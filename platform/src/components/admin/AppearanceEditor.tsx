@@ -49,7 +49,7 @@ function CustomCssForm({ customCss }: { customCss: string }) {
       <form action={saveCustomCss} className="space-y-4">
         <div>
           <h3 className="font-semibold text-slate-900 mb-1">Custom CSS (advanced)</h3>
-          <p className="text-sm text-slate-500">Add your own CSS to fine-tune your website. It is injected on every page. Target a section&apos;s <span className="font-mono text-xs bg-slate-100 px-1 rounded">Custom CSS class</span> or its <span className="font-mono text-xs bg-slate-100 px-1 rounded">#anchor-id</span> set in the section&apos;s Design tab.</p>
+          <p className="text-sm text-slate-500">Add your own CSS to fine-tune your website. It is injected on every page. Target a section&apos;s <span className="font-mono text-xs bg-slate-100 px-1 rounded">Custom CSS class.</span> or its <span className="font-mono text-xs bg-slate-100 px-1 rounded">#anchor-id</span> set in the section&apos;s Design tab.</p>
         </div>
         <textarea name="customCss" defaultValue={customCss} rows={14} spellCheck={false}
           placeholder={".my-class { background: #f5f5f5; }\n#contact { padding-top: 40px; }"}
