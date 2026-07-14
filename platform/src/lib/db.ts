@@ -1,21 +1,15 @@
 import { PrismaClient } from "../generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-// Prisma 7 requires a driver adapter. We pick the adapter from DATABASE_URL:
-//   - postgres://…  -> PrismaPg      (production: Neon / Supabase / any Postgres)
-//   - file:./…      -> better-sqlite3 (local development)
-//
-// To go to production: set DATABASE_URL to a Postgres URL, change
-// `provider = "postgresql"` in prisma/schema.prisma, run `prisma migrate deploy`,
-// and regenerate the client. The code below already handles both. See DEPLOYMENT.md.
-const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
-const isPostgres = /^postgres(ql)?:\/\//i.test(databaseUrl);
+// Production/prod-like: PostgreSQL via the pg driver adapter (Prisma 7 requires
+// a driver adapter). DATABASE_URL is provided in every environment (Neon, etc.).
+// A harmless placeholder keeps the client constructable during build/prerender
+// even before the env var is available — real queries need the real URL. The
+// connection is lazy, so no DB call happens just by creating the client.
+const connectionString = process.env.DATABASE_URL || "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 
 function makeClient() {
-  const adapter = isPostgres
-    ? new PrismaPg({ connectionString: databaseUrl })
-    : new PrismaBetterSqlite3({ url: databaseUrl });
+  const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({ adapter });
 }
 
