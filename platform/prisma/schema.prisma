@@ -1,0 +1,242 @@
+// Standard SaaS — multi-tenant website builder for home-services businesses.
+// Dev DB: SQLite. Production: switch `provider` to "postgresql" + set DATABASE_URL.
+// All JSON-shaped config is stored as String (portable across SQLite/Postgres);
+// typed helpers in src/lib/config.ts handle (de)serialization.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── A client's account (one business = one tenant) ──────────────────────────
+model Tenant {
+  id           String   @id @default(cuid())
+  name         String
+  subdomain    String   @unique
+  customDomain String?  @unique
+  domainStatus String   @default("none") // none | pending | connected
+  vertical     String   @default("home-services") // which sector template
+  status       String   @default("active") // active | suspended | cancelled | trial
+  plan         String   @default("free") // free | starter | professional | premium
+  subscriptionEndsAt DateTime? // null = no expiry (lifetime/free)
+  lastRenewalReminderAt DateTime? // last time an expiry reminder was sent
+  cancelledAt  DateTime?
+  cancelReason String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users        User[]
+  orders       Order[]
+  siteConfig   SiteConfig?
+  pages        Page[]
+  services     Service[]
+  galleryItems GalleryItem[]
+  leads        Lead[]
+  appointments Appointment[]
+}
+
+// ─── Login accounts for a tenant's admin panel ───────────────────────────────
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email     String
+  password  String // bcrypt hash
+  name      String?
+  role      String   @default("owner") // owner | admin | staff
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, email])
+}
+
+// ─── Site-wide look & feel + header/footer (one per tenant) ───────────────────
+model SiteConfig {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  theme     String   @default("{}") // JSON: colors, font, radius
+  header    String   @default("{}") // JSON: logo, topbar contact, nav, cta
+  footer    String   @default("{}") // JSON: about, columns, social, contact
+  seo       String   @default("{}") // JSON: title, description, favicon, ogImage
+  customCss String   @default("") // site-wide custom CSS injected into every page
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Pages (system pages + client's custom pages) ─────────────────────────────
+model Page {
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug      String // "home", "about", "services", or a custom slug
+  title     String
+  isSystem  Boolean   @default(false) // system pages can't be deleted
+  published Boolean   @default(true)
+  order     Int       @default(0) // order in nav
+  showInNav Boolean   @default(true)
+  seoTitle       String @default("") // per-page SEO title override
+  seoDescription String @default("") // per-page SEO meta description
+  seoImage       String @default("") // per-page Open Graph share image
+  noindex        Boolean @default(false) // hide this page from search engines
+  sections  Section[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([tenantId, slug])
+}
+
+// ─── Content blocks that make up a page (reorderable, toggleable) ─────────────
+model Section {
+  id      String  @id @default(cuid())
+  pageId  String
+  page    Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type    String // hero | features | serviceCategories | gallery | about | stats | cta | contactForm | quoteForm | appointmentForm | faq | richText | html
+  order   Int     @default(0)
+  visible Boolean @default(true)
+  content String  @default("{}") // JSON blob whose shape depends on `type`
+  style   String  @default("{}") // JSON: background, spacing, container width, custom class
+}
+
+// ─── Services catalogue ───────────────────────────────────────────────────────
+model Service {
+  id          String @id @default(cuid())
+  tenantId    String
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category    String // "Electrical", "Plumbing", ...
+  title       String
+  description String @default("")
+  image       String @default("")
+  order       Int    @default(0)
+}
+
+// ─── Gallery ──────────────────────────────────────────────────────────────────
+model GalleryItem {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category String
+  image    String
+  caption  String @default("")
+  order    Int    @default(0)
+}
+
+// ─── Quote / contact-form submissions ─────────────────────────────────────────
+model Lead {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  email     String   @default("")
+  service   String   @default("")
+  location  String   @default("")
+  message   String   @default("")
+  status    String   @default("new") // new | contacted | converted | closed
+  createdAt DateTime @default(now())
+}
+
+// ─── Appointment bookings ─────────────────────────────────────────────────────
+model Appointment {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  email     String   @default("")
+  service   String   @default("")
+  date      String   @default("")
+  time      String   @default("")
+  message   String   @default("")
+  status    String   @default("pending") // pending | confirmed | completed | cancelled
+  createdAt DateTime @default(now())
+}
+
+// ─── Marketing site: demo requests & signups for the platform itself ──────────
+model PlatformLead {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String   @default("")
+  company   String   @default("")
+  vertical  String   @default("") // sector they're interested in
+  type      String   @default("demo") // demo | signup | contact
+  message   String   @default("")
+  status    String   @default("new")
+  createdAt DateTime @default(now())
+}
+
+// ─── Platform-wide settings (single row) ─────────────────────────────────────
+model PlatformConfig {
+  id                String   @id @default("singleton")
+  razorpayKeyId     String   @default("")
+  razorpayKeySecret String   @default("")
+  platformName      String   @default("StandardSaaS")
+  supportEmail      String   @default("")
+  supportPhone      String   @default("")
+  broadcastShow     Boolean  @default(false)
+  broadcastText     String   @default("")
+  // GST / invoicing
+  gstin             String   @default("")
+  businessAddress   String   @default("")
+  gstRate           Int      @default(18)
+  invoicePrefix     String   @default("INV")
+  // No-code plan overrides (JSON: { tierId: { monthlyBase, maxServices } })
+  planOverrides     String   @default("{}")
+  // Renewal reminders (email)
+  remindersEnabled  Boolean  @default(false)
+  reminderDays      Int      @default(7)
+  resendApiKey      String   @default("")
+  senderEmail       String   @default("")
+  updatedAt         DateTime @updatedAt
+}
+
+// ─── Discount coupons for the marketing checkout ──────────────────────────────
+model Coupon {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  percentOff Int       @default(0) // 0-100
+  active     Boolean   @default(true)
+  maxUses    Int       @default(0) // 0 = unlimited
+  usedCount  Int       @default(0)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// ─── Super-admin (platform owner) accounts ────────────────────────────────────
+model PlatformUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String // bcrypt hash
+  name      String?
+  createdAt DateTime @default(now())
+}
+
+// ─── Subscription orders / payments ───────────────────────────────────────────
+model Order {
+  id              String   @id @default(cuid())
+  customerName    String
+  email           String
+  phone           String   @default("")
+  company         String   @default("")
+  vertical        String
+  subdomain       String
+  plan            String // 1m | 3m | 6m | 1y | 2y | lifetime
+  amount          Int // in paise (INR)
+  currency        String   @default("INR")
+  status          String   @default("created") // created | paid | failed | provisioned | refunded
+  gateway         String   @default("mock") // mock | razorpay | manual-*
+  gatewayOrderId  String   @default("")
+  gatewayPayId    String   @default("")
+  invoiceNo       String?  @unique // assigned once paid/provisioned
+  refundReason    String   @default("")
+  refundedAt      DateTime?
+  passwordHash    String   @default("") // bcrypt of the admin password chosen at checkout (for provisioning/recovery)
+  provisionError  String   @default("") // last provisioning error, for diagnostics/retry
+  tenantId        String? // set after provisioning
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

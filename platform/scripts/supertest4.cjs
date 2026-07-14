@@ -1,0 +1,22 @@
+﻿const { chromium } = require("playwright");
+(async () => {
+  const b = await chromium.launch();
+  const p = await b.newContext({ viewport: { width: 1280, height: 950 } }).then(c=>c.newPage());
+  await p.goto("http://localhost:3000/super/login", { waitUntil: "networkidle", timeout: 45000 });
+  await p.fill('input[name="email"]', "super@platform.test");
+  await p.fill('input[name="password"]', "super1234");
+  await p.click('button:has-text("Sign in")');
+  await p.waitForSelector("text=Platform overview", { timeout: 20000 });
+  await p.goto("http://localhost:3000/super/clients", { waitUntil: "networkidle" });
+  const href = await p.evaluate(() => Array.from(document.querySelectorAll('a[href^="/super/clients/"]')).map(a=>a.getAttribute('href')).find(h => h && h!=='/super/clients/new' && !h.includes('?')));
+  await p.goto("http://localhost:3000"+href, { waitUntil: "networkidle", timeout: 30000 });
+  await p.waitForSelector('a:has-text("Login as client")', { timeout: 20000 });
+  await p.click('a:has-text("Login as client")');
+  await p.waitForTimeout(3500);
+  const url = p.url();
+  const body = await p.content();
+  console.log("impersonate final url:", url);
+  console.log("on a tenant subdomain admin:", /\/\/[a-z0-9-]+\.localhost:3000\/admin/.test(url) && !url.includes("/impersonate") && !url.includes("/login"));
+  console.log("admin dashboard content:", body.includes("Dashboard") || body.includes("Total Leads") || body.includes("Welcome"));
+  await b.close();
+})();

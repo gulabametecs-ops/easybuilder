@@ -1,0 +1,16 @@
+import type { NextConfig } from "next";
+import path from "node:path";
+
+const nextConfig: NextConfig = {
+  // Pin the workspace root to this app (a stray lockfile in the user's home dir
+  // otherwise makes Next infer the wrong root).
+  turbopack: {
+    root: path.join(__dirname),
+  },
+  // Tenant sites use uploaded/remote images from any host in production.
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
+  },
+};
+
+export default nextConfig;

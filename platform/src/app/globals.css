@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* Class-based dark mode for the marketing site: `dark:` applies when a `.dark`
+   ancestor is present (toggled on <html> by the theme switcher). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Dark theme for the admin & super-admin panels. Scoped to `.admin-shell` (the
+   main content area, excluding the always-dark sidebar) so it restyles the
+   common light-mode utility classes in one place instead of per-page. */
+.dark .admin-shell .bg-white { background-color: #0f172a; }
+.dark .admin-shell .bg-slate-50 { background-color: #1e293b; }
+.dark .admin-shell .bg-slate-100 { background-color: #1e293b; }
+.dark .admin-shell .text-slate-900 { color: #f8fafc; }
+.dark .admin-shell .text-slate-800 { color: #e2e8f0; }
+.dark .admin-shell .text-slate-700 { color: #cbd5e1; }
+.dark .admin-shell .text-slate-600 { color: #cbd5e1; }
+.dark .admin-shell .text-slate-500 { color: #94a3b8; }
+.dark .admin-shell .text-slate-400 { color: #94a3b8; }
+.dark .admin-shell .border-slate-100 { border-color: #1e293b; }
+.dark .admin-shell .border-slate-200 { border-color: #1e293b; }
+.dark .admin-shell .border-slate-300 { border-color: #334155; }
+.dark .admin-shell .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b; }
+.dark .admin-shell .hover\:bg-slate-50:hover { background-color: #1e293b; }
+.dark .admin-shell .hover\:bg-slate-100:hover { background-color: #334155; }
+.dark .admin-shell .hover\:bg-slate-200:hover { background-color: #334155; }
+.dark .admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+.dark .admin-shell select,
+.dark .admin-shell textarea {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+.dark .admin-shell input::placeholder,
+.dark .admin-shell textarea::placeholder { color: #64748b; }
+
+/* Per-tenant theme variables are set inline on the .site-root wrapper
+   (see src/app/_site/layout.tsx). Sensible fallbacks live here. */
+:root {
+  --c-primary: #7cb518;
+  --c-primary-dark: #5c8a12;
+  --c-secondary: #0f2942;
+  --c-accent: #8bc34a;
+  --c-dark: #0a1f33;
+  --c-light: #f4f7ee;
+  --c-text: #334155;
+  --c-heading: #0f2942;
+  --site-radius: 0.9rem;
+  --site-font: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Invoice printing */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; }
+}
+
+body {
+  background: #ffffff;
+  color: #171717;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Tenant site scope */
+.site-root {
+  font-family: var(--site-font);
+  color: var(--c-text);
+}
+/* Default heading color. Placed in @layer base so Tailwind's `utilities` layer
+   (text-white, text-primary, …) always overrides it — e.g. white hero/banner
+   titles over a dark background. Unlayered rules would beat layered utilities. */
+@layer base {
+  .site-root h1,
+  .site-root h2,
+  .site-root h3,
+  .site-root h4 {
+    color: var(--c-heading);
+  }
+}
+
+/* Reusable tenant-themed utilities */
+.btn-primary {
+  background: var(--c-primary);
+  color: #fff;
+  border-radius: 9999px;
+  transition: background 0.2s, transform 0.15s;
+}
+.btn-primary:hover {
+  background: var(--c-primary-dark);
+  transform: translateY(-1px);
+}
+.btn-outline {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  border-radius: 9999px;
+  transition: background 0.2s;
+}
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.text-primary {
+  color: var(--c-primary);
+}
+.bg-primary {
+  background: var(--c-primary);
+}
+.bg-secondary {
+  background: var(--c-secondary);
+}
+.bg-dark {
+  background: var(--c-dark);
+}
+.bg-light {
+  background: var(--c-light);
+}
+.card {
+  border-radius: var(--site-radius);
+}

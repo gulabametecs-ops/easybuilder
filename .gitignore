@@ -1,0 +1,34 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Claude Code local files (private)
+.claude/
+
+# Dev server logs
+*.log
+
+# Node / Next.js (safety — platform has its own .gitignore too)
+node_modules/
+.next/
+out/
+build/
+.turbo/
+
+# Secrets & env
+.env
+.env.*
+!.env.example
+
+# Local databases & uploads (dev only)
+*.db
+*.db-journal
+public/uploads/
+
+# Prisma generated client (regenerated on install)
+src/generated/prisma/
+
+# Stray / accidental
+**/undefined/
+*.tsbuildinfo
+.vercel
