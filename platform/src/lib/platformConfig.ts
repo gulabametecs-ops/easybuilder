@@ -41,9 +41,15 @@ const DEFAULTS: PlatformConfig = {
 };
 
 // The single platform settings row (or defaults if not yet created).
+// Falls back to defaults if the DB is unreachable (e.g. during build-time
+// prerender before the database is provisioned) so deploys never hard-fail here.
 export async function getPlatformConfig(): Promise<PlatformConfig> {
-  const cfg = await db.platformConfig.findUnique({ where: { id: "singleton" } });
-  return cfg ?? DEFAULTS;
+  try {
+    const cfg = await db.platformConfig.findUnique({ where: { id: "singleton" } });
+    return cfg ?? DEFAULTS;
+  } catch {
+    return DEFAULTS;
+  }
 }
 
 // Razorpay keys: DB settings take priority, then env vars as fallback.

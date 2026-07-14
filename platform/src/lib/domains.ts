@@ -26,6 +26,13 @@ export function parseHost(rawHost: string | null | undefined): HostInfo {
   const host = stripPort(rawHost).toLowerCase();
   const root = rootHostname();
 
+  // Vercel deployment/preview URLs (*.vercel.app) have no real domain and can't
+  // host wildcard tenant subdomains — always show the marketing site there so the
+  // deploy is reachable before a custom domain is connected.
+  if (host.endsWith(".vercel.app")) {
+    return { kind: "marketing" };
+  }
+
   // Root domain or www -> marketing site
   if (host === root || host === `www.${root}`) {
     return { kind: "marketing" };
