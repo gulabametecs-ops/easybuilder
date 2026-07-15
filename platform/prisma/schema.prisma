@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ─── A client's account (one business = one tenant) ──────────────────────────
