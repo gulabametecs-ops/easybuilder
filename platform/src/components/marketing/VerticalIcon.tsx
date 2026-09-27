@@ -7,6 +7,14 @@ import {
   Store,
   Factory,
   Music,
+  Baby,
+  Backpack,
+  Target,
+  Trophy,
+  Dumbbell,
+  HeartHandshake,
+  Pill,
+  CalendarDays,
   type LucideIcon,
 } from "lucide-react";
 
@@ -19,6 +27,14 @@ const MAP: Record<string, LucideIcon> = {
   store: Store,
   factory: Factory,
   music: Music,
+  baby: Baby,
+  backpack: Backpack,
+  target: Target,
+  trophy: Trophy,
+  dumbbell: Dumbbell,
+  heart: HeartHandshake,
+  pill: Pill,
+  calendar: CalendarDays,
 };
 
 export function VerticalIcon({ name, className }: { name: string; className?: string }) {

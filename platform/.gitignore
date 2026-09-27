@@ -39,6 +39,10 @@ yarn-error.log*
 *.db-journal
 /public/uploads
 
+# AI live preview sessions (local disk)
+/.data
+
+
 # vercel
 .vercel
 

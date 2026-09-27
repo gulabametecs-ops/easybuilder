@@ -53,7 +53,7 @@ export async function createClient(_prev: CreateClientState, formData: FormData)
 
   const d = parsed.data;
   if (!getVertical(d.vertical)) return { error: "Unknown sector." };
-  if (RESERVED.has(d.subdomain)) return { error: "That subdomain is reserved." };
+  if (RESERVED.has(d.subdomain) || d.subdomain.startsWith("ai-")) return { error: "That subdomain is reserved." };
   if (await db.tenant.findUnique({ where: { subdomain: d.subdomain } })) {
     return { error: `"${d.subdomain}" is already taken.` };
   }

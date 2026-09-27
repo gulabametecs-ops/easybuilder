@@ -44,15 +44,48 @@ export const VERTICALS: Vertical[] = [
     accent: "#2563eb",
   },
   {
-    id: "school-coaching",
-    name: "School / Coaching",
-    tagline: "Schools, coaching & tuition centres",
+    id: "play-school",
+    name: "Play School / Preschool",
+    tagline: "Nursery, LKG, UKG — ages 2 to 5",
+    icon: "baby",
+    description: "Playful, colourful website for preschools — programs, daily routine, safety, facilities and admission enquiries.",
+    status: "live",
+    demoSubdomain: "demo-playschool",
+    demoEmail: "demo@play.test",
+    accent: "#fb923c",
+  },
+  {
+    id: "primary-school",
+    name: "Primary School",
+    tagline: "Classes 1 to 5 — ages 5 to 11",
+    icon: "backpack",
+    description: "Friendly website for primary schools — curriculum, activities, facilities, transport, fees and admissions.",
+    status: "live",
+    demoSubdomain: "demo-primary",
+    demoEmail: "demo@primary.test",
+    accent: "#0ea5e9",
+  },
+  {
+    id: "school",
+    name: "School (Secondary / Senior)",
+    tagline: "CBSE / ICSE / State — classes 6 to 12",
     icon: "school",
-    description: "Courses, faculty, admissions, results and enquiry forms for schools and coaching institutes.",
+    description: "Professional website for schools — streams, faculty, board results & toppers, facilities, notices and admissions.",
     status: "live",
     demoSubdomain: "demo-school",
     demoEmail: "demo@school.test",
-    accent: "#f59e0b",
+    accent: "#1e40af",
+  },
+  {
+    id: "coaching",
+    name: "Coaching Institute",
+    tagline: "JEE, NEET, UPSC, SSC, tuition",
+    icon: "target",
+    description: "Results-driven website for coaching centres — batches, expert faculty, toppers & ranks, free demo booking and test series.",
+    status: "live",
+    demoSubdomain: "demo-coaching",
+    demoEmail: "demo@coaching.test",
+    accent: "#e11d48",
   },
   {
     id: "restaurant-hotel",
@@ -109,6 +142,50 @@ export const VERTICALS: Vertical[] = [
     demoEmail: "demo@skill.test",
     accent: "#db2777",
   },
+  {
+    id: "gym-fitness",
+    name: "Gym / Fitness Studio",
+    tagline: "Gyms, CrossFit, yoga & personal training",
+    icon: "dumbbell",
+    description: "High-energy website for gyms and studios — programs, memberships, trainers, class schedule and free-trial booking.",
+    status: "live",
+    demoSubdomain: "demo-gym",
+    demoEmail: "demo@gym.test",
+    accent: "#f97316",
+  },
+  {
+    id: "ngo-charity",
+    name: "NGO / Charity / Trust",
+    tagline: "Causes, programs, donations & volunteers",
+    icon: "heart",
+    description: "Trustworthy website for NGOs and trusts — causes, impact, donation tiers with 80G note, volunteer sign-up and events.",
+    status: "live",
+    demoSubdomain: "demo-ngo",
+    demoEmail: "demo@ngo.test",
+    accent: "#0d9488",
+  },
+  {
+    id: "pharmacy",
+    name: "Pharmacy / Medical Store",
+    tagline: "Medicines, prescriptions, delivery & lab tests",
+    icon: "pill",
+    description: "Clean website for chemists — product categories, prescription order enquiries, home delivery, lab test packages and store hours.",
+    status: "live",
+    demoSubdomain: "demo-pharmacy",
+    demoEmail: "demo@pharmacy.test",
+    accent: "#059669",
+  },
+  {
+    id: "events-training",
+    name: "Events, Webinars & Training",
+    tagline: "Webinars, seminars, workshops & corporate training",
+    icon: "calendar",
+    description: "Online booking website for events and training — upcoming events, speakers, agenda, ticket passes and seat registration.",
+    status: "live",
+    demoSubdomain: "demo-events",
+    demoEmail: "demo@events.test",
+    accent: "#6366f1",
+  },
 ];
 
 export function getVertical(id: string): Vertical | undefined {
@@ -117,4 +194,45 @@ export function getVertical(id: string): Vertical | undefined {
 
 export function verticalName(id: string): string {
   return getVertical(id)?.name ?? id;
+}
+
+// ─── Sector categories (for the storefront) ───────────────────────────────────
+export const VERTICAL_CATEGORIES = [
+  "Schools & Coaching",
+  "Home & Local Services",
+  "Food & Hospitality",
+  "Healthcare",
+  "Trade & Manufacturing",
+  "Fitness & Wellness",
+  "Community & Non-profit",
+  "Events & Training",
+] as const;
+
+const CATEGORY_OF: Record<string, string> = {
+  "education-consultancy": "Schools & Coaching",
+  "play-school": "Schools & Coaching",
+  "primary-school": "Schools & Coaching",
+  "school": "Schools & Coaching",
+  "coaching": "Schools & Coaching",
+  "skill-learning": "Schools & Coaching",
+  "home-services": "Home & Local Services",
+  "restaurant-hotel": "Food & Hospitality",
+  "hospital-clinic": "Healthcare",
+  "wholesale-shop": "Trade & Manufacturing",
+  "manufacturing": "Trade & Manufacturing",
+  "gym-fitness": "Fitness & Wellness",
+  "ngo-charity": "Community & Non-profit",
+  "pharmacy": "Healthcare",
+  "events-training": "Events & Training",
+};
+
+export function categoryOf(id: string): string {
+  return CATEGORY_OF[id] ?? "Other";
+}
+
+// Verticals grouped by category (only non-empty groups, in the defined order).
+export function verticalsByCategory(): { category: string; items: Vertical[] }[] {
+  return VERTICAL_CATEGORIES
+    .map((category) => ({ category, items: VERTICALS.filter((v) => categoryOf(v.id) === category) }))
+    .filter((g) => g.items.length > 0);
 }

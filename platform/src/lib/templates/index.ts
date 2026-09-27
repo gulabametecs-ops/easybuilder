@@ -12,9 +12,16 @@ import { educationConsultancy } from "./educationConsultancy";
 import { restaurant } from "./restaurant";
 import { hospital } from "./hospital";
 import { school } from "./school";
+import { playSchool } from "./playSchool";
+import { primarySchool } from "./primarySchool";
+import { coaching } from "./coaching";
 import { wholesale } from "./wholesale";
 import { manufacturing } from "./manufacturing";
 import { skill } from "./skill";
+import { gym } from "./gym";
+import { ngo } from "./ngo";
+import { pharmacy } from "./pharmacy";
+import { events } from "./events";
 
 // The original home-services template, assembled from template.ts.
 const homeServices: TemplateDef = {
@@ -33,10 +40,18 @@ export const TEMPLATES: Record<string, TemplateDef> = {
   "education-consultancy": educationConsultancy,
   "restaurant-hotel": restaurant,
   "hospital-clinic": hospital,
-  "school-coaching": school,
+  "play-school": playSchool,
+  "primary-school": primarySchool,
+  "school": school,
+  "coaching": coaching,
+  "school-coaching": school, // legacy alias (old demo tenant) → senior school
   "wholesale-shop": wholesale,
   "manufacturing": manufacturing,
   "skill-learning": skill,
+  "gym-fitness": gym,
+  "ngo-charity": ngo,
+  "pharmacy": pharmacy,
+  "events-training": events,
 };
 
 export function getTemplate(vertical: string): TemplateDef {

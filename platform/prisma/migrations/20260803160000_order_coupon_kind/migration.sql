@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN "couponCode" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "Order" ADD COLUMN "kind" TEXT NOT NULL DEFAULT 'new';

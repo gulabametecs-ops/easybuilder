@@ -7,6 +7,9 @@
 /* Dark theme for the admin & super-admin panels. Scoped to `.admin-shell` (the
    main content area, excluding the always-dark sidebar) so it restyles the
    common light-mode utility classes in one place instead of per-page. */
+.dark .admin-shell {
+  color: #e2e8f0;
+}
 .dark .admin-shell .bg-white { background-color: #0f172a; }
 .dark .admin-shell .bg-slate-50 { background-color: #1e293b; }
 .dark .admin-shell .bg-slate-100 { background-color: #1e293b; }
@@ -15,10 +18,11 @@
 .dark .admin-shell .text-slate-700 { color: #cbd5e1; }
 .dark .admin-shell .text-slate-600 { color: #cbd5e1; }
 .dark .admin-shell .text-slate-500 { color: #94a3b8; }
-.dark .admin-shell .text-slate-400 { color: #94a3b8; }
+.dark .admin-shell .text-slate-400 { color: #a8b4c4; }
+.dark .admin-shell .text-slate-300 { color: #cbd5e1; }
 .dark .admin-shell .border-slate-100 { border-color: #1e293b; }
-.dark .admin-shell .border-slate-200 { border-color: #1e293b; }
-.dark .admin-shell .border-slate-300 { border-color: #334155; }
+.dark .admin-shell .border-slate-200 { border-color: #334155; }
+.dark .admin-shell .border-slate-300 { border-color: #475569; }
 .dark .admin-shell .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b; }
 .dark .admin-shell .hover\:bg-slate-50:hover { background-color: #1e293b; }
 .dark .admin-shell .hover\:bg-slate-100:hover { background-color: #334155; }
@@ -28,10 +32,26 @@
 .dark .admin-shell textarea {
   background-color: #1e293b;
   color: #f8fafc;
-  border-color: #334155;
+  border-color: #475569;
 }
 .dark .admin-shell input::placeholder,
-.dark .admin-shell textarea::placeholder { color: #64748b; }
+.dark .admin-shell textarea::placeholder { color: #94a3b8; }
+/* <code> / mono snippets often lack a text-* class — force readable contrast */
+.dark .admin-shell code,
+.dark .admin-shell pre,
+.dark .admin-shell kbd {
+  color: #f1f5f9;
+  background-color: #1e293b;
+}
+.dark .admin-shell .bg-lime-50 { background-color: rgb(54 83 20 / 0.35); }
+.dark .admin-shell .bg-green-50 { background-color: rgb(6 78 59 / 0.35); }
+.dark .admin-shell .bg-amber-50 { background-color: rgb(120 53 15 / 0.35); }
+.dark .admin-shell .bg-rose-50 { background-color: rgb(136 19 55 / 0.35); }
+.dark .admin-shell .text-lime-700 { color: #bef264; }
+.dark .admin-shell .text-green-700 { color: #6ee7b7; }
+.dark .admin-shell .text-amber-700 { color: #fcd34d; }
+.dark .admin-shell .text-rose-700 { color: #fda4af; }
+.dark .admin-shell .border-lime-200 { border-color: rgb(163 230 53 / 0.25); }
 
 /* Per-tenant theme variables are set inline on the .site-root wrapper
    (see src/app/_site/layout.tsx). Sensible fallbacks live here. */
@@ -56,6 +76,13 @@ html {
 @media print {
   .no-print { display: none !important; }
   body { background: #fff !important; }
+  .invoice-doc {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 body {
@@ -65,9 +92,30 @@ body {
 }
 
 /* Tenant site scope */
+/* Theme colours as Tailwind colours (bg-primary/10, border-primary, ring-primary/30 …).
+   `inline` makes utilities read the per-tenant vars directly, so opacity modifiers
+   and per-section accent overrides work at runtime. */
+@theme inline {
+  --color-primary: var(--c-primary);
+  --color-primary-dark: var(--c-primary-dark);
+  --color-secondary: var(--c-secondary);
+  --color-accent: var(--c-accent);
+  --color-dark: var(--c-dark);
+  --color-light: var(--c-light);
+  --color-heading: var(--c-heading);
+}
+
 .site-root {
   font-family: var(--site-font);
   color: var(--c-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip; /* decorative blobs never cause horizontal scroll (clip keeps sticky working) */
+  /* Surface tokens — flipped by .site-on-dark */
+  --site-surface: #fff;
+  --site-line: rgb(15 23 42 / 0.08);
+  --site-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px -4px rgb(15 23 42 / 0.06);
+  --site-shadow-lg: 0 2px 4px rgb(15 23 42 / 0.03), 0 14px 28px -8px rgb(15 23 42 / 0.12), 0 32px 64px -24px rgb(15 23 42 / 0.16);
 }
 /* Default heading color. Placed in @layer base so Tailwind's `utilities` layer
    (text-white, text-primary, …) always overrides it — e.g. white hero/banner
@@ -78,44 +126,927 @@ body {
   .site-root h3,
   .site-root h4 {
     color: var(--c-heading);
+    letter-spacing: -0.02em;
+  }
+  .site-root h1,
+  .site-root h2 {
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+  .site-root p {
+    text-wrap: pretty;
+  }
+  .site-root .sec-card h3,
+  .site-root .sec-card h4 {
+    color: var(--card-text, var(--c-heading));
   }
 }
+
+/* Dark surfaces: headings/text/cards flip to light-on-dark via tokens. */
+.site-on-dark,
+.site-root :is([data-bg="dark"], [data-bg="primary"]):has(> .site-sec) {
+  --c-heading: #fff;
+  --c-text: rgb(255 255 255 / 0.78);
+  --site-surface: rgb(255 255 255 / 0.06);
+  --site-line: rgb(255 255 255 / 0.12);
+  --site-shadow-sm: 0 1px 0 rgb(255 255 255 / 0.04) inset;
+  --site-shadow-lg: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 24px 48px -20px rgb(0 0 0 / 0.5);
+  color: var(--c-text);
+}
+
+/* Section style backgrounds (light/dark/primary, set by SectionRenderer as data-bg)
+   paint on the wrapper — plain content blocks (.site-sec) go transparent so they
+   show through. Blocks with their own full-bleed art (hero, stats, cta…) keep theirs. */
+.site-root [data-bg] > .site-sec {
+  background: transparent;
+}
+/* On a primary background the accent itself becomes white. */
+.site-root [data-bg="primary"] > .site-sec {
+  --c-primary: #fff;
+  --c-primary-dark: rgb(255 255 255 / 0.88);
+}
+.site-root [data-bg="primary"] > .site-sec .btn-primary { color: #0f172a; }
 
 /* Reusable tenant-themed utilities */
 .btn-primary {
   background: var(--c-primary);
   color: #fff;
-  border-radius: 9999px;
-  transition: background 0.2s, transform 0.15s;
+  border-radius: var(--site-radius);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 1px 2px rgb(15 23 42 / 0.12),
+    0 8px 20px -8px color-mix(in srgb, var(--c-primary) 65%, transparent);
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
 }
 .btn-primary:hover {
   background: var(--c-primary-dark);
   transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 2px 4px rgb(15 23 42 / 0.12),
+    0 14px 28px -10px color-mix(in srgb, var(--c-primary) 70%, transparent);
 }
 .btn-outline {
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  background: rgb(255 255 255 / 0.06);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: #fff;
-  border-radius: 9999px;
-  transition: background 0.2s;
+  border-radius: var(--site-radius);
+  transition: background 0.2s, border-color 0.2s;
 }
 .btn-outline:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(255 255 255 / 0.14);
+  border-color: rgb(255 255 255 / 0.45);
 }
-.text-primary {
+/* Light-surface secondary button */
+.btn-ghost {
+  border: 1px solid var(--site-line);
+  background: var(--site-surface);
+  color: var(--c-heading);
+  border-radius: var(--site-radius);
+  box-shadow: var(--site-shadow-sm);
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
+}
+.btn-ghost:hover {
+  border-color: var(--c-primary);
   color: var(--c-primary);
+  transform: translateY(-1px);
 }
-.bg-primary {
-  background: var(--c-primary);
-}
-.bg-secondary {
-  background: var(--c-secondary);
-}
-.bg-dark {
-  background: var(--c-dark);
-}
-.bg-light {
-  background: var(--c-light);
+.site-root :is(.btn-primary, .btn-outline, .btn-ghost):focus-visible {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 3px;
 }
 .card {
-  border-radius: var(--site-radius);
+  border-radius: var(--card-radius, var(--site-radius));
 }
+
+/* Eyebrow label — small pill badge */
+.site-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c-primary);
+  background: color-mix(in srgb, var(--c-primary) 9%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c-primary) 22%, transparent);
+}
+.site-eyebrow::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 9999px;
+  background: currentColor;
+}
+/* Muted text relative to whatever colour it sits in (works on light, dark and card colours) */
+.site-muted {
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
+/* Soft accent blob for heroes */
+.site-blob {
+  position: absolute;
+  border-radius: 9999px;
+  background: var(--c-primary);
+  filter: blur(90px);
+  opacity: 0.35;
+  pointer-events: none;
+}
+/* Faint grid texture for dark heroes */
+.site-gridlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 30%, transparent 75%);
+}
+/* Card hover: lift + deeper shadow */
+.site-lift {
+  transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.3s, border-color 0.3s;
+}
+.site-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--site-shadow-lg);
+}
+
+/* Glassy sticky header */
+.site-glass {
+  background: color-mix(in srgb, #fff 78%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(14px);
+  backdrop-filter: saturate(1.6) blur(14px);
+}
+
+/* FAQ accordion — smooth open/close where supported, instant elsewhere */
+.site-faq {
+  interpolate-size: allow-keywords;
+}
+.site-faq > summary::-webkit-details-marker {
+  display: none;
+}
+.site-faq::details-content {
+  block-size: 0;
+  overflow: hidden;
+  transition: block-size 0.3s ease, content-visibility 0.3s allow-discrete;
+}
+.site-faq[open]::details-content {
+  block-size: auto;
+}
+
+/* Polished form controls inside site form sections */
+.site-form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select, textarea) {
+  border-radius: calc(var(--site-radius) * 0.85);
+  border-color: rgb(15 23 42 / 0.12);
+  background-color: #f8fafc;
+  min-height: 3rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.site-form :is(input, select, textarea):hover {
+  border-color: rgb(15 23 42 / 0.22);
+}
+.site-form :is(input, select, textarea):focus {
+  outline: none;
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--c-primary) 18%, transparent);
+  background-color: #fff;
+}
+
+/* Section style: alignment + cards (set via Style tab) */
+.sec-heading {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 44rem;
+  margin-bottom: 3.5rem;
+}
+.sec-heading--left {
+  text-align: left;
+  margin-left: 0;
+  margin-right: auto;
+  max-width: none;
+}
+[data-sec-align="left"] .sec-heading {
+  text-align: left;
+  margin-left: 0;
+  margin-right: auto;
+  max-width: none;
+}
+[data-sec-align="right"] .sec-heading {
+  text-align: right;
+  margin-left: auto;
+  margin-right: 0;
+  max-width: none;
+}
+[data-sec-align="center"] .sec-heading {
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Center/right: cards sit in the middle (or end) instead of left-aligned grid holes */
+[data-sec-align="center"] .sec-grid,
+[data-sec-cards="1"] .sec-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+}
+[data-sec-align="right"] .sec-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 1.5rem;
+}
+[data-sec-align="left"] .sec-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 1.5rem;
+}
+[data-sec-align="center"] .sec-grid > *,
+[data-sec-align="left"] .sec-grid > *,
+[data-sec-align="right"] .sec-grid > *,
+[data-sec-cards="1"] .sec-grid > * {
+  width: var(--card-w, 16rem);
+  max-width: 100%;
+}
+
+.sec-card {
+  background: var(--card-bg, var(--site-surface, #fff));
+  color: var(--card-text, inherit);
+  border-style: solid;
+  border-width: var(--card-bw, 1px);
+  border-color: var(--card-border, var(--site-line, #f1f5f9));
+  border-radius: var(--card-radius, var(--site-radius));
+  box-shadow: var(--card-shadow, var(--site-shadow-sm));
+  overflow: hidden;
+}
+[data-sec-align="center"] .sec-card { text-align: center; }
+[data-sec-align="left"] .sec-card { text-align: left; }
+[data-sec-align="right"] .sec-card { text-align: right; }
+
+/* Per-field styles from Content → paintbrush (beats .text-primary / heading utilities).
+   Reset --fs-* to `initial` so children don't inherit parent field vars, then only
+   the vars set inline on this element take effect. Missing vars → declaration dropped. */
+[data-fs] {
+  --fs-color: initial;
+  --fs-size: initial;
+  --fs-weight: initial;
+  --fs-align: initial;
+  --fs-style: initial;
+  --fs-decoration: initial;
+  --fs-transform: initial;
+  --fs-tracking: initial;
+  --fs-leading: initial;
+  --fs-opacity: initial;
+  color: var(--fs-color) !important;
+  font-size: var(--fs-size) !important;
+  font-weight: var(--fs-weight) !important;
+  text-align: var(--fs-align) !important;
+  font-style: var(--fs-style) !important;
+  text-decoration: var(--fs-decoration) !important;
+  text-transform: var(--fs-transform) !important;
+  letter-spacing: var(--fs-tracking) !important;
+  line-height: var(--fs-leading) !important;
+  opacity: var(--fs-opacity) !important;
+}
+
+/* When card styles are set, also restyle legacy .card inside the section */
+[data-sec-cards="1"] .card {
+  background: var(--card-bg, var(--site-surface, #fff));
+  color: var(--card-text, inherit);
+  border-style: solid;
+  border-width: var(--card-bw, 1px);
+  border-color: var(--card-border, var(--site-line, #f1f5f9));
+  border-radius: var(--card-radius, var(--site-radius));
+  box-shadow: var(--card-shadow, var(--site-shadow-sm));
+}
+
+/* Marquee (hero variant) */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.3333%); }
+}
+.animate-marquee {
+  animation: marquee 22s linear infinite;
+}
+/* Slow zoom on the active hero slide */
+@keyframes site-kenburns {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+.site-kenburns {
+  animation: site-kenburns 7s ease-out both;
+}
+@keyframes site-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-root *,
+  .site-root *::before,
+  .site-root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .site-lift:hover,
+  .site-root .btn-primary:hover,
+  .site-root .btn-ghost:hover {
+    transform: none;
+  }
+}
+
+/* ── Marketing site design tokens ─────────────────────────────────────────── */
+.mkt-root {
+  font-family: var(--font-mkt-body), ui-sans-serif, system-ui, sans-serif;
+
+  /* Light — warm sage + crisp white surfaces */
+  --mkt-bg: #edf1ea;
+  --mkt-bg-alt: #e2e9dc;
+  --mkt-surface: #ffffff;
+  --mkt-surface-muted: #f6f8f4;
+  --mkt-border: #d8e0d4;
+  --mkt-border-strong: #c5d0be;
+  --mkt-text: #0f172a;
+  --mkt-text-secondary: #334155;
+  --mkt-text-muted: #64748b;
+  --mkt-accent-text: #3f6212;
+  --mkt-accent-soft: #ecfccb;
+  --mkt-header-bg: rgba(255, 255, 255, 0.88);
+  --mkt-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.dark .mkt-root {
+  --mkt-bg: #060806;
+  --mkt-bg-alt: #0a0e0c;
+  --mkt-surface: rgba(255, 255, 255, 0.03);
+  --mkt-surface-muted: rgba(255, 255, 255, 0.02);
+  --mkt-border: rgba(255, 255, 255, 0.1);
+  --mkt-border-strong: rgba(255, 255, 255, 0.15);
+  --mkt-text: #f8fafc;
+  --mkt-text-secondary: #e2e8f0;
+  --mkt-text-muted: #94a3b8;
+  --mkt-accent-text: #a3e635;
+  --mkt-accent-soft: rgba(163, 230, 53, 0.12);
+  --mkt-header-bg: rgba(6, 8, 6, 0.9);
+  --mkt-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Keep autofill from flashing wrong on marketing forms */
+.mkt-root input:-webkit-autofill,
+.mkt-root input:-webkit-autofill:hover,
+.mkt-root input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--mkt-text);
+  transition: background-color 9999s ease-out 0s;
+  box-shadow: 0 0 0 1000px var(--mkt-surface-muted) inset;
+}
+.dark .mkt-root input:-webkit-autofill,
+.dark .mkt-root input:-webkit-autofill:hover,
+.dark .mkt-root input:-webkit-autofill:focus {
+  -webkit-text-fill-color: rgb(255 255 255);
+  box-shadow: 0 0 0 1000px rgb(10 14 12) inset;
+}
+.mkt-root .font-display,
+.font-display {
+  font-family: var(--font-mkt-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Hero ambient wash + soft orbs */
+.mkt-hero-wash {
+  background:
+    radial-gradient(ellipse 55% 50% at 85% 35%, rgba(132, 204, 22, 0.22), transparent 58%),
+    radial-gradient(ellipse 42% 38% at 12% 72%, rgba(74, 222, 128, 0.1), transparent 55%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 42%);
+}
+.dark .mkt-hero-wash {
+  background:
+    radial-gradient(ellipse 55% 50% at 85% 40%, rgba(163, 230, 53, 0.1), transparent 60%),
+    radial-gradient(ellipse 40% 35% at 15% 70%, rgba(45, 212, 191, 0.05), transparent 55%),
+    linear-gradient(180deg, rgba(163, 230, 53, 0.03), transparent 45%);
+}
+
+.mkt-hero-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+  pointer-events: none;
+  animation: mkt-orb-drift 12s ease-in-out infinite;
+}
+.mkt-hero-orb-a {
+  width: 14rem;
+  height: 14rem;
+  top: 12%;
+  right: 8%;
+  background: rgba(163, 230, 53, 0.22);
+}
+.dark .mkt-hero-orb-a {
+  background: rgba(163, 230, 53, 0.1);
+}
+.mkt-hero-orb-b {
+  width: 11rem;
+  height: 11rem;
+  bottom: 18%;
+  left: 6%;
+  background: rgba(45, 212, 191, 0.14);
+  animation-delay: -4s;
+}
+.dark .mkt-hero-orb-b {
+  background: rgba(45, 212, 191, 0.07);
+}
+
+@keyframes mkt-orb-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(12px, -16px) scale(1.06); }
+}
+
+.mkt-glass-builder {
+  position: relative;
+  border-radius: 0.9rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 20px 50px -28px rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px) saturate(1.15);
+  -webkit-backdrop-filter: blur(8px) saturate(1.15);
+}
+.dark .mkt-glass-builder {
+  background: rgba(10, 16, 12, 0.38);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 24px 56px -24px rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px) saturate(1.2);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+}
+
+/* Builder frame — premium ambient (no spinning lights) */
+.mkt-builder-ambient {
+  position: absolute;
+  inset: -28px -20px -32px -20px;
+  border-radius: 1.5rem;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 75% 55% at 55% 42%, rgba(163, 230, 53, 0.14), transparent 68%),
+    radial-gradient(ellipse 45% 40% at 20% 75%, rgba(45, 212, 191, 0.07), transparent 60%);
+  opacity: 0.9;
+}
+.dark .mkt-builder-ambient {
+  background:
+    radial-gradient(ellipse 75% 55% at 55% 42%, rgba(163, 230, 53, 0.09), transparent 68%),
+    radial-gradient(ellipse 45% 40% at 20% 75%, rgba(45, 212, 191, 0.05), transparent 60%);
+}
+
+.mkt-builder-frame {
+  position: relative;
+  z-index: 1;
+  border-radius: 0.95rem;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 28px 56px -36px rgba(15, 23, 42, 0.45);
+}
+.dark .mkt-builder-frame {
+  box-shadow:
+    0 0 0 1px rgba(163, 230, 53, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.07) inset,
+    0 32px 64px -28px rgba(0, 0, 0, 0.85);
+}
+
+.mkt-builder-edge {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.08) 35%, rgba(163, 230, 53, 0.22) 50%, rgba(255, 255, 255, 0.06) 65%, rgba(255, 255, 255, 0.35) 100%)
+    border-box;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) padding-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.85;
+}
+.dark .mkt-builder-edge {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.03) 35%, rgba(163, 230, 53, 0.35) 50%, rgba(255, 255, 255, 0.04) 65%, rgba(255, 255, 255, 0.12) 100%)
+    border-box;
+  opacity: 0.7;
+}
+
+.mkt-glass-toast {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.dark .mkt-glass-toast {
+  background: rgba(18, 28, 22, 0.72);
+  border-color: rgba(163, 230, 53, 0.22);
+  box-shadow: 0 12px 28px -10px rgba(0, 0, 0, 0.65);
+}
+
+
+.mkt-site-premium {
+  background: #ffffff;
+}
+.dark .mkt-site-premium {
+  background: #0d1210;
+}
+
+.mkt-section-active {
+  box-shadow: 0 0 0 1.5px rgba(163, 230, 53, 0.9), 0 0 20px -2px rgba(163, 230, 53, 0.55);
+  border-radius: 4px;
+}
+
+.mkt-preview-scroll {
+  scrollbar-width: none;
+}
+.mkt-preview-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Legacy build wash kept for older classes */
+.mkt-build-wash {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 40%, rgba(163, 230, 53, 0.22), transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 70%, rgba(45, 212, 191, 0.12), transparent 50%);
+}
+.dark .mkt-build-wash {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 40%, rgba(163, 230, 53, 0.12), transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 70%, rgba(45, 212, 191, 0.06), transparent 50%);
+}
+
+.mkt-build-page {
+  border-radius: 1.1rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 30px 80px -40px rgba(15, 23, 42, 0.25);
+  animation: mkt-page-breathe 6s ease-in-out infinite;
+}
+.dark .mkt-build-page {
+  background: rgba(18, 24, 20, 0.75);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.7);
+}
+
+.mkt-build-nav {
+  background: rgba(248, 250, 246, 0.95);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+.dark .mkt-build-nav {
+  background: rgba(12, 16, 14, 0.9);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.mkt-build-logo {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.4rem;
+  background: #a3e635;
+  animation: mkt-logo-pop 4s ease-in-out infinite;
+}
+
+.mkt-build-line {
+  display: block;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.28);
+}
+.dark .mkt-build-line {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.mkt-build-pill {
+  width: 4.5rem;
+  height: 1.5rem;
+  border-radius: 0.45rem;
+  background: #a3e635;
+  animation: mkt-pill-flash 3.2s ease-in-out infinite;
+}
+.dark .mkt-build-pill {
+  animation: mkt-pill-flash-dark 3.2s ease-in-out infinite;
+}
+
+.mkt-build-stack {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  min-height: 16rem;
+}
+
+.mkt-sec {
+  border-radius: 0.7rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.mkt-sec-a {
+  height: 5.5rem;
+  background: linear-gradient(120deg, #bef264, #4ade80, #2dd4bf);
+  background-size: 200% 200%;
+  animation:
+    mkt-sec-a 5s ease-in-out infinite,
+    mkt-gradient-shift 4s ease-in-out infinite;
+}
+.dark .mkt-sec-a {
+  background: linear-gradient(120deg, #65a30d, #16a34a, #0d9488);
+  background-size: 200% 200%;
+}
+
+.mkt-sec-b {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.45rem;
+  height: 4.25rem;
+  background: transparent;
+  animation: mkt-sec-b 5s ease-in-out infinite;
+}
+.mkt-sec-b > span {
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  animation: mkt-tile-pop 5s ease-in-out infinite;
+}
+.mkt-sec-b > span:nth-child(2) { animation-delay: 0.12s; }
+.mkt-sec-b > span:nth-child(3) { animation-delay: 0.24s; }
+.dark .mkt-sec-b > span {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mkt-sec-c {
+  height: 3rem;
+  background: rgba(15, 23, 42, 0.06);
+  animation: mkt-sec-c 5s ease-in-out infinite;
+}
+.dark .mkt-sec-c {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mkt-sec-d {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 0.45rem;
+  height: 2.75rem;
+  background: transparent;
+  animation: mkt-sec-d 5s ease-in-out infinite;
+}
+.mkt-sec-d > span:first-child {
+  border-radius: 0.55rem;
+  background: #0f172a;
+}
+.mkt-sec-d > span:last-child {
+  border-radius: 0.55rem;
+  background: #a3e635;
+}
+.dark .mkt-sec-d > span:first-child {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mkt-float {
+  position: absolute;
+  border-radius: 0.65rem;
+  opacity: 0.85;
+}
+.mkt-float-1 {
+  width: 4.5rem; height: 2.4rem; left: 8%; top: 58%;
+  background: #a3e635;
+  animation: mkt-float-in-1 5s ease-in-out infinite;
+}
+.mkt-float-2 {
+  width: 3.2rem; height: 3.2rem; right: 10%; top: 42%;
+  background: #2dd4bf;
+  animation: mkt-float-in-2 5s ease-in-out infinite;
+}
+.mkt-float-3 {
+  width: 5rem; height: 1.6rem; left: 12%; top: 34%;
+  background: #fbbf24;
+  animation: mkt-float-in-3 5s ease-in-out infinite;
+}
+.mkt-float-4 {
+  width: 2.6rem; height: 2.6rem; right: 14%; top: 62%;
+  background: #86efac;
+  animation: mkt-float-in-4 5s ease-in-out infinite;
+}
+.dark .mkt-float-1 { opacity: 0.7; }
+.dark .mkt-float-2 { background: #14b8a6; opacity: 0.55; }
+.dark .mkt-float-3 { background: #eab308; opacity: 0.5; }
+.dark .mkt-float-4 { background: #4ade80; opacity: 0.55; }
+
+@keyframes mkt-page-breathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.015) translateY(-4px); }
+}
+@keyframes mkt-gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes mkt-logo-pop {
+  0%, 70%, 100% { transform: scale(1); }
+  78% { transform: scale(1.15); }
+  86% { transform: scale(1); }
+}
+@keyframes mkt-pill-flash {
+  0%, 60%, 100% { background: #a3e635; transform: scaleX(1); }
+  70% { background: #0f172a; transform: scaleX(1.08); }
+  80% { background: #a3e635; transform: scaleX(1); }
+}
+@keyframes mkt-pill-flash-dark {
+  0%, 60%, 100% { background: #a3e635; transform: scaleX(1); }
+  70% { background: #f8fafc; transform: scaleX(1.08); }
+  80% { background: #a3e635; transform: scaleX(1); }
+}
+@keyframes mkt-sec-a {
+  0%, 100% { height: 5.5rem; opacity: 1; transform: translateY(0); }
+  25% { height: 6.5rem; }
+  50% { height: 4.2rem; opacity: 0.92; }
+  75% { height: 5.8rem; }
+}
+@keyframes mkt-sec-b {
+  0%, 100% { opacity: 1; transform: translateY(0); }
+  40% { opacity: 0.35; transform: translateY(8px) scale(0.98); }
+  55% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes mkt-tile-pop {
+  0%, 45%, 100% { transform: scale(1); }
+  52% { transform: scale(0.92); }
+  60% { transform: scale(1.04); }
+  68% { transform: scale(1); }
+}
+@keyframes mkt-sec-c {
+  0%, 100% { width: 100%; opacity: 1; margin-left: 0; }
+  35% { width: 70%; opacity: 0.5; margin-left: 15%; }
+  50% { width: 100%; opacity: 1; margin-left: 0; }
+}
+@keyframes mkt-sec-d {
+  0%, 100% { opacity: 1; transform: translateX(0); }
+  30% { opacity: 0; transform: translateX(24px); }
+  45% { opacity: 1; transform: translateX(0); }
+}
+@keyframes mkt-float-in-1 {
+  0%, 100% { opacity: 0; transform: translate(40px, -30px) scale(0.6); }
+  20% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+  55% { opacity: 0.9; transform: translate(12px, 8px) scale(1); }
+  70% { opacity: 0; transform: translate(80px, 40px) scale(0.5); }
+}
+@keyframes mkt-float-in-2 {
+  0%, 15% { opacity: 0; transform: translate(-50px, 20px) scale(0.5); }
+  35% { opacity: 0.85; transform: translate(0, 0) scale(1); }
+  65% { opacity: 0.85; }
+  80%, 100% { opacity: 0; transform: translate(-30px, -40px) scale(0.4); }
+}
+@keyframes mkt-float-in-3 {
+  0%, 25% { opacity: 0; transform: translate(0, 40px) scale(0.5); }
+  45% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+  75% { opacity: 0.9; }
+  90%, 100% { opacity: 0; transform: translate(60px, -20px) scale(0.4); }
+}
+@keyframes mkt-float-in-4 {
+  0%, 40% { opacity: 0; transform: translate(30px, 30px) scale(0.4); }
+  55% { opacity: 0.85; transform: translate(0, 0) scale(1); }
+  85% { opacity: 0.85; }
+  100% { opacity: 0; transform: translate(-40px, -20px) scale(0.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkt-build-page,
+  .mkt-build-logo,
+  .mkt-build-pill,
+  .mkt-sec,
+  .mkt-sec-b > span,
+  .mkt-float,
+  .mkt-glass-builder,
+  .mkt-hero-orb {
+    animation: none !important;
+  }
+}
+
+@keyframes mkt-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes mkt-click {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(0.85); }
+  70% { transform: scale(1.05); }
+}
+.mkt-click {
+  animation: mkt-click 0.45s ease-out;
+}
+@keyframes mkt-ripple {
+  0% { transform: scale(0.4); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.mkt-ripple {
+  animation: mkt-ripple 0.55s ease-out;
+}
+@keyframes mkt-tray-pulse {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(4px) scale(1.03); }
+}
+.mkt-tray-item {
+  animation: mkt-tray-pulse 2.8s ease-in-out infinite;
+}
+@keyframes mkt-tray-pulse-right {
+  0%, 100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(-4px) scale(1.03); }
+}
+.mkt-tray-item-right {
+  animation: mkt-tray-pulse-right 2.8s ease-in-out infinite;
+}
+
+/* ── AI build animation ─────────────────────────────────────────────────── */
+@keyframes ai-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes ai-orbit-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+@keyframes ai-float {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+  50% { transform: translateY(-10px) scale(1.05); opacity: 0.9; }
+}
+@keyframes ai-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+@keyframes ai-block-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes ai-pulse-ring {
+  0% { transform: scale(0.85); opacity: 0.7; }
+  70% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+@keyframes ai-success-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes ai-result-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ai-build-orbit { animation: ai-orbit 8s linear infinite; }
+.ai-build-orbit-rev { animation: ai-orbit-reverse 12s linear infinite; }
+.ai-build-float { animation: ai-float 3s ease-in-out infinite; }
+.ai-build-block { animation: ai-block-in 0.55s ease-out both; }
+.ai-build-success { animation: ai-success-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.ai-result-enter { animation: ai-result-in 0.5s ease-out both; }
+
+/* ── Hide scrollbars site-wide (scroll still works) ─────────────────────────
+   Placed at file end + !important so Tailwind layers cannot override. */
+html,
+body,
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE / old Edge */
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-button {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+

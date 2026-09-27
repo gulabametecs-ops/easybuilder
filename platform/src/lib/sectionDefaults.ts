@@ -3,7 +3,7 @@ import type { SectionContentMap, SectionType } from "./config";
 // Friendly labels + starter content for each section type (used when a client
 // adds a new section from the page editor).
 export const SECTION_META: { type: SectionType; label: string; description: string }[] = [
-  { type: "banner", label: "Page banner", description: "Compact page-title header with breadcrumb (for inner pages)." },
+  { type: "banner", label: "Page banner", description: "Page title header with optional background image, colour & opacity." },
   { type: "hero", label: "Hero banner", description: "Big headline, image and call-to-action buttons." },
   { type: "about", label: "About / text + image", description: "Two-column text with bullet points and an image." },
   { type: "serviceCategories", label: "Services grid", description: "Your services grouped by category." },
@@ -23,6 +23,9 @@ export const SECTION_META: { type: SectionType; label: string; description: stri
   { type: "quoteForm", label: "Quote form", description: "Lead capture form with a sidebar." },
   { type: "contactForm", label: "Contact form", description: "Contact details + a message form." },
   { type: "appointmentForm", label: "Appointment form", description: "Booking form with date & time." },
+  { type: "noticeBoard", label: "Notice board", description: "Live notices — results, admissions, events & holidays with date & tags." },
+  { type: "toppers", label: "Toppers / results", description: "Showcase top students with photo, rank and score (medals)." },
+  { type: "downloads", label: "Downloads / prospectus", description: "Downloadable files — prospectus, syllabus, fee structure, forms." },
   { type: "pricingPlans", label: "Pricing plans", description: "Subscription-style pricing cards with feature lists." },
   { type: "openingHours", label: "Opening hours", description: "Weekly business hours table." },
   { type: "countdown", label: "Countdown timer", description: "Live countdown to an event / offer deadline." },
@@ -31,7 +34,15 @@ export const SECTION_META: { type: SectionType; label: string; description: stri
 ];
 
 export const SECTION_DEFAULTS: { [K in SectionType]: SectionContentMap[K] } = {
-  banner: { title: "Page", titleHighlight: "Title", subtitle: "" },
+  banner: {
+    title: "Page",
+    titleHighlight: "Title",
+    subtitle: "",
+    image: "",
+    bgColor: "",
+    imageOpacity: 35,
+    overlayOpacity: 75,
+  },
   hero: {
     variant: "classic",
     customHtml: "",
@@ -46,6 +57,10 @@ export const SECTION_DEFAULTS: { [K in SectionType]: SectionContentMap[K] } = {
     features: [
       { icon: "badge-check", title: "Quality Work", text: "" },
       { icon: "clock", title: "On-Time", text: "" },
+    ],
+    slides: [
+      { titleTop: "Welcome to", titleHighlight: "Our Business", description: "A short line about what makes you the best choice.", image: "", primaryBtn: { label: "Get Started", href: "/contact" }, secondaryBtn: { label: "Learn More", href: "/about" } },
+      { titleTop: "Quality You", titleHighlight: "Can Trust", description: "Highlight a second offer, service or promotion here.", image: "", primaryBtn: { label: "Call Now", href: "tel:0000000000" }, secondaryBtn: { label: "Our Services", href: "/services" } },
     ],
   },
   about: {
@@ -144,4 +159,31 @@ export const SECTION_DEFAULTS: { [K in SectionType]: SectionContentMap[K] } = {
     buttonHref: "/quote",
   },
   map: { eyebrow: "", title: "Find", titleHighlight: "Us", address: "Your address here", mapEmbed: "" },
+  noticeBoard: {
+    eyebrow: "STAY UPDATED", title: "Notice", titleHighlight: "Board",
+    notices: [
+      { date: "10 Jul 2026", title: "Class 10 & 12 Board Results declared — congratulations!", category: "Result", link: "/results", isNew: true },
+      { date: "05 Jul 2026", title: "Admissions open for the new session — apply online", category: "Admission", link: "/admission", isNew: true },
+      { date: "28 Jun 2026", title: "Annual Day celebration on 20th July", category: "Event", link: "", isNew: false },
+      { date: "20 Jun 2026", title: "Summer break — school reopens on 1st July", category: "Holiday", link: "", isNew: false },
+    ],
+  },
+  toppers: {
+    eyebrow: "OUR PRIDE", title: "Our", titleHighlight: "Toppers",
+    items: [
+      { name: "Student Name", exam: "Class 12 · Science", score: "98.6%", rank: "1", image: "" },
+      { name: "Student Name", exam: "Class 12 · Commerce", score: "97.8%", rank: "2", image: "" },
+      { name: "Student Name", exam: "Class 10 · CBSE", score: "98.2%", rank: "1", image: "" },
+      { name: "Student Name", exam: "Class 10 · CBSE", score: "97.4%", rank: "2", image: "" },
+    ],
+  },
+  downloads: {
+    eyebrow: "DOWNLOADS", title: "Downloads &", titleHighlight: "Prospectus",
+    items: [
+      { title: "Prospectus 2026–27", description: "Everything about our programs, facilities & admissions.", link: "", icon: "book" },
+      { title: "Admission Form", description: "Fill and submit the offline admission form.", link: "", icon: "clipboard" },
+      { title: "Fee Structure", description: "Class-wise fee details and payment options.", link: "", icon: "tag" },
+      { title: "Academic Calendar", description: "Holidays, exams and events for the year.", link: "", icon: "calendar" },
+    ],
+  },
 };

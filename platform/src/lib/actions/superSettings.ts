@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSuperSession } from "@/lib/superAuth";
 import { getPlatformConfig } from "@/lib/platformConfig";
+import { normalizeGroqModelInput, GROQ_DEFAULT_MODEL } from "@/lib/groqModel";
 import { TIERS } from "@/lib/plans";
 import { runRenewalReminders } from "@/lib/reminders";
 
@@ -132,4 +133,66 @@ export async function addSuperAdmin(_prev: SettingsState, formData: FormData): P
   await db.platformUser.create({ data: { email, password: await bcrypt.hash(parsed.data.password, 10), name: parsed.data.name || "Admin" } });
   revalidatePath("/super/settings");
   return { ok: true, message: `Super admin ${email} added.` };
+}
+
+export async function saveGroq(_prev: SettingsState, formData: FormData): Promise<SettingsState> {
+  await requireSuper();
+  const apiKey = s(formData, "groqApiKey");
+  const rawModel = s(formData, "groqModel");
+  const groqModel = normalizeGroqModelInput(rawModel);
+
+  if (rawModel && !groqModel) {
+    return {
+      ok: false,
+      message: `Invalid model "${rawModel}". Use the full ID (e.g. ${GROQ_DEFAULT_MODEL}) or leave blank for default.`,
+    };
+  }
+
+  await db.platformConfig.upsert({
+    where: { id: "singleton" },
+    update: {
+      ...(apiKey ? { groqApiKey: apiKey } : {}),
+      groqModel,
+    },
+    create: {
+      id: "singleton",
+      groqApiKey: apiKey,
+      groqModel,
+    },
+  });
+  revalidatePath("/super/settings");
+  const live = Boolean(apiKey || (await getPlatformConfig()).groqApiKey);
+  const modelNote = groqModel ? ` Model: ${groqModel}.` : ` Using default model (${GROQ_DEFAULT_MODEL}).`;
+  return {
+    ok: true,
+    message: live
+      ? `Groq AI settings saved — AI Website Builder is enabled.${modelNote}`
+      : `Saved. Enter an API key to enable AI generation.${modelNote}`,
+  };
+}
+
+export async function saveDemoSettings(_prev: SettingsState, formData: FormData): Promise<SettingsState> {
+  await requireSuper();
+  const mode = formData.get("demoOtpMode")?.toString() === "whatsapp" ? "whatsapp" : "screen";
+  const mins = parseInt(formData.get("demoDurationMinutes")?.toString() ?? "10", 10);
+  const token = s(formData, "demoWhatsAppToken");
+  const phoneId = s(formData, "demoWhatsAppPhoneId");
+  await db.platformConfig.upsert({
+    where: { id: "singleton" },
+    update: {
+      demoOtpMode: mode,
+      demoDurationMinutes: isNaN(mins) ? 10 : Math.min(60, Math.max(5, mins)),
+      ...(token ? { demoWhatsAppToken: token } : {}),
+      ...(phoneId ? { demoWhatsAppPhoneId: phoneId } : {}),
+    },
+    create: {
+      id: "singleton",
+      demoOtpMode: mode,
+      demoDurationMinutes: isNaN(mins) ? 10 : Math.min(60, Math.max(5, mins)),
+      demoWhatsAppToken: token,
+      demoWhatsAppPhoneId: phoneId,
+    },
+  });
+  revalidatePath("/super/settings");
+  return { ok: true, message: `Demo settings saved (${mode === "whatsapp" ? "WhatsApp OTP" : "on-screen test OTP"} · ${isNaN(mins) ? 10 : mins} min).` };
 }

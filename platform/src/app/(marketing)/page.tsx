@@ -1,23 +1,31 @@
 import Link from "next/link";
-import { Palette, LayoutDashboard, Inbox, Globe, Rocket, Wrench, Check, ArrowRight, Star, ShieldCheck, Zap, MousePointerClick, PencilRuler, Images, Send, HelpCircle } from "lucide-react";
-import { VERTICALS } from "@/lib/verticals";
+import {
+  Palette, LayoutDashboard, Inbox, Globe, Rocket, Wrench, Check, ArrowRight, Star, ShieldCheck,
+  MousePointerClick, PencilRuler, Images, Send, HelpCircle, FileStack, CalendarClock,
+} from "lucide-react";
+import { VERTICALS, verticalsByCategory } from "@/lib/verticals";
+import { DESIGNS } from "@/lib/designs";
+import { SectorExplorer } from "@/components/marketing/SectorExplorer";
 import { DURATIONS, priceFor, formatINR, resolveTiers } from "@/lib/plans";
 import { getPlatformConfig } from "@/lib/platformConfig";
-import { img } from "@/lib/img";
-import { VerticalIcon } from "@/components/marketing/VerticalIcon";
+import { stockImg } from "@/lib/img";
 import { DemoForm } from "@/components/marketing/DemoForm";
 import { PricingSection } from "@/components/marketing/PricingSection";
-
-const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-const DEMO_URL = "http://demo." + ROOT;
+import { MarketingHero } from "@/components/marketing/MarketingHero";
+import { AiPromptTeaser } from "@/components/marketing/AiPromptTeaser";
+import { MarketingSection } from "@/components/marketing/MarketingSection";
+import { SectionHeader } from "@/components/marketing/SectionHeader";
+import { mkt } from "@/lib/marketingTheme";
 
 const FEATURES = [
-  { icon: Palette, title: "Full theme control", text: "Clients change colors, fonts, logo, header & footer — no code, live instantly." },
-  { icon: LayoutDashboard, title: "Own admin panel", text: "Every client gets a private dashboard to manage their whole website." },
-  { icon: Inbox, title: "Leads & appointments", text: "Quote and booking forms flow straight into the client's inbox." },
-  { icon: Globe, title: "Own domain", text: "Each site on client.yourdomain.com — custom domains supported." },
-  { icon: Wrench, title: "Ready content", text: "Services, gallery, pages pre-filled per sector. Edit, don't build." },
-  { icon: Rocket, title: "Launch in minutes", text: "Pay and a complete website is provisioned automatically." },
+  { icon: Palette, title: "5 design styles", text: "Every sector comes in Original, Modern, Bold, Elegant and Minimal — then tweak colours, fonts and logo anytime." },
+  { icon: LayoutDashboard, title: "Own admin panel", text: "Private dashboard for every client — dashboard, billing, settings and team access included." },
+  { icon: Inbox, title: "Leads & appointments", text: "Quote, contact and booking forms save to the admin inbox with status tracking." },
+  { icon: FileStack, title: "Pages & sections", text: "Visual page builder with drag-ready sections — hero, services, gallery, forms and more." },
+  { icon: Wrench, title: "Ready sector content", text: "Services, gallery, notices and results pre-filled per industry. Edit, don't build from scratch." },
+  { icon: Rocket, title: "SEO & marketing", text: "Meta tags, indexing, campaigns, social share and promo tools built into every site." },
+  { icon: Globe, title: "Own domain", text: "Start on a free subdomain, connect a custom domain anytime from settings." },
+  { icon: CalendarClock, title: "Launch in minutes", text: "Pay once — website, admin panel and content are provisioned automatically." },
 ];
 const STEPS = [
   { n: 1, icon: MousePointerClick, t: "Pick your sector & plan", d: "Choose your industry and a subscription that fits — pay securely in seconds." },
@@ -25,7 +33,19 @@ const STEPS = [
   { n: 3, icon: Images, t: "Add your content", d: "Add your services, photos, pages and business details. Everything is editable." },
   { n: 4, icon: Send, t: "Go live & get leads", d: "Share your link. Quote and appointment requests land straight in your inbox." },
 ];
-const STATS = [{ v: "8+", l: "Industries" }, { v: "100%", l: "Customizable" }, { v: "5 min", l: "To launch" }, { v: "24/7", l: "Always online" }];
+const STATS = [
+  { v: `${VERTICALS.filter((v) => v.status === "live").length}+`, l: "Industries ready" },
+  { v: `${DESIGNS.length}`, l: "Design styles each" },
+  { v: "5 min", l: "To go live" },
+  { v: "24/7", l: "Always online" },
+];
+const CATEGORY_IMAGES: Record<string, string> = {
+  "Schools & Coaching": stockImg("classroom students", 640, 360),
+  "Home & Local Services": stockImg("homeservice electrician", 640, 360),
+  "Food & Hospitality": stockImg("restaurant food", 640, 360),
+  Healthcare: stockImg("doctor hospital", 640, 360),
+  "Trade & Manufacturing": stockImg("manufacturing warehouse", 640, 360),
+};
 const TESTIMONIALS = [
   { n: "Rahul M.", r: "Home-service owner", t: "Got my website live in minutes and started getting leads the same week." },
   { n: "Dr. Anita", r: "Clinic owner", t: "Patients now book appointments online. The admin panel is so easy." },
@@ -42,10 +62,6 @@ const FAQS = [
   { q: "Is my data safe?", a: "Yes. Each business is fully isolated, sessions are secure, and the leads you collect belong only to you." },
 ];
 
-const card = "rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03]";
-const h2 = "text-3xl font-extrabold text-slate-900 dark:text-white";
-const muted = "text-slate-500 dark:text-slate-400";
-
 export default async function Landing() {
   const cfg = await getPlatformConfig();
   const tiers = resolveTiers(cfg.planOverrides);
@@ -53,166 +69,234 @@ export default async function Landing() {
 
   return (
     <main>
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_10%,rgba(132,204,22,0.16),transparent_45%)]" />
-        <div className="absolute inset-0 [background-image:linear-gradient(rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.04)_1px,transparent_1px)] dark:[background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:radial-gradient(circle_at_center,black,transparent_75%)]" />
-        <div className="relative mx-auto max-w-6xl px-4 pt-24 pb-16 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-lime-500/15 text-lime-700 dark:text-lime-300 text-xs font-semibold px-4 py-1.5 mb-6 tracking-wide">
-            <Zap className="w-3.5 h-3.5" /> WEBSITES FOR EVERY SERVICE BUSINESS
-          </span>
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-slate-900 dark:text-white leading-[1.05] max-w-4xl mx-auto">
-            Sell branded websites that your <span className="text-lime-600 dark:text-lime-400">clients control</span>
-          </h1>
-          <p className="mt-6 text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-            One platform to launch complete, customizable websites for home services, clinics, restaurants,
-            consultancies and more — each with its own admin panel, leads and bookings.
-          </p>
-          <div className="mt-9 flex flex-wrap gap-3 justify-center">
-            <Link href="/subscribe" className="inline-flex items-center gap-2 rounded-full bg-lime-500 text-white font-semibold px-7 py-3.5 hover:bg-lime-600">Start from {startPrice} <ArrowRight className="w-4 h-4" /></Link>
-            <Link href="/demos" className="inline-flex items-center gap-2 rounded-full border border-black/15 dark:border-white/20 text-slate-800 dark:text-white px-7 py-3.5 font-semibold hover:bg-black/5 dark:hover:bg-white/10">Explore live demos</Link>
-          </div>
-          <div className="mt-14 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-3xl mx-auto">
-            {STATS.map((s) => (<div key={s.l}><div className="text-3xl font-extrabold text-slate-900 dark:text-white">{s.v}</div><div className={`text-sm ${muted}`}>{s.l}</div></div>))}
-          </div>
-        </div>
-      </section>
+      <MarketingHero startPrice={startPrice} />
 
-      {/* Sectors with images */}
-      <section id="sectors" className="py-20 border-t border-black/5 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12"><h2 className={h2}>Built for every sector</h2><p className={`mt-2 ${muted}`}>Pick your industry — each comes with a ready-made template.</p></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {VERTICALS.map((v) => (
-              <Link key={v.id} href={`/subscribe?vertical=${v.id}`} className={`group overflow-hidden ${card} hover:border-lime-500/50 hover:shadow-lg transition`}>
-                <div className="relative h-32">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img(v.name, 600, 300)} alt={v.name} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <span className="absolute top-3 left-3 w-10 h-10 rounded-xl flex items-center justify-center backdrop-blur bg-white/90 text-slate-900"><VerticalIcon name={v.icon} className="w-5 h-5" /></span>
-                  <span className={`absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full ${v.status === "live" ? "bg-lime-500 text-white" : "bg-amber-400 text-slate-900"}`}>{v.status === "live" ? "LIVE" : "SOON"}</span>
-                </div>
-                <div className="p-4">
-                  <p className="text-slate-900 dark:text-white font-semibold group-hover:text-lime-600 dark:group-hover:text-lime-400">{v.name}</p>
-                  <p className={`text-xs mt-0.5 ${muted}`}>{v.tagline}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+      <AiPromptTeaser />
+
+      {/* Sectors */}
+      <MarketingSection id="sectors" variant="default">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-14 sm:mb-16">
+          {STATS.map((s) => (
+            <div key={s.l} className={mkt.statCard}>
+              <div className={mkt.statValue}>{s.v}</div>
+              <div className={`text-sm mt-1.5 font-medium ${mkt.muted}`}>{s.l}</div>
+            </div>
+          ))}
         </div>
-      </section>
+
+        <SectionHeader
+          eyebrow={<p className={mkt.eyebrow}>Every industry covered</p>}
+          title="Explore by category"
+          description="Pick a category, browse every sector inside, then try a live demo or subscribe in minutes."
+        />
+
+        <SectorExplorer
+          categories={verticalsByCategory().map((g) => ({
+            name: g.category,
+            image: CATEGORY_IMAGES[g.category] ?? stockImg(`${g.category} business`, 640, 360),
+            count: g.items.length,
+            sectors: g.items.map((v) => ({
+              id: v.id,
+              name: v.name,
+              tagline: v.tagline,
+              icon: v.icon,
+              status: v.status,
+              image: stockImg(v.name, 640, 360),
+              description: v.description,
+            })),
+          }))}
+        />
+      </MarketingSection>
 
       {/* Features */}
-      <section id="features" className="py-20 border-t border-black/5 dark:border-white/10">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12"><h2 className={h2}>Everything a client needs</h2><p className={`mt-2 ${muted}`}>One platform, unlimited branded websites.</p></div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map((f) => (
-              <div key={f.title} className={`p-6 ${card}`}>
-                <span className="inline-flex w-11 h-11 rounded-xl bg-lime-500/15 items-center justify-center mb-4"><f.icon className="w-5 h-5 text-lime-600 dark:text-lime-400" /></span>
-                <h3 className="text-slate-900 dark:text-white font-semibold">{f.title}</h3>
-                <p className={`text-sm mt-1.5 ${muted}`}>{f.text}</p>
-              </div>
-            ))}
-          </div>
+      <MarketingSection id="features" variant="alt">
+        <SectionHeader
+          eyebrow={<p className={mkt.eyebrow}>Built for agencies & resellers</p>}
+          title="Everything a client needs"
+          description="One platform to launch, manage and grow branded websites — with the same admin your clients use every day."
+        />
+
+        <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+          {FEATURES.map((f) => (
+            <div key={f.title} className={`group p-6 ${mkt.card} ${mkt.cardHover}`}>
+              <span className="inline-flex w-11 h-11 rounded-xl bg-[var(--mkt-accent-soft)] group-hover:bg-lime-500/20 items-center justify-center mb-4 transition-colors">
+                <f.icon className="w-5 h-5 text-[var(--mkt-accent-text)]" strokeWidth={2.25} />
+              </span>
+              <h3 className="font-semibold text-[var(--mkt-text)]">{f.title}</h3>
+              <p className={`text-sm mt-2 leading-relaxed ${mkt.muted}`}>{f.text}</p>
+            </div>
+          ))}
         </div>
-      </section>
+      </MarketingSection>
 
       {/* How it works */}
-      <section id="how" className="py-20 border-t border-black/5 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-14">
-            <p className="text-lime-600 dark:text-lime-400 text-sm font-semibold tracking-wider uppercase mb-2">Get started in minutes</p>
-            <h2 className={h2}>How it works</h2>
-            <p className={`mt-2 ${muted}`}>From sign-up to your first lead — four simple steps, zero code.</p>
-          </div>
-          <div className="relative grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* connector line behind steps (desktop) */}
-            <div className="hidden lg:block absolute top-9 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-lime-500/0 via-lime-500/40 to-lime-500/0" />
-            {STEPS.map((s) => {
-              const Icon = s.icon;
-              return (
-                <div key={s.n} className={`relative p-6 text-center ${card} hover:shadow-lg transition`}>
-                  <div className="relative w-16 h-16 mx-auto">
-                    <div className="w-16 h-16 rounded-2xl bg-lime-500/15 flex items-center justify-center">
-                      <Icon className="w-7 h-7 text-lime-600 dark:text-lime-400" />
-                    </div>
-                    <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-lime-500 text-white text-xs font-bold flex items-center justify-center">{s.n}</span>
+      <MarketingSection id="how" variant="default">
+        <SectionHeader
+          eyebrow={<p className={mkt.eyebrow}>Get started in minutes</p>}
+          title="How it works"
+          description="From sign-up to your first lead — four simple steps, zero code."
+        />
+
+        <div className="relative grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div
+            className="hidden lg:block absolute top-10 left-[12%] right-[12%] h-px bg-gradient-to-r from-transparent via-lime-500/30 to-transparent"
+            aria-hidden
+          />
+          {STEPS.map((s) => {
+            const Icon = s.icon;
+            return (
+              <div key={s.n} className={`relative p-6 sm:p-7 text-center ${mkt.card} ${mkt.cardHover}`}>
+                <div className="relative w-14 h-14 mx-auto">
+                  <div className="w-14 h-14 rounded-2xl bg-lime-500/15 flex items-center justify-center ring-1 ring-lime-500/15">
+                    <Icon className="w-6 h-6 text-[var(--mkt-accent-text)]" strokeWidth={2} />
                   </div>
-                  <h3 className="text-slate-900 dark:text-white font-semibold mt-4">{s.t}</h3>
-                  <p className={`text-sm mt-1.5 ${muted}`}>{s.d}</p>
+                  <span className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-lime-500 text-slate-950 text-xs font-bold flex items-center justify-center">
+                    {s.n}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-          <div className="text-center mt-12">
-            <Link href="/subscribe" className="inline-flex items-center gap-2 rounded-full bg-lime-500 text-white font-semibold px-7 py-3 hover:bg-lime-600">Get started now <ArrowRight className="w-4 h-4" /></Link>
-          </div>
+                <h3 className="font-semibold mt-5 text-[var(--mkt-text)]">{s.t}</h3>
+                <p className={`text-sm mt-2 leading-relaxed ${mkt.muted}`}>{s.d}</p>
+              </div>
+            );
+          })}
         </div>
-      </section>
+
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 mt-12 sm:mt-14">
+          <Link href="/subscribe" className={`${mkt.btnPrimary} ${mkt.btnPrimaryLg}`}>
+            Get started now <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link href="/demos" className={`${mkt.btnPill} px-7 py-3.5 text-sm`}>
+            Try live demos
+          </Link>
+        </div>
+      </MarketingSection>
 
       {/* Testimonials */}
-      <section className="py-20 border-t border-black/5 dark:border-white/10">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="text-center mb-12"><h2 className={h2}>Loved by business owners</h2></div>
-          <div className="grid sm:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.n} className={`p-6 ${card}`}>
-                <div className="flex gap-0.5 mb-3">{Array.from({ length: 5 }).map((_, i) => <Star key={i} className="w-4 h-4 text-lime-500 fill-lime-500" />)}</div>
-                <p className="text-slate-700 dark:text-slate-300 italic">“{t.t}”</p>
-                <p className="mt-4 text-slate-900 dark:text-white font-semibold">{t.n}</p><p className={`text-xs ${muted}`}>{t.r}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <MarketingSection variant="alt">
+        <SectionHeader
+          eyebrow={<p className={mkt.eyebrow}>Real businesses</p>}
+          title="Loved by business owners"
+          description="Clinics, schools, gyms, restaurants and service businesses use StandardSaaS to go live fast."
+        />
 
-      {/* Pricing */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {TESTIMONIALS.map((t) => {
+            const initials = t.n.split(/\s+/).map((w) => w[0]).join("").slice(0, 2);
+            return (
+              <article key={t.n} className={`flex flex-col p-6 sm:p-7 ${mkt.card} ${mkt.cardHover}`}>
+                <div className="flex gap-0.5 mb-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-lime-500 fill-lime-500" />
+                  ))}
+                </div>
+                <p className="text-[var(--mkt-text-secondary)] text-[15px] leading-relaxed flex-1">
+                  &ldquo;{t.t}&rdquo;
+                </p>
+                <div className="mt-6 flex items-center gap-3 pt-5 border-t border-black/6 dark:border-white/10">
+                  <span className="w-10 h-10 rounded-full bg-lime-500/15 text-lime-700 dark:text-lime-400 font-bold text-sm flex items-center justify-center shrink-0">
+                    {initials}
+                  </span>
+                  <div>
+                    <p className="font-semibold text-[var(--mkt-text)]">{t.n}</p>
+                    <p className={`text-xs mt-0.5 ${mkt.muted}`}>{t.r}</p>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </MarketingSection>
+
       <PricingSection tiers={tiers} />
 
       {/* FAQ */}
-      <section id="faq" className="py-20 border-t border-black/5 dark:border-white/10">
-        <div className="mx-auto max-w-5xl px-4">
-          <div className="text-center mb-12">
-            <span className="inline-flex items-center gap-2 rounded-full bg-lime-500/15 text-lime-700 dark:text-lime-300 text-xs font-semibold px-4 py-1.5 mb-3"><HelpCircle className="w-3.5 h-3.5" /> FAQ</span>
-            <h2 className={h2}>Questions? Answered.</h2>
-            <p className={`mt-2 ${muted}`}>Everything you need to know before getting started.</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            {FAQS.map((f) => (
-              <details key={f.q} className={`group ${card} open:shadow-md transition`}>
-                <summary className="cursor-pointer list-none flex items-start justify-between gap-3 p-5 font-semibold text-slate-900 dark:text-white">
-                  <span>{f.q}</span>
-                  <span className="shrink-0 w-6 h-6 rounded-full bg-lime-500/15 flex items-center justify-center mt-0.5"><ArrowRight className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 group-open:rotate-90 transition-transform" /></span>
-                </summary>
-                <p className={`px-5 pb-5 text-sm ${muted}`}>{f.a}</p>
-              </details>
-            ))}
-          </div>
-          <div className={`mt-8 rounded-2xl p-6 text-center ${card}`}>
-            <p className="text-slate-900 dark:text-white font-semibold">Still have questions?</p>
-            <p className={`text-sm mt-1 ${muted}`}>We're happy to help you get set up.</p>
-            <a href="#demo" className="mt-4 inline-flex items-center gap-2 rounded-full border border-black/15 dark:border-white/20 text-slate-800 dark:text-white px-6 py-2.5 text-sm font-semibold hover:bg-black/5 dark:hover:bg-white/10">Contact us <ArrowRight className="w-4 h-4" /></a>
-          </div>
+      <MarketingSection id="faq" variant="alt" container="narrow">
+        <SectionHeader
+          eyebrow={
+            <span className={mkt.badge}>
+              <HelpCircle className="w-3.5 h-3.5" /> FAQ
+            </span>
+          }
+          title="Questions? Answered."
+          description="Everything you need to know before getting started."
+        />
+
+        <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+          {FAQS.map((f) => (
+            <details
+              key={f.q}
+              className={`group ${mkt.card} open:border-lime-500/40 open:shadow-md open:shadow-lime-500/5 transition-all duration-300`}
+            >
+              <summary className="cursor-pointer list-none flex items-start justify-between gap-4 p-5 font-semibold text-[var(--mkt-text)] [&::-webkit-details-marker]:hidden">
+                <span className="text-[15px] leading-snug pr-2">{f.q}</span>
+                <span className="shrink-0 w-7 h-7 rounded-full bg-lime-500/15 flex items-center justify-center group-open:bg-lime-500/25 transition-colors">
+                  <ArrowRight className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400 group-open:rotate-90 transition-transform duration-300" />
+                </span>
+              </summary>
+              <div className="px-5 pb-5 -mt-1">
+                <p className={`text-sm leading-relaxed ${mkt.muted}`}>{f.a}</p>
+              </div>
+            </details>
+          ))}
         </div>
-      </section>
+
+        <div className={`mt-8 sm:mt-10 ${mkt.card} p-8 text-center`}>
+            <p className="font-semibold text-lg text-[var(--mkt-text)]">Still have questions?</p>
+          <p className={`text-sm mt-2 ${mkt.muted}`}>We&apos;re happy to help you get set up.</p>
+          <a href="#demo" className={`mt-5 inline-flex ${mkt.btnPill} px-6 py-2.5 text-sm`}>
+            Contact us <ArrowRight className="w-4 h-4" />
+          </a>
+        </div>
+      </MarketingSection>
 
       {/* CTA + demo */}
-      <section id="demo" className="py-20 border-t border-black/5 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
-        <div className="mx-auto max-w-5xl px-4 grid lg:grid-cols-2 gap-10 items-center">
-          <div>
-            <h2 className={h2}>Ready to launch?</h2>
-            <p className={`mt-3 ${muted}`}>Start now, or request a guided demo. Explore the <a href={DEMO_URL} className="text-lime-600 dark:text-lime-400 underline">live demo</a> first.</p>
-            <ul className="mt-6 space-y-2.5">
-              {["No credit card to start", "Website ready in minutes", "Cancel anytime", "Free subdomain included"].map((t) => (
-                <li key={t} className="flex items-center gap-2 text-slate-700 dark:text-slate-300"><Check className="w-4 h-4 text-lime-500" /> {t}</li>
+      <MarketingSection id="demo" variant="default" container="narrow">
+        <div className="grid lg:grid-cols-2 gap-10 lg:gap-12 items-start">
+          <div className="lg:sticky lg:top-24">
+            <div className="mb-8">
+              <p className={`${mkt.eyebrow} mb-2`}>Get started today</p>
+              <h2 className={mkt.h2}>Ready to launch?</h2>
+              <p className={`mt-3 text-[15px] leading-relaxed ${mkt.muted}`}>
+                Start now, or request a guided demo. Every sector includes a full admin panel.
+              </p>
+            </div>
+            <p className={`text-sm -mt-4 mb-6 ${mkt.muted}`}>
+              Prefer to explore first?{" "}
+              <Link href="/demos" className="text-lime-600 dark:text-lime-400 font-medium hover:underline">
+                Browse live demos →
+              </Link>
+            </p>
+            <ul className="space-y-3">
+              {[
+                "Try a live demo before you buy",
+                "Website ready in minutes",
+                "Free subdomain included",
+                "Cancel anytime — no lock-in",
+              ].map((t) => (
+                <li key={t} className="flex items-center gap-3 text-[var(--mkt-text-secondary)]">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-accent-soft)]">
+                    <Check className="w-3.5 h-3.5 text-[var(--mkt-accent-text)]" strokeWidth={2.5} />
+                  </span>
+                  {t}
+                </li>
               ))}
             </ul>
-            <div className={`mt-6 flex items-center gap-2 text-sm ${muted}`}><ShieldCheck className="w-4 h-4 text-lime-500" /> Trusted, secure &amp; always online.</div>
+            <div className={`mt-8 flex items-center gap-2 text-sm ${mkt.muted}`}>
+              <ShieldCheck className="w-4 h-4 text-lime-500 shrink-0" />
+              Trusted, secure &amp; always online.
+            </div>
+            <Link href="/subscribe" className={`mt-8 inline-flex ${mkt.btnPrimary} ${mkt.btnPrimaryMd} rounded-full`}>
+              Subscribe now <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
-          <div className={`p-6 ${card}`}><DemoForm /></div>
+
+          <div className={`${mkt.card} p-6 sm:p-8`}>
+            <h3 className="font-bold text-lg text-[var(--mkt-text)]">Request a demo</h3>
+            <p className={`text-sm mt-1 mb-6 ${mkt.muted}`}>We&apos;ll reach out within 24 hours.</p>
+            <DemoForm />
+          </div>
         </div>
-      </section>
+      </MarketingSection>
     </main>
   );
 }

@@ -3,10 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireTenantId } from "./guard";
+import { requireTenantId, getDemoWriteContext, persistDemoOverlay, getDemoSessionId } from "./guard";
+import {
+  patchSectionOverlay,
+  addOverlaySection,
+  setSectionOrderOverlay,
+} from "@/lib/demoOverlay";
 import { SECTION_DEFAULTS } from "@/lib/sectionDefaults";
 import { getPlatformConfig } from "@/lib/platformConfig";
 import { serviceLimitForPlan } from "@/lib/plans";
+import { getPageTemplate } from "@/lib/pageTemplates";
 import type { SectionType } from "@/lib/config";
 
 function slugify(input: string): string {
@@ -27,6 +33,15 @@ export async function createPage(formData: FormData) {
   const existing = await db.page.findFirst({ where: { tenantId, slug } });
   if (existing) slug = `${slug}-${Date.now().toString().slice(-4)}`;
 
+  const tpl = getPageTemplate(formData.get("type")?.toString() ?? "blank");
+  const sections = tpl.sections.map((t, i) => ({ type: t, order: i, content: JSON.stringify(SECTION_DEFAULTS[t] ?? {}) }));
+
+  const published = formData.get("published") !== "off";
+  const showInNav = formData.get("showInNav") !== "off";
+  const seoTitle = (formData.get("seoTitle")?.toString() ?? "").trim();
+  const seoDescription = (formData.get("seoDescription")?.toString() ?? "").trim();
+  const noindex = formData.get("noindex") === "on";
+
   const max = await db.page.aggregate({ where: { tenantId }, _max: { order: true } });
   const page = await db.page.create({
     data: {
@@ -34,8 +49,13 @@ export async function createPage(formData: FormData) {
       slug,
       title,
       isSystem: false,
+      published,
+      showInNav,
+      seoTitle: seoTitle || title,
+      seoDescription,
+      noindex,
       order: (max._max.order ?? 0) + 1,
-      sections: { create: [{ type: "richText", order: 0, content: JSON.stringify(SECTION_DEFAULTS.richText) }] },
+      sections: { create: sections },
     },
   });
   revalidatePath("/admin/pages");
@@ -114,38 +134,148 @@ async function assertSectionOwned(id: string, tenantId: string) {
 }
 
 export async function updateSectionContent(id: string, content: string) {
-  const tenantId = await requireTenantId();
-  const section = await assertSectionOwned(id, tenantId);
-  // validate JSON
   try { JSON.parse(content); } catch { throw new Error("Invalid content"); }
+
+  const demo = await getDemoWriteContext();
+  if (demo) {
+    const section = await assertSectionOwned(id, demo.tenantId);
+    const next = patchSectionOverlay(demo.overlay, id, { content });
+    await persistDemoOverlay(demo.sessionId, next);
+    revalidatePath(`/admin/pages/${section.pageId}`);
+    revalidatePath("/");
+    if (section.page.slug && section.page.slug !== "home") revalidatePath(`/${section.page.slug}`);
+    return;
+  }
+
+  const tenantId = await requireTenantId({ demoOk: true });
+  const section = await assertSectionOwned(id, tenantId);
   await db.section.update({ where: { id }, data: { content } });
   revalidatePath(`/admin/pages/${section.pageId}`);
+  revalidatePath("/");
+  if (section.page.slug && section.page.slug !== "home") revalidatePath(`/${section.page.slug}`);
 }
 
 export async function updateSectionStyle(id: string, style: string) {
-  const tenantId = await requireTenantId();
-  const section = await assertSectionOwned(id, tenantId);
   try { JSON.parse(style); } catch { throw new Error("Invalid style"); }
+
+  const demo = await getDemoWriteContext();
+  if (demo) {
+    const section = await assertSectionOwned(id, demo.tenantId);
+    const next = patchSectionOverlay(demo.overlay, id, { style });
+    await persistDemoOverlay(demo.sessionId, next);
+    revalidatePath(`/admin/pages/${section.pageId}`);
+    revalidatePath("/");
+    if (section.page.slug && section.page.slug !== "home") revalidatePath(`/${section.page.slug}`);
+    return;
+  }
+
+  const tenantId = await requireTenantId({ demoOk: true });
+  const section = await assertSectionOwned(id, tenantId);
   await db.section.update({ where: { id }, data: { style } });
   revalidatePath(`/admin/pages/${section.pageId}`);
+  revalidatePath("/");
+  if (section.page.slug && section.page.slug !== "home") revalidatePath(`/${section.page.slug}`);
 }
 
 export async function toggleSection(id: string) {
-  const tenantId = await requireTenantId();
+  const demo = await getDemoWriteContext();
+  if (demo) {
+    const section = await assertSectionOwned(id, demo.tenantId);
+    const baseVisible = demo.overlay.sections?.[id]?.visible ?? section.visible;
+    const next = patchSectionOverlay(demo.overlay, id, { visible: !baseVisible });
+    await persistDemoOverlay(demo.sessionId, next);
+    return;
+  }
+
+  const tenantId = await requireTenantId({ demoOk: true });
   const section = await assertSectionOwned(id, tenantId);
   await db.section.update({ where: { id }, data: { visible: !section.visible } });
   revalidatePath(`/admin/pages/${section.pageId}`);
 }
 
 export async function deleteSection(id: string) {
-  const tenantId = await requireTenantId();
+  const demo = await getDemoWriteContext();
+  if (demo) {
+    const next = patchSectionOverlay(demo.overlay, id, { deleted: true });
+    await persistDemoOverlay(demo.sessionId, next);
+    return;
+  }
+
+  const tenantId = await requireTenantId({ demoOk: true });
   const section = await assertSectionOwned(id, tenantId);
   await db.section.delete({ where: { id } });
   revalidatePath(`/admin/pages/${section.pageId}`);
 }
 
+// Duplicate a section right below the original.
+export async function duplicateSection(id: string) {
+  const demo = await getDemoWriteContext();
+  if (demo) {
+    const tenantId = demo.tenantId;
+    const section = await assertSectionOwned(id, tenantId);
+    const newId = `demo_${Date.now().toString(36)}`;
+    let next = addOverlaySection(demo.overlay, newId, {
+      pageId: section.pageId,
+      type: section.type,
+      order: section.order + 1,
+      visible: section.visible,
+      content: section.content,
+      style: section.style,
+    });
+    const order = next.sectionOrder?.[section.pageId];
+    if (order) {
+      const idx = order.indexOf(id);
+      const newOrder = [...order];
+      newOrder.splice(idx + 1, 0, newId);
+      next = setSectionOrderOverlay(next, section.pageId, newOrder);
+    }
+    await persistDemoOverlay(demo.sessionId, next);
+    return;
+  }
+
+  const tenantId = await requireTenantId({ demoOk: true });
+  const section = await assertSectionOwned(id, tenantId);
+  await db.section.updateMany({ where: { pageId: section.pageId, order: { gt: section.order } }, data: { order: { increment: 1 } } });
+  await db.section.create({
+    data: { pageId: section.pageId, type: section.type, order: section.order + 1, visible: section.visible, content: section.content, style: section.style },
+  });
+  revalidatePath(`/admin/pages/${section.pageId}`);
+}
+
+// Reorder all sections of a page from a drag-and-drop ordering.
+export async function reorderSections(pageId: string, orderedIds: string[]) {
+  const demo = await getDemoWriteContext();
+  if (demo) {
+    const next = setSectionOrderOverlay(demo.overlay, pageId, orderedIds);
+    await persistDemoOverlay(demo.sessionId, next);
+    return;
+  }
+
+  const tenantId = await requireTenantId({ demoOk: true });
+  const page = await db.page.findFirst({ where: { id: pageId, tenantId } });
+  if (!page) return;
+  await db.$transaction(orderedIds.map((id, i) => db.section.updateMany({ where: { id, pageId }, data: { order: i } })));
+  revalidatePath(`/admin/pages/${pageId}`);
+}
+
 export async function moveSection(id: string, dir: "up" | "down") {
-  const tenantId = await requireTenantId();
+  const demo = await getDemoWriteContext();
+  if (demo) {
+    const tenantId = demo.tenantId;
+    const section = await assertSectionOwned(id, tenantId);
+    const siblings = await db.section.findMany({ where: { pageId: section.pageId }, orderBy: { order: "asc" } });
+    const ids = siblings.map((s) => s.id);
+    const idx = ids.indexOf(id);
+    const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= ids.length) return;
+    const newOrder = [...ids];
+    [newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]];
+    const next = setSectionOrderOverlay(demo.overlay, section.pageId, newOrder);
+    await persistDemoOverlay(demo.sessionId, next);
+    return;
+  }
+
+  const tenantId = await requireTenantId({ demoOk: true });
   const section = await assertSectionOwned(id, tenantId);
   const siblings = await db.section.findMany({ where: { pageId: section.pageId }, orderBy: { order: "asc" } });
   const idx = siblings.findIndex((s) => s.id === id);
@@ -159,8 +289,18 @@ export async function moveSection(id: string, dir: "up" | "down") {
 }
 
 // ─── Services ────────────────────────────────────────────────────────────────
+async function uniqueServiceSlug(tenantId: string, title: string, excludeId?: string): Promise<string> {
+  const base = slugify(title || "service");
+  let slug = base;
+  let i = 1;
+  while (await db.service.findFirst({ where: { tenantId, slug, ...(excludeId ? { NOT: { id: excludeId } } : {}) } })) {
+    slug = `${base}-${i++}`;
+  }
+  return slug;
+}
+
 export async function addService(formData: FormData) {
-  const tenantId = await requireTenantId();
+  const tenantId = await requireTenantId({ demoOk: true });
   const category = (formData.get("category")?.toString() ?? "").trim() || "General";
   const title = (formData.get("title")?.toString() ?? "").trim();
   if (!title) return;
@@ -172,6 +312,7 @@ export async function addService(formData: FormData) {
     return; // at limit — the UI shows an upgrade prompt
   }
   const max = await db.service.aggregate({ where: { tenantId }, _max: { order: true } });
+  const demoSessionId = await getDemoSessionId();
   await db.service.create({
     data: {
       tenantId,
@@ -180,38 +321,65 @@ export async function addService(formData: FormData) {
       description: (formData.get("description")?.toString() ?? "").trim(),
       image: (formData.get("image")?.toString() ?? "").trim(),
       order: (max._max.order ?? 0) + 1,
+      slug: await uniqueServiceSlug(tenantId, title),
+      longDescription: (formData.get("longDescription")?.toString() ?? "").trim(),
+      seoTitle: (formData.get("seoTitle")?.toString() ?? "").trim(),
+      seoDescription: (formData.get("seoDescription")?.toString() ?? "").trim(),
+      demoSessionId,
     },
   });
   revalidatePath("/admin/services");
+  revalidatePath("/");
 }
 
 export async function updateService(formData: FormData) {
-  const tenantId = await requireTenantId();
+  const tenantId = await requireTenantId({ demoOk: true });
   const id = formData.get("id")?.toString() ?? "";
-  await db.service.updateMany({
-    where: { id, tenantId },
+  const existing = await db.service.findFirst({ where: { id, tenantId } });
+  if (!existing) return;
+  const demoId = await getDemoSessionId();
+  if (demoId && existing.demoSessionId !== demoId) return;
+  const title = (formData.get("title")?.toString() ?? "").trim();
+  const slug = existing.slug || (await uniqueServiceSlug(tenantId, title, id));
+  await db.service.update({
+    where: { id },
     data: {
       category: (formData.get("category")?.toString() ?? "").trim(),
-      title: (formData.get("title")?.toString() ?? "").trim(),
+      title,
       description: (formData.get("description")?.toString() ?? "").trim(),
       image: (formData.get("image")?.toString() ?? "").trim(),
+      slug,
+      longDescription: (formData.get("longDescription")?.toString() ?? "").trim(),
+      seoTitle: (formData.get("seoTitle")?.toString() ?? "").trim(),
+      seoDescription: (formData.get("seoDescription")?.toString() ?? "").trim(),
     },
   });
   revalidatePath("/admin/services");
+  revalidatePath("/");
+  if (slug) revalidatePath(`/services/${slug}`);
 }
 
 export async function deleteService(id: string) {
-  const tenantId = await requireTenantId();
+  const tenantId = await requireTenantId({ demoOk: true });
+  const demoId = await getDemoSessionId();
+  if (demoId) {
+    const s = await db.service.findFirst({ where: { id, tenantId } });
+    if (!s || s.demoSessionId !== demoId) return;
+  }
+  const existing = await db.service.findFirst({ where: { id, tenantId } });
   await db.service.deleteMany({ where: { id, tenantId } });
   revalidatePath("/admin/services");
+  revalidatePath("/");
+  if (existing?.slug) revalidatePath(`/services/${existing.slug}`);
 }
 
 // ─── Gallery ─────────────────────────────────────────────────────────────────
 export async function addGalleryItem(formData: FormData) {
-  const tenantId = await requireTenantId();
+  const tenantId = await requireTenantId({ demoOk: true });
   const category = (formData.get("category")?.toString() ?? "").trim() || "General";
   const image = (formData.get("image")?.toString() ?? "").trim();
   const max = await db.galleryItem.aggregate({ where: { tenantId }, _max: { order: true } });
+  const demoSessionId = await getDemoSessionId();
   await db.galleryItem.create({
     data: {
       tenantId,
@@ -219,13 +387,21 @@ export async function addGalleryItem(formData: FormData) {
       image,
       caption: (formData.get("caption")?.toString() ?? "").trim(),
       order: (max._max.order ?? 0) + 1,
+      demoSessionId,
     },
   });
   revalidatePath("/admin/gallery");
+  revalidatePath("/");
 }
 
 export async function deleteGalleryItem(id: string) {
-  const tenantId = await requireTenantId();
+  const tenantId = await requireTenantId({ demoOk: true });
+  const demoId = await getDemoSessionId();
+  if (demoId) {
+    const g = await db.galleryItem.findFirst({ where: { id, tenantId } });
+    if (!g || g.demoSessionId !== demoId) return;
+  }
   await db.galleryItem.deleteMany({ where: { id, tenantId } });
   revalidatePath("/admin/gallery");
+  revalidatePath("/");
 }

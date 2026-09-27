@@ -46,7 +46,9 @@ Then, with your Neon URL set locally, create the tables:
 ```bash
 # put the Neon URL in .env as DATABASE_URL, then:
 npx prisma migrate deploy
-npm run seed        # creates the super admin + demo tenants
+# seed refuses to run on Postgres without your own super-admin login:
+SUPER_ADMIN_EMAIL="you@yourdomain.com" SUPER_ADMIN_PASSWORD="a-long-password" npm run seed
+# (demo tenants get a random owner password in production — visitors use the demo OTP flow)
 ```
 
 ## Step 3 — Get a domain & plan DNS
@@ -113,9 +115,20 @@ git push -u origin main
 ## Step 9 — Done ✅
 
 - Marketing site: `https://mysaas.com`
-- Super admin: `https://mysaas.com/super`  (`super@platform.test` / `super1234` —
-  change this password immediately, or re-seed with your own)
+- Super admin: `https://mysaas.com/super`  (the `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` you seeded with)
 - A client who subscribes gets `https://theirname.mysaas.com` + `/admin`.
+
+### Required production secrets
+
+| Name | Why |
+| --- | --- |
+| `AUTH_SECRET` | Signs session JWTs — never leave the default |
+| `CRON_SECRET` | Protects `/api/cron/renewal-reminders` |
+| `RAZORPAY_WEBHOOK_SECRET` | Optional but recommended — webhook at `/api/webhooks/razorpay` |
+
+Configure the Razorpay webhook URL to `https://mysaas.com/api/webhooks/razorpay`
+(events: `payment.captured`, `order.paid`) so orders still provision if the
+browser closes mid-checkout.
 
 ---
 

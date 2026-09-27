@@ -12,6 +12,7 @@ const NAV = [
   { href: "/super/clients", label: "Clients", icon: Building2 },
   { href: "/super/orders", label: "Orders & Payments", icon: CreditCard },
   { href: "/super/enquiries", label: "Enquiries", icon: Inbox },
+  { href: "/super/demo-leads", label: "Demo leads", icon: ShieldCheck },
   { href: "/super/coupons", label: "Coupons", icon: Ticket },
   { href: "/super/settings", label: "Settings", icon: Settings },
 ];

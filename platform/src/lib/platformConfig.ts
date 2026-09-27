@@ -1,4 +1,7 @@
 import { db } from "./db";
+import { resolveGroqModel } from "./groqModel";
+
+export { GROQ_DEFAULT_MODEL, isValidGroqModelId, normalizeGroqModelInput, resolveGroqModel } from "./groqModel";
 
 export type PlatformConfig = {
   id: string;
@@ -18,6 +21,12 @@ export type PlatformConfig = {
   reminderDays: number;
   resendApiKey: string;
   senderEmail: string;
+  demoOtpMode: string;
+  demoDurationMinutes: number;
+  demoWhatsAppToken: string;
+  demoWhatsAppPhoneId: string;
+  groqApiKey: string;
+  groqModel: string;
 };
 
 const DEFAULTS: PlatformConfig = {
@@ -38,6 +47,12 @@ const DEFAULTS: PlatformConfig = {
   reminderDays: 7,
   resendApiKey: "",
   senderEmail: "",
+  demoOtpMode: "screen",
+  demoDurationMinutes: 10,
+  demoWhatsAppToken: "",
+  demoWhatsAppPhoneId: "",
+  groqApiKey: "",
+  groqModel: "",
 };
 
 // The single platform settings row (or defaults if not yet created).
@@ -58,5 +73,14 @@ export async function getRazorpayKeys(): Promise<{ keyId: string; keySecret: str
   return {
     keyId: cfg.razorpayKeyId || process.env.RAZORPAY_KEY_ID || "",
     keySecret: cfg.razorpayKeySecret || process.env.RAZORPAY_KEY_SECRET || "",
+  };
+}
+
+/** Groq AI keys: Super Admin DB settings take priority, then env vars. */
+export async function getGroqConfig(): Promise<{ apiKey: string; model: string }> {
+  const cfg = await getPlatformConfig();
+  return {
+    apiKey: cfg.groqApiKey || process.env.GROQ_API_KEY || "",
+    model: resolveGroqModel(cfg.groqModel || process.env.GROQ_MODEL),
   };
 }

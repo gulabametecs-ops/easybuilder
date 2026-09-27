@@ -33,6 +33,12 @@ export default async function SuperSettingsPage() {
           reminderDays: cfg.reminderDays,
           hasResendKey: Boolean(cfg.resendApiKey),
           senderEmail: cfg.senderEmail,
+          demoOtpMode: cfg.demoOtpMode,
+          demoDurationMinutes: cfg.demoDurationMinutes,
+          hasWhatsAppToken: Boolean(cfg.demoWhatsAppToken),
+          demoWhatsAppPhoneId: cfg.demoWhatsAppPhoneId,
+          hasGroqKey: Boolean(cfg.groqApiKey),
+          groqModel: cfg.groqModel,
         }}
         admins={admins}
         tiers={tiers}

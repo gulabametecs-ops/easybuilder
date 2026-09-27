@@ -11,7 +11,7 @@ const ALLOWED: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "image/gif": "gif",
-  "image/svg+xml": "svg",
+  // SVG intentionally excluded — can carry XSS payloads.
 };
 
 // Tenant image upload. Saves to public/uploads/<tenantId>/ and returns the URL.
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   }
   const ext = ALLOWED[file.type];
   if (!ext) {
-    return NextResponse.json({ error: "Only JPG, PNG, WEBP, GIF or SVG allowed." }, { status: 415 });
+    return NextResponse.json({ error: "Only JPG, PNG, WEBP or GIF allowed." }, { status: 415 });
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());

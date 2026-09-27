@@ -35,9 +35,9 @@ export default async function OrdersPage() {
               <tbody className="divide-y divide-slate-100">
                 {orders.map((o) => {
                   const paid = o.status === "provisioned" || o.status === "paid";
-                  const stuck = o.status === "paid"; // paid but not yet live
+                  const stuck = o.status === "paid" || o.status === "created"; // paid-not-live OR needs manual mark-paid
                   return (
-                  <tr key={o.id} className={stuck ? "bg-amber-50/60" : ""}>
+                  <tr key={o.id} className={o.status === "paid" ? "bg-amber-50/60" : ""}>
                     <td className="p-4 font-medium text-slate-900">{o.customerName}<br /><span className="text-slate-400 font-normal">{o.email}</span></td>
                     <td className="p-4 text-slate-600">{verticalName(o.vertical)}</td>
                     <td className="p-4 text-slate-600">{o.plan}</td>
@@ -50,7 +50,7 @@ export default async function OrdersPage() {
                     <td className="p-4 text-slate-400 whitespace-nowrap">{new Date(o.createdAt).toLocaleDateString()}</td>
                     <td className="p-4 whitespace-nowrap">
                       <div className="flex items-center gap-3 text-sm">
-                        {stuck && <RetryProvisionButton orderId={o.id} />}
+                        {stuck && o.status !== "provisioned" && <RetryProvisionButton orderId={o.id} />}
                         {(paid || o.status === "refunded") && <Link href={`/super/invoice/${o.id}`} className="inline-flex items-center gap-1 text-lime-600 hover:underline"><FileText className="w-3.5 h-3.5" /> Invoice</Link>}
                         {paid && <RefundButton orderId={o.id} />}
                       </div>

@@ -1,92 +1,143 @@
-import Link from "next/link";
-import { ArrowRight, Lock, ExternalLink, LayoutDashboard, Sparkles, Check } from "lucide-react";
-import { VERTICALS, DEMO_PASSWORD } from "@/lib/verticals";
-import { ROOT_DOMAIN } from "@/lib/domains";
-import { img } from "@/lib/img";
-import { hasDemoAccess } from "@/lib/actions/demos";
-import { VerticalIcon } from "@/components/marketing/VerticalIcon";
-import { DemoGate } from "@/components/marketing/DemoGate";
+import { Check, Sparkles } from "lucide-react";
+import { VERTICALS, VERTICAL_CATEGORIES, categoryOf } from "@/lib/verticals";
+import { stockImg } from "@/lib/img";
+import { getTemplate } from "@/lib/templates";
+import { DESIGNS } from "@/lib/designs";
+import { getDemoStatusForVertical } from "@/lib/actions/demos";
+import { DemosExplorer, type ActiveInfo, type DemoCategory, type DemoSector } from "@/components/marketing/DemosExplorer";
+import { AiDraftBanner } from "@/components/marketing/AiDraftBanner";
+import { sweepExpiredDemoSessions } from "@/lib/demoSession";
+import { mkt } from "@/lib/marketingTheme";
 
 export const metadata = { title: "Live Demos — Standard SaaS" };
 
-const proto = ROOT_DOMAIN.includes("localhost") ? "http" : "https";
-const card = "rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/[0.03]";
-const muted = "text-slate-500 dark:text-slate-400";
-const liveCount = VERTICALS.filter((v) => v.status === "live").length;
+const CATEGORY_IMAGES: Record<string, string> = {
+  "Schools & Coaching": stockImg("classroom students", 640, 360),
+  "Home & Local Services": stockImg("homeservice electrician", 640, 360),
+  "Food & Hospitality": stockImg("restaurant food", 640, 360),
+  Healthcare: stockImg("doctor hospital", 640, 360),
+  "Trade & Manufacturing": stockImg("manufacturing warehouse", 640, 360),
+};
 
-export default async function DemosPage() {
-  const unlocked = await hasDemoAccess();
+// Grouped dynamically: known categories keep their defined order, any new ones follow.
+function buildCategories(): DemoCategory[] {
+  const order: string[] = [...VERTICAL_CATEGORIES];
+  for (const v of VERTICALS) {
+    const c = categoryOf(v.id);
+    if (!order.includes(c)) order.push(c);
+  }
+  return order
+    .map((name) => ({
+      name,
+      image: CATEGORY_IMAGES[name] ?? stockImg(`${name} business`, 640, 360),
+      count: VERTICALS.filter((v) => categoryOf(v.id) === name).length,
+    }))
+    .filter((c) => c.count > 0);
+}
+
+function buildSectors(): DemoSector[] {
+  return VERTICALS.map((v) => {
+    const colors = getTemplate(v.id).theme.colors;
+    return {
+      id: v.id,
+      name: v.name,
+      tagline: v.tagline,
+      icon: v.icon,
+      status: v.status,
+      category: categoryOf(v.id),
+      accent: v.accent,
+      image: stockImg(v.name, 640, 400),
+      description: v.description,
+      designs: DESIGNS.map((d) => ({
+        id: d.id,
+        name: d.name,
+        tagline: d.tagline,
+        font: d.font,
+        header: d.header,
+        hero: d.hero ?? null,
+        colors: d.palette(colors),
+      })),
+    };
+  });
+}
+
+export default async function DemosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ expired?: string; vertical?: string }>;
+}) {
+  const sp = await searchParams;
+  await sweepExpiredDemoSessions();
+
+  const live = VERTICALS.filter((v) => v.status === "live");
+  const statuses = await Promise.all(live.map(async (v) => ({ id: v.id, status: await getDemoStatusForVertical(v.id) })));
+
+  const activeByVertical: Record<string, ActiveInfo> = {};
+  for (const s of statuses) {
+    if (s.status.step !== "active") continue;
+    activeByVertical[s.id] = {
+      siteUrl: s.status.siteUrl,
+      adminUrl: s.status.adminUrl,
+      expiresAt: s.status.expiresAt,
+      minutesLeft: s.status.minutesLeft,
+      // Same session cookie holder only — lets creds survive a refresh / drawer close.
+      adminUsername: s.status.adminUsername,
+      adminPassword: s.status.adminPassword,
+    };
+  }
+
+  const categories = buildCategories();
+  const focusVertical = sp.vertical && VERTICALS.some((v) => v.id === sp.vertical) ? sp.vertical : undefined;
 
   return (
     <main>
-      {/* Premium hero band */}
-      <section className="relative overflow-hidden border-b border-black/5 dark:border-white/10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_-10%,rgba(132,204,22,0.18),transparent_50%)]" />
-        <div className="relative mx-auto max-w-6xl px-4 py-16 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full bg-lime-500/15 text-lime-700 dark:text-lime-300 text-xs font-semibold px-4 py-1.5 mb-5">
-            <Sparkles className="w-3.5 h-3.5" /> {liveCount} LIVE DEMOS · {VERTICALS.length} SECTORS
+      <section className={`relative overflow-hidden ${mkt.sectionDivider} bg-[var(--mkt-bg)]`}>
+        <div className="mkt-hero-wash absolute inset-0 pointer-events-none" aria-hidden />
+        <div className="mkt-hero-orb mkt-hero-orb-a" aria-hidden />
+        <div className="mkt-hero-orb mkt-hero-orb-b" aria-hidden />
+        <div className={`relative ${mkt.container} pt-16 pb-12 sm:pt-24 sm:pb-16 text-center`}>
+          <span className={`${mkt.badge} mb-6`}>
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-lime-500 opacity-60 motion-safe:animate-ping" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-lime-500" />
+            </span>
+            {live.length} live demos · {DESIGNS.length} designs each
           </span>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white">Explore demos by sector</h1>
-          <p className={`mt-4 max-w-2xl mx-auto ${muted}`}>
-            See a real, fully-working website for each industry — and log into its admin panel to feel how easy it is to customize.
+          <h1 className="mx-auto max-w-3xl text-4xl sm:text-6xl font-bold tracking-tight text-[var(--mkt-text)] text-balance">
+            See your website{" "}
+            <span className="bg-gradient-to-r from-lime-500 to-emerald-500 bg-clip-text text-transparent">before you buy it</span>
+          </h1>
+          <p className={`mx-auto mt-5 max-w-2xl text-base sm:text-lg ${mkt.muted} text-pretty`}>
+            Pick your sector, choose a design, verify with OTP and get a private 10-minute sandbox — live website and
+            admin panel included.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
-            {["Live websites", "Real admin panels", "Fully customizable"].map((t) => (
-              <span key={t} className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300"><Check className="w-4 h-4 text-lime-500" /> {t}</span>
+          <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
+            {["Real, working websites", "Switch between 5 designs", "Auto-reset sandbox"].map((t) => (
+              <span key={t} className="inline-flex items-center gap-1.5 text-[var(--mkt-text-secondary)]">
+                <Check className="w-4 h-4 text-lime-500" /> {t}
+              </span>
             ))}
           </div>
+          {sp.expired && !focusVertical && (
+            <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300">
+              <Sparkles className="w-4 h-4" /> Your demo session ended. Choose a sector below to start again.
+            </p>
+          )}
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 py-14">
-        {!unlocked && <div className="mb-12"><DemoGate /></div>}
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {VERTICALS.map((v) => {
-            const live = v.status === "live";
-            const siteUrl = v.demoSubdomain ? `${proto}://${v.demoSubdomain}.${ROOT_DOMAIN}` : "#";
-            const adminUrl = `${siteUrl}/admin/login`;
-            return (
-              <div key={v.id} className={`overflow-hidden flex flex-col ${card} hover:shadow-lg transition`}>
-                <div className="relative h-40">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img(v.name, 640, 360)} alt={v.name} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                  <span className="absolute top-3 left-3 w-10 h-10 rounded-xl flex items-center justify-center bg-white/90 text-slate-900"><VerticalIcon name={v.icon} className="w-5 h-5" /></span>
-                  <span className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-full ${live ? "bg-lime-500 text-white" : "bg-amber-400 text-slate-900"}`}>{live ? "● LIVE" : "COMING SOON"}</span>
-                  <h3 className="absolute bottom-3 left-4 right-4 text-white font-bold text-lg drop-shadow">{v.name}</h3>
-                </div>
-
-                <div className="p-5 flex flex-col flex-1">
-                  <p className="text-slate-400 dark:text-slate-500 text-xs">{v.tagline}</p>
-                  <p className={`text-sm mt-2 flex-1 ${muted}`}>{v.description}</p>
-
-                  {live ? (
-                    unlocked ? (
-                      <div className="mt-5 space-y-2.5">
-                        <div className="grid grid-cols-2 gap-2">
-                          <a href={siteUrl} target="_blank" className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-lime-500 text-white font-semibold px-3 py-2.5 text-sm hover:bg-lime-600">Open demo <ExternalLink className="w-3.5 h-3.5" /></a>
-                          <a href={adminUrl} target="_blank" className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/15 dark:border-white/15 text-slate-800 dark:text-white font-semibold px-3 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/10"><LayoutDashboard className="w-3.5 h-3.5" /> Admin panel</a>
-                        </div>
-                        <div className="rounded-lg bg-black/[0.03] dark:bg-white/5 px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
-                          Admin login: <span className="font-medium text-slate-700 dark:text-slate-200">{v.demoEmail}</span> · <span className="font-medium text-slate-700 dark:text-slate-200">{DEMO_PASSWORD}</span>
-                        </div>
-                        <Link href={`/subscribe?vertical=${v.id}`} className="block text-center text-sm font-semibold text-lime-600 dark:text-lime-400 hover:underline pt-1">Get this website →</Link>
-                      </div>
-                    ) : (
-                      <div className="mt-5">
-                        <span className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-black/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-semibold px-4 py-2.5 text-sm"><Lock className="w-3.5 h-3.5" /> Unlock to view demo + admin</span>
-                      </div>
-                    )
-                  ) : (
-                    <Link href={`/subscribe?vertical=${v.id}`} className="mt-5 inline-flex items-center justify-center gap-1.5 rounded-lg border border-black/15 dark:border-white/15 text-slate-800 dark:text-white font-semibold px-4 py-2.5 text-sm hover:bg-black/5 dark:hover:bg-white/10">Notify me / enquire <ArrowRight className="w-4 h-4" /></Link>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      <div className={`${mkt.container} pt-6`}>
+        <AiDraftBanner />
       </div>
+
+      <DemosExplorer
+        key={focusVertical ?? "all"}
+        categories={categories}
+        sectors={buildSectors()}
+        activeByVertical={activeByVertical}
+        focusVertical={focusVertical}
+        expired={!!sp.expired}
+      />
     </main>
   );
 }

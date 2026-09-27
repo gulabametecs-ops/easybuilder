@@ -35,7 +35,7 @@ export async function signupAction(_prev: SignupState, formData: FormData): Prom
   }
   const { businessName, subdomain, email, password } = parsed.data;
 
-  if (RESERVED.has(subdomain)) {
+  if (RESERVED.has(subdomain) || subdomain.startsWith("ai-")) {
     return { status: "error", message: "That subdomain is reserved. Please choose another." };
   }
   const taken = await db.tenant.findUnique({ where: { subdomain } });
@@ -73,7 +73,7 @@ export async function checkSubdomain(sub: string): Promise<{ available: boolean;
   if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(s) || s.length < 3) {
     return { available: false, reason: "invalid" };
   }
-  if (RESERVED.has(s)) return { available: false, reason: "reserved" };
+  if (RESERVED.has(s) || s.startsWith("ai-")) return { available: false, reason: "reserved" };
   const taken = await db.tenant.findUnique({ where: { subdomain: s } });
   return { available: !taken, reason: taken ? "taken" : undefined };
 }

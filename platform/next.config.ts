@@ -11,6 +11,19 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
+  async headers() {
+    const base = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    ];
+    // Admin panels can't be framed by other sites (clickjacking); same-origin preview frames still work.
+    const noFrame = [...base, { key: "X-Frame-Options", value: "SAMEORIGIN" }];
+    return [
+      { source: "/:path*", headers: base },
+      { source: "/admin/:path*", headers: noFrame },
+      { source: "/super/:path*", headers: noFrame },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -1,6 +1,8 @@
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import { getTemplate } from "./templates";
+import { designTheme, designHeader, designFooter, designSeeds } from "./designs";
+import type { SectionStyle } from "./config";
 import { img } from "./img";
 
 export type ProvisionInput = {
@@ -13,6 +15,8 @@ export type ProvisionInput = {
   status?: string;
   vertical?: string;
   subscriptionEndsAt?: Date | null;
+  /** Design preset id (see lib/designs.ts); empty = template as designed. */
+  design?: string;
 };
 
 // Creates a fully-populated tenant from the default template.
@@ -21,6 +25,7 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
   const { businessName, subdomain, ownerEmail } = input;
   const biz = businessName;
   const tpl = getTemplate(input.vertical ?? "home-services");
+  const design = input.design ?? "";
   const passwordHash = input.ownerPasswordHash ?? (input.ownerPassword ? await bcrypt.hash(input.ownerPassword, 10) : "");
   if (!passwordHash) throw new Error("No password provided for the owner account");
 
@@ -49,23 +54,31 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
     await tx.siteConfig.create({
       data: {
         tenantId: tenant.id,
-        theme: JSON.stringify(tpl.theme),
-        header: JSON.stringify(tpl.header(biz)),
-        footer: JSON.stringify(tpl.footer(biz)),
+        theme: JSON.stringify(designTheme(tpl.theme, design)),
+        header: JSON.stringify(designHeader(tpl.header(biz), design)),
+        footer: JSON.stringify(designFooter(tpl.footer(biz), design)),
         seo: JSON.stringify(tpl.seo(biz)),
       },
     });
 
     // Services
+    const svcSlug = (t: string) => t.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "service";
+    const seen = new Set<string>();
     await tx.service.createMany({
-      data: tpl.services.map((s, i) => ({
-        tenantId: tenant.id,
-        category: s.category,
-        title: s.title,
-        description: s.description,
-        image: img(`${s.title}-${i}`, 600, 400),
-        order: i,
-      })),
+      data: tpl.services.map((s, i) => {
+        let slug = svcSlug(s.title);
+        while (seen.has(slug)) slug = `${svcSlug(s.title)}-${i}`;
+        seen.add(slug);
+        return {
+          tenantId: tenant.id,
+          category: s.category,
+          title: s.title,
+          description: s.description,
+          image: img(`${s.title}-${i}`, 600, 400),
+          order: i,
+          slug,
+        };
+      }),
     });
 
     // Gallery
@@ -92,7 +105,7 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
         },
       });
 
-      let sections = page.sections as { type: string; content: unknown }[];
+      let sections = page.sections as { type: string; content: unknown; style?: SectionStyle }[];
       const firstType = sections[0]?.type;
       if (page.slug !== "home" && firstType !== "banner" && firstType !== "hero") {
         const words = page.title.trim().split(/\s+/);
@@ -103,8 +116,9 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
         ];
       }
 
-      // Home page: add social proof (testimonials) + FAQ before the trailing CTA.
-      if (page.slug === "home") {
+      // Home page: add generic social proof + FAQ before the trailing CTA — only when
+      // the template doesn't already bring its own (vertical-specific) ones.
+      if (page.slug === "home" && !sections.some((s) => s.type === "testimonials" || s.type === "faq")) {
         const extras = [
           { type: "testimonials", content: {
             eyebrow: "TESTIMONIALS", title: "What Our", titleHighlight: "Customers Say",
@@ -130,12 +144,14 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
           : [...sections, ...extras];
       }
 
+      sections = designSeeds(sections, design);
       await tx.section.createMany({
         data: sections.map((sec, i) => ({
           pageId: createdPage.id,
           type: sec.type,
           order: i,
           content: JSON.stringify(sec.content),
+          ...(sec.style && Object.keys(sec.style).length ? { style: JSON.stringify(sec.style) } : {}),
         })),
       });
     }

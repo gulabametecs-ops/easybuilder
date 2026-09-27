@@ -17,9 +17,21 @@ export default async function ClientInvoicePage({ params }: { params: Promise<{ 
   const cfg = await getPlatformConfig();
 
   return (
-    <div className="min-h-screen bg-slate-100 py-10 px-4">
+    <div
+      className="min-h-screen py-10 px-4"
+      style={{
+        background: "linear-gradient(180deg, color-mix(in srgb, var(--c-primary, #7cb518) 10%, #f8fafc), var(--c-light, #f4f7ee))",
+        fontFamily: 'var(--site-font, "Poppins", ui-sans-serif, system-ui, sans-serif)',
+      }}
+    >
       <div className="max-w-2xl mx-auto mb-4 no-print">
-        <Link href="/admin/billing" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800"><ArrowLeft className="w-4 h-4" /> Back to billing</Link>
+        <Link
+          href="/admin/billing"
+          className="inline-flex items-center gap-1.5 text-sm font-medium hover:opacity-80"
+          style={{ color: "var(--c-heading, #0f2942)" }}
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to billing
+        </Link>
       </div>
       <Invoice order={order} cfg={cfg} />
     </div>

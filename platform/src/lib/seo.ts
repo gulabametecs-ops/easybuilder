@@ -20,11 +20,12 @@ export function buildSiteMetadata(config: TenantConfig, bizName: string, baseUrl
     keywords: seo.keywords ? seo.keywords.split(",").map((k) => k.trim()).filter(Boolean) : undefined,
     icons: seo.favicon ? [{ url: seo.favicon }] : undefined,
     alternates: { canonical: baseUrl },
-    robots: seo.indexable === false
-      ? { index: false, follow: false }
-      : { index: true, follow: true },
+    robots: {
+      index: seo.indexable !== false,
+      follow: seo.robotsFollow !== false,
+    },
     openGraph: {
-      type: "website",
+      type: seo.ogType === "article" || seo.ogType === "profile" ? seo.ogType : "website",
       siteName: bizName,
       title: seo.title || bizName,
       description: seo.description,
@@ -38,7 +39,12 @@ export function buildSiteMetadata(config: TenantConfig, bizName: string, baseUrl
       description: seo.description,
       images: seo.ogImage ? [seo.ogImage] : undefined,
     },
-    verification: seo.googleVerification ? { google: seo.googleVerification } : undefined,
+    verification: (seo.googleVerification || seo.bingVerification)
+      ? {
+          google: seo.googleVerification || undefined,
+          other: seo.bingVerification ? { "msvalidate.01": seo.bingVerification } : undefined,
+        }
+      : undefined,
   };
 }
 
@@ -68,5 +74,17 @@ export function localBusinessJsonLd(config: TenantConfig, bizName: string, baseU
   if (seo.priceRange) data.priceRange = seo.priceRange;
   if (seo.geoLat && seo.geoLng) data.geo = { "@type": "GeoCoordinates", latitude: seo.geoLat, longitude: seo.geoLng };
   if (sameAs.length) data.sameAs = sameAs;
+  if (seo.ratingValue && seo.ratingCount) data.aggregateRating = { "@type": "AggregateRating", ratingValue: seo.ratingValue, reviewCount: seo.ratingCount };
   return data;
+}
+
+// FAQPage structured data built from the page's FAQ sections (rich results).
+export function faqJsonLd(faqs: { q: string; a: string }[]): Record<string, unknown> | null {
+  const items = faqs.filter((f) => f.q && f.a);
+  if (!items.length) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  };
 }

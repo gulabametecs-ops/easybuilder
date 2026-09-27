@@ -1,14 +1,15 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { db } from "./db";
+import { authSecret } from "./secret";
 
 const COOKIE = "super_session";
-const secret = new TextEncoder().encode((process.env.AUTH_SECRET ?? "dev-secret") + "-super");
+const secret = () => authSecret("-super");
 
 export type SuperSession = { userId: string; email: string; name: string };
 
 export async function createSuperSession(s: SuperSession) {
-  const token = await new SignJWT(s).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("7d").sign(secret);
+  const token = await new SignJWT(s).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("7d").sign(secret());
   const store = await cookies();
   store.set(COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 7 });
 }
@@ -21,7 +22,7 @@ export async function getSuperSession(): Promise<SuperSession | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, secret());
     return payload as unknown as SuperSession;
   } catch {
     return null;

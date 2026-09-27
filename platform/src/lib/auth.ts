@@ -2,14 +2,13 @@ import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import { db } from "./db";
 import { getCurrentTenant } from "./tenant";
+import { authSecret } from "./secret";
 
 export const SESSION_COOKIE = "admin_session";
 const COOKIE = SESSION_COOKIE;
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "dev-secret-change-me",
-);
+const secret = () => authSecret();
 // Distinct secret for short-lived impersonation hand-off tokens.
-const impSecret = new TextEncoder().encode((process.env.AUTH_SECRET ?? "dev-secret-change-me") + "-impersonate");
+const impSecret = () => authSecret("-impersonate");
 
 export type Session = {
   userId: string;
@@ -17,6 +16,8 @@ export type Session = {
   email: string;
   role: string;
   name: string;
+  /** Set for demo-visitor logins: writes are limited to the per-visitor sandbox (see guard.ts). */
+  demo?: boolean;
 };
 
 export const sessionCookieOpts = {
@@ -28,7 +29,7 @@ export const sessionCookieOpts = {
 };
 
 export async function signSession(session: Session): Promise<string> {
-  return new SignJWT(session).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("7d").sign(secret);
+  return new SignJWT(session).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("7d").sign(secret());
 }
 
 // Signs a session JWT and stores it as an httpOnly cookie. Because each tenant
@@ -42,11 +43,11 @@ export async function createSession(session: Session) {
 // Short-lived token used to hand off a super-admin "login as client" across
 // hosts (super admin lives on the root domain, tenant admin on the subdomain).
 export async function createImpersonationToken(session: Session): Promise<string> {
-  return new SignJWT(session).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("2m").sign(impSecret);
+  return new SignJWT(session).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("2m").sign(impSecret());
 }
 export async function consumeImpersonationToken(token: string): Promise<Session | null> {
   try {
-    const { payload } = await jwtVerify(token, impSecret);
+    const { payload } = await jwtVerify(token, impSecret());
     return payload as unknown as Session;
   } catch {
     return null;
@@ -64,7 +65,7 @@ export async function getSession(): Promise<Session | null> {
   const token = store.get(COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, secret());
     return payload as unknown as Session;
   } catch {
     return null;

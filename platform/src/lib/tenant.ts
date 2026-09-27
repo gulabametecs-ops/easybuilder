@@ -36,6 +36,7 @@ export type TenantConfig = {
   footer: FooterConfig;
   seo: SeoConfig;
   customCss: string;
+  resultConfig: string;
 };
 
 // Loads + parses the site-wide config (theme/header/footer/seo) for a tenant.
@@ -47,7 +48,40 @@ export const getTenantConfig = cache(async (tenantId: string, bizName: string): 
     footer: parseJson<FooterConfig>(cfg?.footer, defaultFooter(bizName)),
     seo: parseJson<SeoConfig>(cfg?.seo, defaultSeo(bizName)),
     customCss: cfg?.customCss ?? "",
+    resultConfig: cfg?.resultConfig ?? "{}",
   };
+});
+
+export type SiteNotice = { date: string; title: string; category: string; link: string; isNew: boolean; isResult: boolean; attachmentUrl: string; attachmentName: string };
+
+const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function fmtDate(d: Date): string {
+  return `${String(d.getDate()).padStart(2, "0")} ${MON[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+// The unified notice feed for the public site: admin notices PLUS every
+// published result exam (each result is itself a notice that links to the
+// result-search for that exam). Pinned first, then newest.
+export const getSiteNotices = cache(async (tenantId: string): Promise<SiteNotice[]> => {
+  const { getActiveDemoSession } = await import("./demoSession");
+  const demo = await getActiveDemoSession();
+  const noticeWhere = demo
+    ? { tenantId, published: true, OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] }
+    : { tenantId, published: true };
+
+  const [notices, exams] = await Promise.all([
+    db.notice.findMany({ where: noticeWhere, orderBy: [{ pinned: "desc" }, { createdAt: "desc" }] }),
+    db.resultExam.findMany({ where: { tenantId, published: true }, orderBy: { createdAt: "desc" } }),
+  ]);
+  const now = Date.now();
+  const NEW_MS = 14 * 24 * 3600 * 1000;
+
+  const manual = notices.map((n) => ({ date: n.date, title: n.title, category: n.category, link: n.link, isNew: n.pinned, isResult: false, attachmentUrl: n.attachmentUrl, attachmentName: n.attachmentName, pinned: n.pinned, ts: n.createdAt.getTime() }));
+  const results = exams.map((e) => ({ date: fmtDate(e.createdAt), title: `${e.name} — Result Declared`, category: "Result", link: `/result?exam=${e.id}`, isNew: now - e.createdAt.getTime() < NEW_MS, isResult: true, attachmentUrl: "", attachmentName: "", pinned: false, ts: e.createdAt.getTime() }));
+
+  const all = [...manual, ...results];
+  all.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.ts - a.ts);
+  return all.map(({ date, title, category, link, isNew, isResult, attachmentUrl, attachmentName }) => ({ date, title, category, link, isNew, isResult, attachmentUrl, attachmentName }));
 });
 
 // Loads a published page + its visible sections (ordered) for rendering.
@@ -68,8 +102,13 @@ export const getPageForEditor = cache(async (tenantId: string, slug: string) => 
 
 // Services grouped by category (ordered), for service sections & form dropdowns.
 export const getServicesGrouped = cache(async (tenantId: string) => {
+  const { getActiveDemoSession } = await import("./demoSession");
+  const demo = await getActiveDemoSession();
+  const where = demo
+    ? { tenantId, OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] }
+    : { tenantId };
   const services = await db.service.findMany({
-    where: { tenantId },
+    where,
     orderBy: { order: "asc" },
   });
   const groups = new Map<string, typeof services>();
@@ -82,8 +121,13 @@ export const getServicesGrouped = cache(async (tenantId: string) => {
 
 // Gallery grouped by category (ordered).
 export const getGalleryGrouped = cache(async (tenantId: string) => {
+  const { getActiveDemoSession } = await import("./demoSession");
+  const demo = await getActiveDemoSession();
+  const where = demo
+    ? { tenantId, OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] }
+    : { tenantId };
   const items = await db.galleryItem.findMany({
-    where: { tenantId },
+    where,
     orderBy: { order: "asc" },
   });
   const groups = new Map<string, typeof items>();

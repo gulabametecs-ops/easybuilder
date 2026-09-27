@@ -1,7 +1,6 @@
 import { getAuthedSession } from "@/lib/auth";
 import { getTenantConfig } from "@/lib/tenant";
 import { ROOT_DOMAIN } from "@/lib/domains";
-import { PageHeader } from "@/components/admin/ui";
 import { SeoManager } from "@/components/admin/SeoManager";
 
 export const metadata = { title: "SEO" };
@@ -14,9 +13,13 @@ export default async function SeoPage() {
   const siteUrl = tenant.customDomain ? `https://${tenant.customDomain}` : `http://${tenant.subdomain}.${ROOT_DOMAIN}`;
 
   return (
-    <>
-      <PageHeader title="SEO" subtitle="Control how your website appears on Google and social media. Changes go live instantly." />
-      <SeoManager seo={config.seo} siteUrl={siteUrl} bizName={tenant.name} />
-    </>
+    <div className="admin-full-bleed flex flex-col flex-1 min-h-0">
+      <SeoManager
+        seo={config.seo}
+        siteUrl={siteUrl}
+        bizName={tenant.name}
+        sitemapUrl={`${siteUrl}/sitemap.xml`}
+      />
+    </div>
   );
 }

@@ -37,6 +37,9 @@ model Tenant {
   galleryItems GalleryItem[]
   leads        Lead[]
   appointments Appointment[]
+  notices      Notice[]
+  resultExams  ResultExam[]
+  campaigns    Campaign[]
 }
 
 // ─── Login accounts for a tenant's admin panel ───────────────────────────────
@@ -63,7 +66,100 @@ model SiteConfig {
   footer    String   @default("{}") // JSON: about, columns, social, contact
   seo       String   @default("{}") // JSON: title, description, favicon, ogImage
   customCss String   @default("") // site-wide custom CSS injected into every page
+  resultConfig String @default("{}") // JSON: marksheet/report-card template settings
+  adminPrefs String @default("{}") // JSON: notifyLeads, notifyAppointments, etc.
   updatedAt DateTime @updatedAt
+}
+
+// ─── Ad campaigns (marketing manager) ─────────────────────────────────────────
+model Campaign {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  platform  String   @default("google") // google | meta | instagram | whatsapp | local | other
+  objective String   @default("leads")  // leads | traffic | awareness | sales | calls
+  service   String   @default("")       // which service/product this ad promotes
+  adImage   String   @default("")        // creative image for this ad
+  headline  String   @default("")
+  adText    String   @default("")
+  targetUrl String   @default("")
+  budget    Int      @default(0)  // total planned budget
+  startDate String   @default("")
+  endDate   String   @default("")
+  // Audience targeting
+  gender    String   @default("all") // all | male | female
+  ageMin    Int      @default(18)
+  ageMax    Int      @default(65)
+  interests String   @default("[]") // JSON array of interest keywords
+  locations String   @default("[]") // JSON array of target cities/areas
+  radiusKm  Int      @default(0)     // target radius around locations
+  status    String   @default("draft") // draft | active | paused | completed
+  spend     Int      @default(0)
+  clicks    Int      @default(0)
+  leads     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+// ─── Notices / circulars (managed from the admin panel) ───────────────────────
+model Notice {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  date      String   @default("") // display date e.g. "20 Jul 2026"
+  title     String
+  category  String   @default("News") // Result | Admission | Exam | Event | Holiday | News
+  link      String   @default("")
+  attachmentUrl  String @default("") // uploaded image / PDF / document
+  attachmentName String @default("") // original file name (for display)
+  pinned    Boolean  @default(false)
+  published Boolean  @default(true)
+  order     Int      @default(0)
+  demoSessionId String? // set during OTP demo sandbox — deleted when session expires
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+// ─── Results: one exam dataset, uploaded via CSV ──────────────────────────────
+model ResultExam {
+  id        String          @id @default(cuid())
+  tenantId  String
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String // "Annual Examination 2026"
+  published Boolean         @default(true)
+  verifyDob Boolean         @default(false) // require DOB along with roll no
+  createdAt DateTime        @default(now())
+  results   StudentResult[]
+
+  @@unique([tenantId, name])
+}
+
+// ─── A single student's result within an exam ─────────────────────────────────
+model StudentResult {
+  id         String     @id @default(cuid())
+  examId     String
+  exam       ResultExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  tenantId   String
+  rollNo     String
+  name       String
+  className  String     @default("")
+  section    String     @default("")
+  fatherName String     @default("")
+  motherName String     @default("")
+  dob        String     @default("")
+  subjects   String     @default("[]") // JSON: [{ name, max, obtained }]
+  total      Int        @default(0)
+  maxTotal   Int        @default(0)
+  percentage Float      @default(0)
+  grade      String     @default("")
+  status     String     @default("") // Pass | Fail
+  remarks    String     @default("")
+
+  @@index([tenantId, rollNo])
 }
 
 // ─── Pages (system pages + client's custom pages) ─────────────────────────────
@@ -110,6 +206,13 @@ model Service {
   description String @default("")
   image       String @default("")
   order       Int    @default(0)
+  slug            String @default("") // URL slug for the service detail page
+  longDescription String @default("") // richer content shown on the detail page
+  seoTitle        String @default("") // per-service SEO title
+  seoDescription  String @default("") // per-service SEO meta description
+  demoSessionId   String? // demo sandbox create — cleaned on expiry
+
+  @@index([demoSessionId])
 }
 
 // ─── Gallery ──────────────────────────────────────────────────────────────────
@@ -119,8 +222,11 @@ model GalleryItem {
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category String
   image    String
-  caption  String @default("")
-  order    Int    @default(0)
+  caption String @default("")
+  order   Int    @default(0)
+  demoSessionId String?
+
+  @@index([demoSessionId])
 }
 
 // ─── Quote / contact-form submissions ─────────────────────────────────────────
@@ -135,7 +241,11 @@ model Lead {
   location  String   @default("")
   message   String   @default("")
   status    String   @default("new") // new | contacted | converted | closed
+  demoSessionId String? // demo sandbox — deleted when session expires
   createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([demoSessionId])
 }
 
 // ─── Appointment bookings ─────────────────────────────────────────────────────
@@ -151,7 +261,11 @@ model Appointment {
   time      String   @default("")
   message   String   @default("")
   status    String   @default("pending") // pending | confirmed | completed | cancelled
+  demoSessionId String? // demo sandbox — deleted when session expires
   createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([demoSessionId])
 }
 
 // ─── Marketing site: demo requests & signups for the platform itself ──────────
@@ -165,7 +279,39 @@ model PlatformLead {
   type      String   @default("demo") // demo | signup | contact
   message   String   @default("")
   status    String   @default("new")
+  verified  Boolean  @default(false) // OTP verified for demo leads
   createdAt DateTime @default(now())
+
+  demoSessions DemoSession[]
+}
+
+// ─── Isolated demo sandbox session (10 min, per vertical, per visitor) ────────
+model DemoSession {
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  phone          String
+  company        String   @default("")
+  vertical       String   // locked to one sector
+  token          String   @unique @default(cuid())
+  otpHash        String   @default("")
+  otpExpiresAt   DateTime?
+  verifiedAt     DateTime?
+  status         String   @default("pending_otp") // pending_otp | active | expired
+  expiresAt      DateTime?
+  overlay        String   @default("{}") // per-session customizations (never touches tenant DB)
+  pagesViewed    String   @default("[]") // JSON array of page slugs
+  adminUsername  String   @default("") // temporary unique admin username (cleared on expire)
+  adminPassword  String   @default("") // temporary admin password (cleared on expire)
+  platformLeadId String?
+  platformLead   PlatformLead? @relation(fields: [platformLeadId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([phone, vertical])
+  @@index([token])
+  @@index([status])
+  @@index([adminUsername])
 }
 
 // ─── Platform-wide settings (single row) ─────────────────────────────────────
@@ -190,6 +336,14 @@ model PlatformConfig {
   reminderDays      Int      @default(7)
   resendApiKey      String   @default("")
   senderEmail       String   @default("")
+  // Demo gate: OTP + isolated sandbox sessions
+  demoOtpMode       String   @default("screen") // screen | whatsapp
+  demoDurationMinutes Int    @default(10)
+  demoWhatsAppToken String   @default("")
+  demoWhatsAppPhoneId String @default("")
+  // AI Website Builder (Groq — server-side only)
+  groqApiKey        String   @default("")
+  groqModel         String   @default("") // blank = openai/gpt-oss-120b
   updatedAt         DateTime @updatedAt
 }
 
@@ -203,6 +357,23 @@ model Coupon {
   usedCount  Int       @default(0)
   expiresAt  DateTime?
   createdAt  DateTime  @default(now())
+}
+
+// ─── AI website builder (Groq planning → existing section engine) ─────────────
+model AiGeneration {
+  id         String   @id @default(cuid())
+  tenantId   String
+  kind       String   // plan | generate | modify | apply
+  prompt     String
+  blueprint  String   @default("{}") // structured plan JSON
+  operations String   @default("[]") // modify ops JSON
+  snapshot   String   @default("{}") // pre-modify snapshot for rollback
+  status     String   @default("completed") // pending | completed | failed
+  error      String   @default("")
+  pageId     String   @default("") // optional page scope
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
 }
 
 // ─── Super-admin (platform owner) accounts ────────────────────────────────────
@@ -235,7 +406,11 @@ model Order {
   refundedAt      DateTime?
   passwordHash    String   @default("") // bcrypt of the admin password chosen at checkout (for provisioning/recovery)
   provisionError  String   @default("") // last provisioning error, for diagnostics/retry
-  tenantId        String? // set after provisioning
+  couponCode      String   @default("") // applied only after payment succeeds
+  aiBlueprint     String   @default("{}") // JSON plan from marketing AI builder
+  design          String   @default("") // design preset id (lib/designs.ts); "" = template as designed
+  kind            String   @default("new") // new | renew | upgrade
+  tenantId        String? // set after provisioning (or for renewals, set at create)
   tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

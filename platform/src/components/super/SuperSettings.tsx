@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-import { saveRazorpay, savePlatform, saveBroadcast, savePlans, saveGst, saveReminders, triggerReminders, changeSuperPassword, addSuperAdmin, type SettingsState } from "@/lib/actions/superSettings";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { saveRazorpay, savePlatform, saveBroadcast, savePlans, saveGst, saveReminders, triggerReminders, changeSuperPassword, addSuperAdmin, saveDemoSettings, saveGroq, type SettingsState } from "@/lib/actions/superSettings";
+import { GROQ_DEFAULT_MODEL, isValidGroqModelId } from "@/lib/groqModel";
 import { type Tier } from "@/lib/plans";
 import { Card } from "@/components/admin/ui";
-import { CreditCard, Building2, KeyRound, UserPlus, CheckCircle2, AlertCircle, Megaphone, Layers, FileText, BellRing } from "lucide-react";
+import { CreditCard, Building2, KeyRound, UserPlus, CheckCircle2, AlertCircle, Megaphone, Layers, FileText, BellRing, Smartphone, Sparkles } from "lucide-react";
 
 const init: SettingsState = { ok: false, message: "" };
 const inputCls = "w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-lime-500";
@@ -20,12 +22,16 @@ type Cfg = {
   broadcastShow: boolean; broadcastText: string;
   gstin: string; businessAddress: string; gstRate: number; invoicePrefix: string;
   remindersEnabled: boolean; reminderDays: number; hasResendKey: boolean; senderEmail: string;
+  demoOtpMode: string; demoDurationMinutes: number; hasWhatsAppToken: boolean; demoWhatsAppPhoneId: string;
+  hasGroqKey: boolean; groqModel: string;
 };
 
 export function SuperSettings({ cfg, admins, tiers }: { cfg: Cfg; admins: { email: string; name: string | null }[]; tiers: Tier[] }) {
   const live = Boolean(cfg.razorpayKeyId && cfg.hasSecret);
   return (
     <div className="space-y-6 max-w-3xl">
+      <DemoSettingsForm cfg={cfg} />
+      <GroqForm cfg={cfg} />
       <RazorpayForm cfg={cfg} live={live} />
       <PlansForm tiers={tiers} />
       <GstForm cfg={cfg} />
@@ -37,6 +43,111 @@ export function SuperSettings({ cfg, admins, tiers }: { cfg: Cfg; admins: { emai
         <AddAdminForm admins={admins} />
       </div>
     </div>
+  );
+}
+
+function GroqForm({ cfg }: { cfg: Cfg }) {
+  const router = useRouter();
+  const [state, action, pending] = useActionState(saveGroq, init);
+  const live = cfg.hasGroqKey;
+  const savedModel = cfg.groqModel && isValidGroqModelId(cfg.groqModel) ? cfg.groqModel : "";
+  const activeModel = savedModel || GROQ_DEFAULT_MODEL;
+
+  useEffect(() => {
+    if (state.ok) router.refresh();
+  }, [state.ok, router]);
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-lime-600" /> AI Website Builder (Groq)
+        </h3>
+        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${live ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+          {live ? "● AI enabled" : "Not configured"}
+        </span>
+      </div>
+      <p className="text-sm text-slate-500 mb-4">
+        Powers the homepage AI prompt and admin AI builder. Get a free key from{" "}
+        <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-lime-600 underline">
+          console.groq.com
+        </a>
+        . Stored server-side only — never exposed to browsers.
+      </p>
+      <form key={`${cfg.hasGroqKey}-${savedModel}`} action={action} className="space-y-4">
+        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+          Active model: <span className="font-mono font-semibold text-slate-800">{activeModel}</span>
+          {!savedModel && <span className="text-slate-500"> (default)</span>}
+        </p>
+        <label className="block">
+          <span className={lbl}>Groq API key</span>
+          <input
+            name="groqApiKey"
+            type="password"
+            autoComplete="off"
+            placeholder={cfg.hasGroqKey ? "•••••••• (saved — leave blank to keep)" : "gsk_xxxxxxxx"}
+            className={inputCls}
+          />
+          <span className="block text-xs text-slate-400 mt-1">Key is saved securely. Leave blank when saving other fields to keep the existing key.</span>
+        </label>
+        <label className="block">
+          <span className={lbl}>Model (optional)</span>
+          <input
+            name="groqModel"
+            defaultValue={savedModel}
+            placeholder={GROQ_DEFAULT_MODEL}
+            className={inputCls}
+          />
+          <span className="block text-xs text-slate-400 mt-1">
+            Full model ID only (must include <code className="text-slate-500">/</code>), e.g.{" "}
+            <code className="text-slate-500">{GROQ_DEFAULT_MODEL}</code>. Leave blank to use default.
+          </span>
+        </label>
+        <Msg s={state} />
+        <button disabled={pending} className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 hover:bg-slate-800 disabled:opacity-60">
+          {pending ? "Saving..." : "Save Groq settings"}
+        </button>
+      </form>
+    </Card>
+  );
+}
+
+function DemoSettingsForm({ cfg }: { cfg: Cfg }) {
+  const [state, action, pending] = useActionState(saveDemoSettings, init);
+  return (
+    <Card className="p-6">
+      <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-1"><Smartphone className="w-5 h-5 text-lime-600" /> Demo gate (OTP &amp; sandbox)</h3>
+      <p className="text-sm text-slate-500 mb-4">
+        Control how visitors unlock sector demos. <strong>Screen (test)</strong> shows OTP on the page. <strong>WhatsApp</strong> sends OTP via Meta WhatsApp Cloud API.
+      </p>
+      <form action={action} className="space-y-4">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <label className="block">
+            <span className={lbl}>OTP delivery</span>
+            <select name="demoOtpMode" defaultValue={cfg.demoOtpMode} className={inputCls}>
+              <option value="screen">Screen (test) — show OTP on page</option>
+              <option value="whatsapp">WhatsApp — send OTP to phone</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className={lbl}>Demo duration (minutes)</span>
+            <input name="demoDurationMinutes" type="number" min={5} max={60} defaultValue={cfg.demoDurationMinutes} className={inputCls} />
+          </label>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <label className="block">
+            <span className={lbl}>WhatsApp API token</span>
+            <input name="demoWhatsAppToken" type="password" placeholder={cfg.hasWhatsAppToken ? "•••••••• (blank to keep)" : "Meta Cloud API token"} className={inputCls} />
+          </label>
+          <label className="block">
+            <span className={lbl}>WhatsApp Phone Number ID</span>
+            <input name="demoWhatsAppPhoneId" defaultValue={cfg.demoWhatsAppPhoneId} placeholder="From Meta developer console" className={inputCls} />
+          </label>
+        </div>
+        <Msg s={state} />
+        <button disabled={pending} className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 hover:bg-slate-800 disabled:opacity-60">{pending ? "Saving..." : "Save demo settings"}</button>
+      </form>
+    </Card>
   );
 }
 

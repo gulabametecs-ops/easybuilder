@@ -34,6 +34,12 @@ import {
   BookOpen,
   Plane,
   HeartPulse,
+  ThumbsUp,
+  Gift,
+  Package,
+  Factory,
+  Heart,
+  Truck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,6 +55,7 @@ const MAP: Record<string, LucideIcon> = {
   phone: Phone,
   mail: Mail,
   map: MapPin,
+  "map-pin": MapPin,
   facebook: Share2,
   instagram: Camera,
   whatsapp: MessageCircle,
@@ -57,6 +64,7 @@ const MAP: Record<string, LucideIcon> = {
   clipboard: ClipboardCheck,
   calendar: Calendar,
   bolt: Zap,
+  zap: Zap,
   droplet: Droplets,
   hammer: Hammer,
   roller: PaintRoller,
@@ -67,13 +75,31 @@ const MAP: Record<string, LucideIcon> = {
   trending: TrendingUp,
   arrow: ArrowRight,
   graduation: GraduationCap,
+  "graduation-cap": GraduationCap,
   stethoscope: Stethoscope,
   utensils: Utensils,
   store: Store,
   book: BookOpen,
+  "book-open": BookOpen,
   plane: Plane,
-  heart: HeartPulse,
+  heart: Heart,
+  "heart-pulse": HeartPulse,
+  "thumbs-up": ThumbsUp,
+  gift: Gift,
+  package: Package,
+  factory: Factory,
+  truck: Truck,
 };
+
+/** Icon keys shown in the admin visual picker. */
+export const ICON_OPTIONS = [
+  "star", "check", "badge-check", "award", "thumbs-up", "heart", "shield",
+  "home", "users", "user-check", "phone", "mail", "map", "calendar",
+  "clock", "zap", "gift", "tag", "edit", "wrench", "hammer", "droplet",
+  "roller", "package", "factory", "truck", "book", "graduation", "stethoscope",
+  "utensils", "store", "plane", "headset", "clipboard", "handshake", "trending",
+  "arrow", "whatsapp", "instagram", "facebook",
+] as const;
 
 export function Icon({
   name,
@@ -95,17 +121,13 @@ export function categoryIcon(category: string): string {
   if (c.includes("plumb")) return "droplet";
   if (c.includes("carpen") || c.includes("interior")) return "hammer";
   if (c.includes("paint")) return "roller";
-  // education
   if (c.includes("abroad") || c.includes("universit")) return "graduation";
   if (c.includes("india")) return "graduation";
   if (c.includes("test") || c.includes("prep") || c.includes("course")) return "book";
   if (c.includes("visa") || c.includes("document")) return "plane";
-  // healthcare
   if (c.includes("dental") || c.includes("eye") || c.includes("skin") || c.includes("mental") || c.includes("medicine") || c.includes("clinic")) return "stethoscope";
   if (c.includes("health")) return "heart";
-  // food
   if (c.includes("dining") || c.includes("food") || c.includes("menu") || c.includes("event") || c.includes("cater")) return "utensils";
-  // retail
   if (c.includes("product") || c.includes("wholesale") || c.includes("shop")) return "store";
   return "wrench";
 }

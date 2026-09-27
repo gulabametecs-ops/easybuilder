@@ -22,13 +22,6 @@ export async function validateCoupon(code: string): Promise<CouponResult> {
   return { valid: true, code: c, percentOff: coupon.percentOff, message: `${coupon.percentOff}% off applied!` };
 }
 
-// Marks a coupon as used (called after a successful order).
-export async function redeemCoupon(code: string): Promise<void> {
-  const c = code.trim().toUpperCase();
-  if (!c) return;
-  await db.coupon.updateMany({ where: { code: c, active: true }, data: { usedCount: { increment: 1 } } });
-}
-
 // ─── Super-admin CRUD ─────────────────────────────────────────────────────────
 export async function createCoupon(formData: FormData) {
   await requireSuper();

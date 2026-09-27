@@ -4,11 +4,14 @@ import type {
   FooterConfig,
   SeoConfig,
   SectionContentMap,
+  SectionStyle,
 } from "../config";
 
 export type SectionSeed<T extends keyof SectionContentMap = keyof SectionContentMap> = {
   type: T;
   content: SectionContentMap[T];
+  /** Optional per-section design (background, card look, alignment…). */
+  style?: SectionStyle;
 };
 
 export type PageSeed = {

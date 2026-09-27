@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { parseHost } from "@/lib/domains";
 import { getTenantConfig } from "@/lib/tenant";
 import { baseUrlFromHost } from "@/lib/seo";
+import { checkTenantAccess } from "@/lib/subscription";
 
 // Per-host robots.txt. Bypasses the proxy (dot in path), so we resolve the
 // tenant straight from the Host header here.
@@ -20,8 +21,9 @@ export async function GET(request: Request) {
     : await db.tenant.findUnique({ where: { subdomain: info.key } });
   if (!tenant) return text(`User-agent: *\nDisallow: /\n`);
 
+  const access = checkTenantAccess(tenant);
   const config = await getTenantConfig(tenant.id, tenant.name);
-  if (config.seo.indexable === false || tenant.status === "suspended") {
+  if (config.seo.indexable === false || !access.allowed) {
     return text(`User-agent: *\nDisallow: /\n`);
   }
   return text(`User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: ${baseUrl}/sitemap.xml\n`);

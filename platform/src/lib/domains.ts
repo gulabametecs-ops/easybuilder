@@ -38,6 +38,14 @@ export function parseHost(rawHost: string | null | undefined): HostInfo {
     return { kind: "marketing" };
   }
 
+  // Local dev: treat 127.0.0.1 same as localhost when platform runs on localhost
+  if (
+    (root === "localhost" || ROOT_DOMAIN.includes("localhost")) &&
+    (host === "127.0.0.1" || host === "localhost")
+  ) {
+    return { kind: "marketing" };
+  }
+
   // Subdomain of the root domain -> tenant by subdomain
   if (host.endsWith(`.${root}`)) {
     const key = host.slice(0, host.length - root.length - 1);
