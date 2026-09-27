@@ -26,8 +26,10 @@ export function SectorExplorer({ categories }: { categories: Category[] }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const active = categories.find((c) => c.name === open) ?? categories[0] ?? null;
 
+  // Scroll to the panel only after the visitor picks a category — never on page load.
+  const picked = useRef(false);
   useEffect(() => {
-    if (!panelRef.current) return;
+    if (!picked.current || !panelRef.current) return;
     panelRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [open]);
 
@@ -47,7 +49,7 @@ export function SectorExplorer({ categories }: { categories: Category[] }) {
             <button
               key={c.name}
               type="button"
-              onClick={() => setOpen(c.name)}
+              onClick={() => { picked.current = true; setOpen(c.name); }}
               className={`group relative shrink-0 w-[160px] sm:w-auto snap-start overflow-hidden rounded-2xl text-left transition-all duration-300 ${
                 isOpen
                   ? "ring-2 ring-lime-500 shadow-lg shadow-lime-500/15"

@@ -6,10 +6,12 @@ import {
   ArrowRight, Phone, Star, Wrench, Droplets, Paintbrush,
   MapPin, Mail, Camera, MessageSquare, Clock, Palette, Inbox,
   FileStack, Images, CalendarClock, Search, LayoutDashboard,
-  Megaphone, ScrollText, Rocket, Receipt, Settings,
+  Megaphone, ScrollText, Rocket, Receipt, Settings, Check, Globe, Smartphone,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { stockImg } from "@/lib/img";
+import { DESIGNS } from "@/lib/designs";
+import { VERTICALS } from "@/lib/verticals";
 
 export function MarketingHero({ startPrice }: { startPrice: string }) {
   const [on, setOn] = useState(false);
@@ -30,54 +32,46 @@ export function MarketingHero({ startPrice }: { startPrice: string }) {
           {/* Left — admin features aligned */}
           <div className="text-center lg:text-left max-w-xl mx-auto lg:mx-0">
             <p
-              className={`inline-flex items-center gap-2 text-sm font-medium text-lime-700 dark:text-lime-400 transition duration-500 ${
+              className={`inline-flex items-center gap-2 rounded-full border border-lime-500/25 bg-lime-500/10 px-3 py-1 text-xs font-semibold text-lime-700 dark:text-lime-400 transition duration-500 ${
                 on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-lime-500 animate-pulse" />
-              Full admin panel for every client site
+              Website + admin panel for every business
             </p>
 
             <h1
-              className={`mt-4 text-[clamp(2.1rem,4vw,3rem)] font-bold tracking-[-0.035em] leading-[1.05] text-slate-900 dark:text-white transition duration-500 delay-75 ${
+              className={`mt-5 text-[clamp(2.1rem,4vw,3.1rem)] font-bold tracking-[-0.035em] leading-[1.08] text-slate-900 dark:text-white transition duration-500 delay-75 ${
                 on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              Your business website,{" "}
+              Your <RotatingSector /> website,
+              <br />
               <span className="text-lime-600 dark:text-lime-400">live in minutes.</span>
             </h1>
 
             <p
-              className={`mt-3 text-lg sm:text-xl font-semibold tracking-tight text-slate-800 dark:text-slate-100 transition duration-500 delay-100 ${
+              className={`mt-5 text-base sm:text-lg leading-relaxed text-slate-600 dark:text-slate-300 max-w-lg mx-auto lg:mx-0 transition duration-500 delay-100 ${
                 on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              Build, edit and run client websites from one admin.
-            </p>
-
-            <p
-              className={`mt-3 text-[15px] leading-relaxed text-slate-600 dark:text-slate-400 max-w-md mx-auto lg:mx-0 transition duration-500 delay-150 ${
-                on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-            >
-              Dashboard, leads, appointments, appearance, pages, services, gallery, notices, results, SEO, marketing, billing and settings — all in one admin.
+              Pick your sector, choose one of {DESIGNS.length} designs and get a ready website with its own admin panel —
+              leads, bookings, pages and SEO included. No code.
             </p>
 
             <ul
-              className={`mt-6 grid sm:grid-cols-2 gap-2.5 text-left max-w-lg mx-auto lg:mx-0 transition duration-500 delay-200 ${
+              className={`mt-7 grid grid-cols-2 gap-2.5 text-left max-w-md mx-auto lg:mx-0 transition duration-500 delay-150 ${
                 on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
               {[
-                { icon: LayoutDashboard, t: "Dashboard & analytics" },
-                { icon: Inbox, t: "Leads & appointments" },
-                { icon: Palette, t: "Appearance & pages builder" },
-                { icon: Wrench, t: "Services, gallery & notices" },
-                { icon: ScrollText, t: "Results publishing" },
-                { icon: Rocket, t: "SEO & marketing campaigns" },
+                { icon: Globe, t: `${LIVE_COUNT}+ ready industries` },
+                { icon: Palette, t: `${DESIGNS.length} design styles each` },
+                { icon: LayoutDashboard, t: "Own admin panel" },
+                { icon: Inbox, t: "Leads & bookings inbox" },
               ].map(({ icon: Icon, t }) => (
-                <li key={t} className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-lime-500/15 text-lime-700 dark:bg-lime-400/10 dark:text-lime-400">
+                <li key={t} className="flex items-center gap-2.5 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)]/70 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 backdrop-blur-sm">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-lime-500/15 text-lime-700 dark:bg-lime-400/10 dark:text-lime-400">
                     <Icon className="w-3.5 h-3.5" strokeWidth={2.25} />
                   </span>
                   {t}
@@ -86,31 +80,39 @@ export function MarketingHero({ startPrice }: { startPrice: string }) {
             </ul>
 
             <div
-              className={`mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-3 transition duration-500 delay-250 ${
+              className={`mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-3 transition duration-500 delay-200 ${
                 on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
               <Link
                 href="/subscribe"
-                className="inline-flex items-center gap-2 rounded-lg bg-lime-500 text-slate-950 font-semibold px-5 py-3 text-sm hover:bg-lime-400 transition shadow-sm shadow-lime-500/25"
+                className="group inline-flex items-center gap-2 rounded-full bg-lime-500 text-slate-950 font-semibold px-6 py-3.5 text-sm hover:bg-lime-400 transition shadow-lg shadow-lime-500/25"
               >
                 Start from {startPrice}
-                <ArrowRight className="w-4 h-4" strokeWidth={2.25} />
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
               </Link>
               <Link
                 href="/demos"
-                className="inline-flex items-center gap-2 rounded-lg border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] text-[var(--mkt-text)] font-medium px-5 py-3 text-sm hover:bg-lime-500/5 hover:border-lime-500/40 transition shadow-sm"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] text-[var(--mkt-text)] font-semibold px-6 py-3.5 text-sm hover:bg-lime-500/5 hover:border-lime-500/40 transition shadow-sm"
               >
-                Explore live demos
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500" />
+                </span>
+                Try a live demo
               </Link>
             </div>
 
             <p
-              className={`mt-6 text-sm text-slate-500 dark:text-slate-500 transition duration-500 delay-300 ${
+              className={`mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400 transition duration-500 delay-300 ${
                 on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              Billing · Settings · Custom domain · No code required
+              {["Demo before you buy", "Free subdomain", "Cancel anytime"].map((t) => (
+                <span key={t} className="inline-flex items-center gap-1.5">
+                  <Check className="w-4 h-4 text-lime-500" strokeWidth={2.5} /> {t}
+                </span>
+              ))}
             </p>
           </div>
 
@@ -125,6 +127,28 @@ export function MarketingHero({ startPrice }: { startPrice: string }) {
         </div>
       </div>
     </section>
+  );
+}
+
+const LIVE_COUNT = VERTICALS.filter((v) => v.status === "live").length;
+
+// Real sectors from the catalog — the headline cycles through them.
+const SECTOR_WORDS = ["school", "clinic", "gym", "restaurant", "coaching", "NGO", "pharmacy", "play school", "events", "home services"];
+
+function RotatingSector() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => setI((n) => (n + 1) % SECTOR_WORDS.length), 2200);
+    return () => window.clearInterval(id);
+  }, []);
+  return (
+    <span className="relative inline-block whitespace-nowrap align-bottom">
+      <span key={SECTOR_WORDS[i]} className="mkt-word-in inline-block bg-gradient-to-r from-lime-500 to-emerald-500 bg-clip-text text-transparent dark:from-lime-300 dark:to-emerald-400">
+        {SECTOR_WORDS[i]}
+      </span>
+      <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-lime-500/40" aria-hidden />
+    </span>
   );
 }
 
@@ -303,9 +327,63 @@ function DesktopBuildAnimation() {
     return false;
   };
 
+  const design = DESIGNS[cycle % DESIGNS.length];
+
+  // Subtle 3D tilt that follows the pointer (CSS vars, no re-render).
+  const tiltRef = useRef<HTMLDivElement>(null);
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = tiltRef.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.setProperty("--ry", `${(x * 7).toFixed(2)}deg`);
+    el.style.setProperty("--rx", `${(-y * 6).toFixed(2)}deg`);
+  };
+  const onLeave = () => {
+    tiltRef.current?.style.setProperty("--ry", "-4deg");
+    tiltRef.current?.style.setProperty("--rx", "2deg");
+  };
+
   return (
-    <div className="relative w-full">
+    <div className="relative w-full [perspective:1600px]" onPointerMove={onMove} onPointerLeave={onLeave}>
       <div className="mkt-builder-ambient" aria-hidden />
+      <div className="absolute -inset-10 -z-10 rounded-full bg-lime-500/15 blur-3xl mkt-glow-pulse" aria-hidden />
+
+      {/* Floating chips — real product features, synced to the build loop */}
+      <div className="absolute -left-16 bottom-8 z-40 mkt-float" aria-hidden>
+        <div className="flex items-center gap-2 rounded-xl border border-[var(--mkt-border)] bg-white dark:bg-slate-900 px-3 py-2 shadow-xl backdrop-blur">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-lime-500/15 text-lime-600 dark:text-lime-400">
+            <Palette className="h-3.5 w-3.5" />
+          </span>
+          <span>
+            <span className="block text-[10px] font-medium text-[var(--mkt-text-muted)]">Design style</span>
+            <span key={design.id} className="mkt-word-in block text-xs font-bold text-[var(--mkt-text)]">{design.name}</span>
+          </span>
+        </div>
+      </div>
+      <div className="absolute -right-6 -top-5 z-40 mkt-float [animation-delay:-3s]" aria-hidden>
+        <div
+          className={`flex items-center gap-2 rounded-full border border-[var(--mkt-border)] bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-[var(--mkt-text)] shadow-xl backdrop-blur transition-all duration-500 ${
+            phase === "live" ? "opacity-100 scale-100" : "opacity-0 scale-90"
+          }`}
+        >
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-lime-500 text-slate-950">
+            <Check className="h-2.5 w-2.5" strokeWidth={3} />
+          </span>
+          Published · {tpl.domain}
+        </div>
+      </div>
+      <div className="absolute -right-8 bottom-24 z-40 mkt-float [animation-delay:-1.5s]" aria-hidden>
+        <div className="flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-white dark:bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-[var(--mkt-text-secondary)] shadow-lg backdrop-blur">
+          <Smartphone className="h-3.5 w-3.5 text-lime-500" /> Mobile-ready
+        </div>
+      </div>
+
+      <div
+        ref={tiltRef}
+        className="relative transition-transform duration-300 ease-out [transform-style:preserve-3d] [transform:rotateX(var(--rx,2deg))_rotateY(var(--ry,-4deg))]"
+      >
 
       <div
         className={`relative mkt-builder-frame transition-[opacity,transform,filter] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
@@ -680,6 +758,7 @@ function DesktopBuildAnimation() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

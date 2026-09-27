@@ -1050,3 +1050,22 @@ body::-webkit-scrollbar,
   -webkit-appearance: none !important;
 }
 
+/* Hero: rotating sector word, floating chips, glow */
+@keyframes mkt-word-in {
+  from { opacity: 0; transform: translateY(0.35em); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.mkt-word-in { animation: mkt-word-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes mkt-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.mkt-float { animation: mkt-float 6s ease-in-out infinite; }
+@keyframes mkt-glow-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+.mkt-glow-pulse { animation: mkt-glow-pulse 8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .mkt-word-in, .mkt-float, .mkt-glow-pulse { animation: none !important; }
+}
