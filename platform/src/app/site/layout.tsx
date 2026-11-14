@@ -90,6 +90,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       seo: parseJson<SeoConfig>(merged.seo, defaultSeo(tenant.name)),
       customCss: merged.customCss,
       resultConfig: config.resultConfig,
+      payments: config.payments,
     };
   }
 

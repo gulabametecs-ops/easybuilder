@@ -132,7 +132,7 @@ export function AIWebsiteGenerator({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ success: false, error: `Server error (${res.status}). Please try again.` }));
       if (!data.success) {
         setError(data.error || "Generation failed");
         return;
@@ -152,7 +152,7 @@ export function AIWebsiteGenerator({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ blueprint, apply: true, mode }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ success: false, error: `Server error (${res.status}). Please try again.` }));
       if (!data.success) {
         setError(data.error || "Failed to create website");
         return;

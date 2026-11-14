@@ -42,6 +42,8 @@ export const websiteBlueprintSchema = z.object({
       borderRadius: z.string().max(20).optional(),
       spacing: z.string().max(20).optional(),
       animationLevel: z.string().max(20).optional(),
+      /** Design preset id from lib/designs (modern | bold | elegant | minimal). */
+      preset: z.string().max(20).optional(),
     })
     .optional(),
   services: z

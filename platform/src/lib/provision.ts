@@ -74,6 +74,7 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
           category: s.category,
           title: s.title,
           description: s.description,
+          longDescription: s.longDescription ?? "",
           image: img(`${s.title}-${i}`, 600, 400),
           order: i,
           slug,
@@ -102,6 +103,7 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
           title: page.title,
           isSystem: page.isSystem,
           order: page.order,
+          showInNav: page.showInNav !== false,
         },
       });
 
@@ -153,6 +155,67 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
           content: JSON.stringify(sec.content),
           ...(sec.style && Object.keys(sec.style).length ? { style: JSON.stringify(sec.style) } : {}),
         })),
+      });
+    }
+
+    const people = tpl.people?.(biz) ?? [];
+    if (people.length) {
+      await tx.person.createMany({
+        data: people.map((p, i) => ({
+          tenantId: tenant.id,
+          name: p.name,
+          role: p.role,
+          bio: p.bio ?? "",
+          image: p.image || img(`${p.name}-team-${i}`, 600, 600),
+          groupName: p.groupName ?? "core",
+          experience: p.experience ?? "",
+          order: i,
+          published: true,
+        })),
+      });
+    }
+
+    const events = tpl.events?.(biz) ?? [];
+    if (events.length) {
+      const seenSlugs = new Set<string>();
+      await tx.siteEvent.createMany({
+        data: events.map((e, i) => {
+          let slug = (e.slug || svcSlug(e.title));
+          while (seenSlugs.has(slug)) slug = `${svcSlug(e.title)}-${i}`;
+          seenSlugs.add(slug);
+          return {
+            tenantId: tenant.id,
+            slug,
+            title: e.title,
+            activityName: e.activityName ?? e.title,
+            shortDescription: e.shortDescription ?? "",
+            programDescription: e.programDescription ?? "",
+            date: e.date,
+            location: e.location ?? "",
+            organizedBy: e.organizedBy ?? biz,
+            dignitaries: e.dignitaries ?? "",
+            impact: e.impact ?? "",
+            coverImage: img(`${e.title}-event-${i}`, 1200, 720),
+            gallery: JSON.stringify([
+              img(`${e.title}-g1-${i}`, 800, 600),
+              img(`${e.title}-g2-${i}`, 800, 600),
+              img(`${e.title}-g3-${i}`, 800, 600),
+            ]),
+            objectives: JSON.stringify(e.objectives ?? []),
+            documents: JSON.stringify(e.documents ?? []),
+            status: e.status ?? "auto",
+            mapUrl: e.mapUrl ?? "",
+            venueNote: e.venueNote ?? "",
+            blocks: JSON.stringify(e.blocks ?? []),
+            enableDonate: !!e.enableDonate,
+            donateAmount: e.donateAmount ?? 0,
+            donateLabel: "",
+            showQr: !!e.showQr,
+            qrCaption: e.qrCaption ?? "",
+            published: true,
+            order: i,
+          };
+        }),
       });
     }
 

@@ -13,6 +13,8 @@ export type DesignId = "classic" | "modern" | "bold" | "elegant" | "minimal";
 export type Design = {
   id: DesignId;
   name: string;
+  /** One short line for the picker (what a buyer actually needs). */
+  blurb: string;
   tagline: string;
   font: string;
   header: NonNullable<HeaderConfig["design"]>;
@@ -31,6 +33,7 @@ export const DESIGNS: Design[] = [
   {
     id: "classic",
     name: "Original",
+    blurb: "Classic layout",
     tagline: "The template as designed — balanced and familiar",
     font: "",
     header: "classic",
@@ -43,6 +46,7 @@ export const DESIGNS: Design[] = [
   {
     id: "modern",
     name: "Modern",
+    blurb: "Clean and airy",
     tagline: "Clean, airy and app-like with soft rounded cards",
     font: "Plus Jakarta Sans",
     header: "modern",
@@ -56,6 +60,7 @@ export const DESIGNS: Design[] = [
   {
     id: "bold",
     name: "Bold",
+    blurb: "Dark and strong",
     tagline: "High-contrast, dark and energetic — makes a statement",
     font: "Sora",
     header: "bold",
@@ -69,6 +74,7 @@ export const DESIGNS: Design[] = [
   {
     id: "elegant",
     name: "Elegant",
+    blurb: "Warm and refined",
     tagline: "Refined serif type, warm tones and generous spacing",
     font: "Fraunces",
     header: "centered",
@@ -82,6 +88,7 @@ export const DESIGNS: Design[] = [
   {
     id: "minimal",
     name: "Minimal",
+    blurb: "Simple and calm",
     tagline: "Pared-back, typography-first — lets the content breathe",
     font: "DM Sans",
     header: "minimal",

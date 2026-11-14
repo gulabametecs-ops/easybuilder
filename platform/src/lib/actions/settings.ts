@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { getAuthedSession } from "@/lib/auth";
 import { type AdminPrefs } from "@/lib/adminPrefs";
+import { parsePayments } from "@/lib/payments";
 
 export type SettingsState = { ok: boolean; message: string };
 
@@ -61,6 +62,40 @@ export async function saveAdminPrefs(_prev: SettingsState, formData: FormData): 
   });
   revalidatePath("/admin/settings");
   return { ok: true, message: "Notification preferences saved." };
+}
+
+export async function saveTenantPayments(_prev: SettingsState, formData: FormData): Promise<SettingsState> {
+  const authed = await getAuthedSession();
+  if (!authed) return { ok: false, message: "Unauthorized" };
+  const s = (k: string) => (formData.get(k)?.toString() ?? "").trim();
+  const existing = await db.siteConfig.findUnique({ where: { tenantId: authed.tenant.id } });
+  const prev = parsePayments(existing?.payments);
+  const secret = s("razorpayKeySecret");
+  const next = {
+    razorpayKeyId: s("razorpayKeyId"),
+    razorpayKeySecret: secret || prev.razorpayKeySecret,
+    upiId: s("upiId"),
+    upiQrImage: s("upiQrImage"),
+    accountName: s("accountName"),
+    accountNumber: s("accountNumber"),
+    ifsc: s("ifsc"),
+    bankName: s("bankName"),
+    paymentNote: s("paymentNote"),
+  };
+  await db.siteConfig.upsert({
+    where: { tenantId: authed.tenant.id },
+    update: { payments: JSON.stringify(next) },
+    create: { tenantId: authed.tenant.id, payments: JSON.stringify(next) },
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/donate");
+  const live = Boolean(next.razorpayKeyId && next.razorpayKeySecret);
+  return {
+    ok: true,
+    message: live
+      ? "Saved. Razorpay is ready for donations on your site."
+      : "Saved. Add Razorpay keys for online pay, or use UPI / QR without them.",
+  };
 }
 
 export async function requestCancellation(_prev: SettingsState, formData: FormData): Promise<SettingsState> {

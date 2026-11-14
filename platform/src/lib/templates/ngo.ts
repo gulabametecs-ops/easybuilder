@@ -163,6 +163,7 @@ export const ngo: TemplateDef = {
           { name: "Sponsor a Year", price: "₹12,000", period: "/year", features: ["Full year of education for one child", "Letters from your sponsored child", "80G tax receipt", "Invite to annual day"], featured: false, buttonLabel: "Sponsor Now", buttonHref: "/contact" },
         ],
       } },
+      { type: "donatePay", content: { eyebrow: "PAY EASILY", title: "UPI, QR or", titleHighlight: "Online", subtitle: "Scan, transfer, or pay with Razorpay — set details in Admin → Settings → Payments.", suggestedAmounts: "500,1000,2500" } },
       { type: "priceList", content: { eyebrow: "BANK TRANSFER", title: "Donate via", titleHighlight: "Bank / UPI", note: "All donations are eligible for 50% tax exemption under Section 80G of the Income Tax Act. Please share your PAN and address to receive your 80G receipt. Foreign contributions accepted only through our FCRA account.", groups: [
         { category: "Bank Details", items: [ { name: "Account Name", price: "Your Trust Name", note: "" }, { name: "Account Number", price: "XXXXXXXXXXXX", note: "" }, { name: "IFSC", price: "XXXX0000000", note: "" }, { name: "UPI ID", price: "yourtrust@upi", note: "" } ] },
       ] }, style: { background: "light" } },

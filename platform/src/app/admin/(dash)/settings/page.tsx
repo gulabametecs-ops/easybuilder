@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getPlatformConfig } from "@/lib/platformConfig";
 import { resolveTier, serviceLimitForPlan } from "@/lib/plans";
 import { parseAdminPrefs } from "@/lib/adminPrefs";
+import { parsePayments } from "@/lib/payments";
 import { SettingsManager } from "@/components/admin/SettingsManager";
 
 export const metadata = { title: "Settings" };
@@ -19,7 +20,7 @@ export default async function SettingsPage() {
 
   const cfg = await getPlatformConfig();
   const tier = resolveTier(tenant.plan, cfg.planOverrides);
-  const [serviceCount, members, siteConfig, user, leads, appointments] = await Promise.all([
+  const [serviceCount, members, siteConfig, user, leads, appointments, donations] = await Promise.all([
     db.service.count({ where: { tenantId: tenant.id } }),
     db.user.findMany({
       where: { tenantId: tenant.id },
@@ -39,6 +40,12 @@ export default async function SettingsPage() {
       orderBy: { createdAt: "desc" },
       take: 2000,
       select: { name: true, phone: true, email: true, date: true, time: true, message: true, createdAt: true },
+    }),
+    db.siteDonation.findMany({
+      where: { tenantId: tenant.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: { id: true, name: true, amount: true, status: true, createdAt: true },
     }),
   ]);
   const limit = serviceLimitForPlan(tenant.plan, cfg.planOverrides);
@@ -73,6 +80,15 @@ export default async function SettingsPage() {
         canManageTeam={canManageTeam}
         isOwner={session.role === "owner"}
         prefs={prefs}
+        payments={{ ...parsePayments(siteConfig?.payments), razorpayKeySecret: "" }}
+        hasRazorpaySecret={Boolean(parsePayments(siteConfig?.payments).razorpayKeySecret)}
+        donations={donations.map((d) => ({
+          id: d.id,
+          name: d.name,
+          amount: d.amount,
+          status: d.status,
+          createdAt: d.createdAt.toISOString(),
+        }))}
         leads={leads.map((l) => ({
           name: l.name,
           phone: l.phone,

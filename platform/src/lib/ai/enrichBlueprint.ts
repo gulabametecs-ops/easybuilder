@@ -12,6 +12,66 @@ type Playbook = {
 
 const PLAYBOOKS: Playbook[] = [
   {
+    keywords: ["gym", "fitness", "crossfit", "yoga", "workout", "personal training", "bodybuilding", "zumba"],
+    websiteType: "fitness",
+    pages: [
+      { name: "Home", slug: "home", pageTemplateId: "landing" },
+      { name: "About", slug: "about", pageTemplateId: "about" },
+      { name: "Programs", slug: "programs", pageTemplateId: "services" },
+      { name: "Membership", slug: "membership", pageTemplateId: "pricing" },
+      { name: "Trainers", slug: "trainers", pageTemplateId: "team" },
+      { name: "Free Trial", slug: "free-trial", pageTemplateId: "booking" },
+      { name: "Contact", slug: "contact", pageTemplateId: "contact" },
+    ],
+    requirements: ["Gym address & timings", "Membership plans & prices", "Trainer names & certifications", "Free trial / joining offer"],
+  },
+  {
+    keywords: ["pharmacy", "chemist", "medical store", "medicines", "drug store"],
+    websiteType: "pharmacy",
+    pages: [
+      { name: "Home", slug: "home", pageTemplateId: "landing" },
+      { name: "Products", slug: "products", pageTemplateId: "services" },
+      { name: "Order Medicines", slug: "order", pageTemplateId: "quote" },
+      { name: "Store Hours", slug: "store", pageTemplateId: "booking" },
+      { name: "Contact", slug: "contact", pageTemplateId: "contact" },
+    ],
+    requirements: ["Drug licence number", "Store address & hours", "Home delivery areas", "WhatsApp number for orders"],
+  },
+  {
+    keywords: ["webinar", "seminar", "workshop", "conference", "event", "events", "summit", "training program", "corporate training"],
+    websiteType: "events",
+    pages: [
+      { name: "Home", slug: "home", pageTemplateId: "landing" },
+      { name: "Events", slug: "events", pageTemplateId: "services" },
+      { name: "Speakers", slug: "speakers", pageTemplateId: "team" },
+      { name: "Tickets", slug: "tickets", pageTemplateId: "pricing" },
+      { name: "Register", slug: "register", pageTemplateId: "booking" },
+      { name: "Contact", slug: "contact", pageTemplateId: "contact" },
+    ],
+    requirements: ["Event dates, venue or online link", "Ticket prices & passes", "Speaker names & bios", "Registration / payment link"],
+  },
+  {
+    keywords: ["section 8", "social foundation", "financial literacy", "grassroots", "initiatives"],
+    websiteType: "foundation",
+    pages: [
+      { name: "Home", slug: "home", pageTemplateId: "landing" },
+      { name: "About Us", slug: "about", pageTemplateId: "about" },
+      { name: "Our Team", slug: "team", pageTemplateId: "team" },
+      { name: "Initiatives", slug: "initiatives", pageTemplateId: "services" },
+      { name: "Events", slug: "events", pageTemplateId: "events-list" },
+      { name: "Gallery", slug: "gallery", pageTemplateId: "gallery" },
+      { name: "Volunteer", slug: "volunteer", pageTemplateId: "volunteer" },
+      { name: "Donate", slug: "donate", pageTemplateId: "pricing" },
+      { name: "Contact", slug: "contact", pageTemplateId: "contact" },
+    ],
+    requirements: [
+      "CIN / Section 8 registration",
+      "Regional and registered office addresses",
+      "Donation UPI or payment link",
+      "Program areas you actually run",
+    ],
+  },
+  {
     keywords: ["ngo", "nonprofit", "non-profit", "charity", "foundation", "trust", "volunteer", "donation", "csr", "social work"],
     websiteType: "ngo",
     pages: [
@@ -58,7 +118,7 @@ const PLAYBOOKS: Playbook[] = [
     requirements: ["School address & contact numbers", "Admission dates & fee structure", "Affiliation / board details", "Transport or hostel info"],
   },
   {
-    keywords: ["coaching", "tuition", "jee", "neet", "competitive", "classes"],
+    keywords: ["coaching", "tuition", "jee", "neet", "upsc", "competitive exam"],
     websiteType: "coaching",
     pages: [
       { name: "Home", slug: "home", pageTemplateId: "landing" },
@@ -71,7 +131,7 @@ const PLAYBOOKS: Playbook[] = [
     requirements: ["Centre address & batch timings", "Course fees & duration", "Demo class booking number", "Past results / achievements"],
   },
   {
-    keywords: ["agency", "marketing", "digital", "seo", "branding", "advertising", "studio"],
+    keywords: ["agency", "marketing agency", "digital marketing", "seo", "branding", "advertising"],
     websiteType: "agency",
     pages: [
       { name: "Home", slug: "home", pageTemplateId: "landing" },
@@ -106,8 +166,9 @@ const DEFAULT_PAGES: PageSeed[] = [
 
 function detectPlaybook(text: string): Playbook | null {
   const lower = text.toLowerCase();
+  const has = (k: string) => new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(lower);
   for (const pb of PLAYBOOKS) {
-    if (pb.keywords.some((k) => lower.includes(k))) return pb;
+    if (pb.keywords.some(has)) return pb;
   }
   return null;
 }
@@ -169,6 +230,7 @@ export function inferVerticalId(
   prompt = "",
 ): string {
   const t = `${prompt} ${blueprint.website?.type ?? ""} ${blueprint.website?.description ?? ""} ${blueprint.website?.name ?? ""}`.toLowerCase();
+  if (/section 8|social foundation|financial literacy|grassroots/.test(t)) return "social-foundation";
   if (/\bngo\b|nonprofit|non-profit|charity|foundation|\btrust\b|volunteer|donat/.test(t)) return "ngo-charity";
   if (/\bgym\b|fitness|crossfit|yoga|workout|personal train/.test(t)) return "gym-fitness";
   if (/pharmac|chemist|medical store|medicine/.test(t)) return "pharmacy";
@@ -184,9 +246,21 @@ export function inferVerticalId(
   if (/agency|marketing|seo/.test(t)) return "education-consultancy";
   return "home-services";
 }
+/** When no category has 2+ services, show them all as one grid instead of 1-card rows. */
+function groupThinServices(services: WebsiteBlueprint["services"]): WebsiteBlueprint["services"] {
+  if (!services?.length) return services;
+  const counts = new Map<string, number>();
+  for (const s of services) counts.set(s.category, (counts.get(s.category) ?? 0) + 1);
+  if ([...counts.values()].some((n) => n >= 2)) return services;
+  return services.map((s) => ({ ...s, category: "Our Services" }));
+}
+
 export function enrichBlueprint(blueprint: WebsiteBlueprint, prompt: string): WebsiteBlueprint {
+  blueprint = { ...blueprint, services: groupThinServices(blueprint.services) };
   const corpus = `${prompt} ${blueprint.website.type ?? ""} ${blueprint.website.description ?? ""} ${blueprint.website.name}`;
-  const playbook = detectPlaybook(corpus);
+  const playbook =
+    detectPlaybook(`${prompt} ${blueprint.website.type ?? ""} ${blueprint.website.name}`) ??
+    detectPlaybook(blueprint.website.description ?? "");
 
   const seeds = playbook?.pages ?? (blueprint.pages.length < 3 ? DEFAULT_PAGES : []);
   const pages = mergePages(blueprint.pages, seeds);

@@ -8,6 +8,8 @@ import { ImageSlot } from "../ImageSlot";
 import type { SectionContentMap } from "@/lib/config";
 import { safeHref } from "@/lib/sanitizeHtml";
 import { headingStylesFrom, textStyleProps, cardStyleCss, readContentStyles, readItemStyle, type FieldStyle } from "@/lib/fieldStyle";
+import { DonateBox } from "../DonateBox";
+import type { PublicPayments } from "@/lib/payments";
 
 const WRAP = "mx-auto px-4 sm:px-6";
 const PANEL = "rounded-[calc(var(--site-radius)*1.6)] bg-[var(--site-surface)] ring-1 ring-[var(--site-line)] shadow-[var(--site-shadow-sm)]";
@@ -394,6 +396,36 @@ export function MapBlock({ c }: { c: SectionContentMap["map"] }) {
             <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">Paste a Google Maps embed URL in the editor.</div>
           )}
         </div>
+      </div>
+    </section>
+  );
+}
+
+export function DonatePayBlock({
+  c,
+  payments,
+  orgName,
+}: {
+  c: SectionContentMap["donatePay"];
+  payments?: PublicPayments;
+  orgName?: string;
+}) {
+  const first = (c.suggestedAmounts || "500").split(",")[0];
+  const suggested = parseInt(first.replace(/[^\d]/g, ""), 10) || 500;
+  return (
+    <section className="site-sec py-16 sm:py-24">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6">
+        <Heading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} content={c} />
+        {c.subtitle && <p className="text-center site-muted -mt-8 mb-8">{c.subtitle}</p>}
+        <DonateBox
+          payments={payments || {
+            razorpayKeyId: "", upiId: "", upiQrImage: "", accountName: "", accountNumber: "",
+            ifsc: "", bankName: "", paymentNote: "", razorpayReady: false,
+          }}
+          orgName={orgName || "Donate"}
+          suggested={suggested}
+          label="Donate now"
+        />
       </div>
     </section>
   );

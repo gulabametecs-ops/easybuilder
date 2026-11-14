@@ -6,7 +6,7 @@ import {
   ArrowRight, Phone, Star, Wrench, Droplets, Paintbrush,
   MapPin, Mail, Camera, MessageSquare, Clock, Palette, Inbox,
   FileStack, Images, CalendarClock, Search, LayoutDashboard,
-  Megaphone, ScrollText, Rocket, Receipt, Settings, Check, Globe, Smartphone,
+  Megaphone, ScrollText, Rocket, Receipt, Settings, Check, Smartphone, Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { stockImg } from "@/lib/img";
@@ -14,113 +14,71 @@ import { DESIGNS } from "@/lib/designs";
 import { VERTICALS } from "@/lib/verticals";
 
 export function MarketingHero({ startPrice }: { startPrice: string }) {
-  const [on, setOn] = useState(false);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setOn(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
-
   return (
     <section className="relative isolate overflow-hidden bg-[var(--mkt-bg)]">
-      <div className="absolute inset-0 pointer-events-none" aria-hidden>
-        <div className="mkt-hero-wash absolute inset-0" />
-        <div className="absolute inset-0 opacity-[0.35] dark:opacity-[0.08] [background-image:radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:28px_28px] [mask-image:radial-gradient(ellipse_at_70%_40%,black_15%,transparent_72%)]" />
-      </div>
+      <div className="absolute inset-0 pointer-events-none mkt-hero-wash" aria-hidden />
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-28 pb-16 sm:pb-20">
-        <div className="grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-10 xl:gap-12 items-center">
-          {/* Left — admin features aligned */}
+      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 lg:pt-24 pb-16 sm:pb-20">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-12 xl:gap-14 items-center">
           <div className="text-center lg:text-left max-w-xl mx-auto lg:mx-0">
-            <p
-              className={`inline-flex items-center gap-2 rounded-full border border-lime-500/25 bg-lime-500/10 px-3 py-1 text-xs font-semibold text-lime-700 dark:text-lime-400 transition duration-500 ${
-                on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-            >
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-lime-500 animate-pulse" />
-              Website + admin panel for every business
+            <p className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1 text-xs font-semibold text-[var(--mkt-text-secondary)] motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--mkt-accent-2)]" />
+              {LIVE_COUNT}+ industries · site + admin in one
             </p>
 
-            <h1
-              className={`mt-5 text-[clamp(2.1rem,4vw,3.1rem)] font-bold tracking-[-0.035em] leading-[1.08] text-slate-900 dark:text-white transition duration-500 delay-75 ${
-                on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-            >
-              Your <RotatingSector /> website,
-              <br />
-              <span className="text-lime-600 dark:text-lime-400">live in minutes.</span>
+            <h1 className="font-display mt-6 text-[clamp(2.4rem,5.2vw,3.85rem)] leading-[1.08] text-[var(--mkt-text)] motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
+              <span className="block">A website for your</span>
+              <span className="block italic text-[var(--mkt-accent-text)]">
+                <RotatingSector />
+              </span>
+              <span className="block">ready in minutes.</span>
             </h1>
 
-            <p
-              className={`mt-5 text-base sm:text-lg leading-relaxed text-slate-600 dark:text-slate-300 max-w-lg mx-auto lg:mx-0 transition duration-500 delay-100 ${
-                on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-            >
-              Pick your sector, choose one of {DESIGNS.length} designs and get a ready website with its own admin panel —
-              leads, bookings, pages and SEO included. No code.
+            <p className="mt-5 text-base sm:text-lg leading-relaxed text-[var(--mkt-text-secondary)] max-w-lg mx-auto lg:mx-0 motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
+              Pick a sector, choose a look, go live. Pages, leads, bookings and SEO ship with the site — no designer, no code.
             </p>
 
-            <ul
-              className={`mt-7 grid grid-cols-2 gap-2.5 text-left max-w-md mx-auto lg:mx-0 transition duration-500 delay-150 ${
-                on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-            >
-              {[
-                { icon: Globe, t: `${LIVE_COUNT}+ ready industries` },
-                { icon: Palette, t: `${DESIGNS.length} design styles each` },
-                { icon: LayoutDashboard, t: "Own admin panel" },
-                { icon: Inbox, t: "Leads & bookings inbox" },
-              ].map(({ icon: Icon, t }) => (
-                <li key={t} className="flex items-center gap-2.5 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)]/70 px-3 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200 backdrop-blur-sm">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-lime-500/15 text-lime-700 dark:bg-lime-400/10 dark:text-lime-400">
-                    <Icon className="w-3.5 h-3.5" strokeWidth={2.25} />
-                  </span>
-                  {t}
-                </li>
-              ))}
-            </ul>
-
-            <div
-              className={`mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-3 transition duration-500 delay-200 ${
-                on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-            >
+            <div className="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-3 motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
               <Link
                 href="/subscribe"
-                className="group inline-flex items-center gap-2 rounded-full bg-lime-500 text-slate-950 font-semibold px-6 py-3.5 text-sm hover:bg-lime-400 transition shadow-lg shadow-lime-500/25"
+                className="group inline-flex items-center gap-2 rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)] font-semibold px-6 py-3.5 text-sm hover:bg-[var(--mkt-accent-hover)] transition"
               >
                 Start from {startPrice}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
               </Link>
               <Link
-                href="/demos"
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] text-[var(--mkt-text)] font-semibold px-6 py-3.5 text-sm hover:bg-lime-500/5 hover:border-lime-500/40 transition shadow-sm"
+                href="/ai-builder"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] text-[var(--mkt-text)] font-semibold px-5 py-3.5 text-sm hover:bg-[var(--mkt-bg-alt)] transition"
               >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500" />
-                </span>
-                Try a live demo
+                <Sparkles className="h-4 w-4" />
+                Build with AI
+              </Link>
+              <Link
+                href="/demos"
+                className="inline-flex items-center gap-2 rounded-full px-4 py-3.5 text-sm font-semibold text-[var(--mkt-text-secondary)] hover:text-[var(--mkt-text)]"
+              >
+                Live demos
               </Link>
             </div>
 
-            <p
-              className={`mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400 transition duration-500 delay-300 ${
-                on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-              }`}
-            >
-              {["Demo before you buy", "Free subdomain", "Cancel anytime"].map((t) => (
-                <span key={t} className="inline-flex items-center gap-1.5">
-                  <Check className="w-4 h-4 text-lime-500" strokeWidth={2.5} /> {t}
-                </span>
+            <dl className="mt-10 grid grid-cols-3 gap-6 text-left max-w-md mx-auto lg:mx-0 motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
+              {[
+                { v: `${LIVE_COUNT}+`, l: "industries" },
+                { v: `${DESIGNS.length}`, l: "designs each" },
+                { v: "5 min", l: "to go live" },
+              ].map((s) => (
+                <div key={s.l}>
+                  <dt className="sr-only">{s.l}</dt>
+                  <dd className="text-xl font-bold tracking-tight text-[var(--mkt-text)]">{s.v}</dd>
+                  <dd className="mt-0.5 text-[12px] text-[var(--mkt-text-muted)]">{s.l}</dd>
+                </div>
               ))}
-            </p>
+            </dl>
           </div>
 
           {/* Right — desktop-only desktop browser build */}
           <div
-            className={`hidden lg:block relative w-full max-w-[560px] xl:max-w-[600px] ml-auto transition duration-700 delay-150 ${
-              on ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-            }`}
+            className={`hidden lg:block relative w-full max-w-[560px] xl:max-w-[600px] ml-auto transition duration-700 delay-150 motion-safe:animate-[site-fade-up_0.5s_ease-out_both]`}
           >
             <DesktopBuildAnimation />
           </div>
@@ -133,7 +91,7 @@ export function MarketingHero({ startPrice }: { startPrice: string }) {
 const LIVE_COUNT = VERTICALS.filter((v) => v.status === "live").length;
 
 // Real sectors from the catalog — the headline cycles through them.
-const SECTOR_WORDS = ["school", "clinic", "gym", "restaurant", "coaching", "NGO", "pharmacy", "play school", "events", "home services"];
+const SECTOR_WORDS = ["school", "clinic", "gym", "restaurant", "coaching", "NGO", "pharmacy", "preschool", "events"];
 
 function RotatingSector() {
   const [i, setI] = useState(0);
@@ -142,12 +100,21 @@ function RotatingSector() {
     const id = window.setInterval(() => setI((n) => (n + 1) % SECTOR_WORDS.length), 2200);
     return () => window.clearInterval(id);
   }, []);
+  // Every word sits in the same grid cell, so the slot is always as wide as the
+  // longest one — the headline never reflows or changes its number of lines.
   return (
-    <span className="relative inline-block whitespace-nowrap align-bottom">
-      <span key={SECTOR_WORDS[i]} className="mkt-word-in inline-block bg-gradient-to-r from-lime-500 to-emerald-500 bg-clip-text text-transparent dark:from-lime-300 dark:to-emerald-400">
-        {SECTOR_WORDS[i]}
-      </span>
-      <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-lime-500/40" aria-hidden />
+    <span className="inline-grid whitespace-nowrap align-bottom justify-items-center lg:justify-items-start">
+      {SECTOR_WORDS.map((w, n) => (
+        <span
+          key={n === i ? `on-${w}` : w}
+          aria-hidden={n !== i}
+          className={`[grid-area:1/1] text-[var(--mkt-accent-text)] ${
+            n === i ? "mkt-word-in" : "invisible"
+          }`}
+        >
+          {w}
+        </span>
+      ))}
     </span>
   );
 }
@@ -348,12 +315,12 @@ function DesktopBuildAnimation() {
   return (
     <div className="relative w-full [perspective:1600px]" onPointerMove={onMove} onPointerLeave={onLeave}>
       <div className="mkt-builder-ambient" aria-hidden />
-      <div className="absolute -inset-10 -z-10 rounded-full bg-lime-500/15 blur-3xl mkt-glow-pulse" aria-hidden />
+      <div className="absolute -inset-10 -z-10 rounded-full bg-[var(--mkt-accent-soft)] blur-3xl mkt-glow-pulse" aria-hidden />
 
       {/* Floating chips — real product features, synced to the build loop */}
       <div className="absolute -left-16 bottom-8 z-40 mkt-float" aria-hidden>
         <div className="flex items-center gap-2 rounded-xl border border-[var(--mkt-border)] bg-white dark:bg-slate-900 px-3 py-2 shadow-xl backdrop-blur">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-lime-500/15 text-lime-600 dark:text-lime-400">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]">
             <Palette className="h-3.5 w-3.5" />
           </span>
           <span>
@@ -368,7 +335,7 @@ function DesktopBuildAnimation() {
             phase === "live" ? "opacity-100 scale-100" : "opacity-0 scale-90"
           }`}
         >
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-lime-500 text-slate-950">
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)]">
             <Check className="h-2.5 w-2.5" strokeWidth={3} />
           </span>
           Published · {tpl.domain}
@@ -376,7 +343,7 @@ function DesktopBuildAnimation() {
       </div>
       <div className="absolute -right-8 bottom-24 z-40 mkt-float [animation-delay:-1.5s]" aria-hidden>
         <div className="flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-white dark:bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-[var(--mkt-text-secondary)] shadow-lg backdrop-blur">
-          <Smartphone className="h-3.5 w-3.5 text-lime-500" /> Mobile-ready
+          <Smartphone className="h-3.5 w-3.5 text-[var(--mkt-accent)]" /> Mobile-ready
         </div>
       </div>
 
@@ -402,7 +369,7 @@ function DesktopBuildAnimation() {
             </div>
             <div className="flex-1 flex justify-center min-w-0 px-2">
               <div className="h-[22px] w-full max-w-[280px] rounded-md bg-white/70 dark:bg-white/5 ring-1 ring-slate-200/60 dark:ring-white/10 flex items-center justify-center gap-1.5 px-2">
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${phase === "live" ? "bg-lime-500" : "bg-amber-400 animate-pulse"}`} />
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${phase === "live" ? "bg-[var(--mkt-accent)]" : "bg-amber-400 animate-pulse"}`} />
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
                   {show("canvas") ? `https://${tpl.domain}` : "standardsaas.app/builder"}
                 </span>
@@ -410,7 +377,7 @@ function DesktopBuildAnimation() {
             </div>
             <span className={`text-[9px] font-bold uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded ${
               phase === "live"
-                ? "bg-lime-500/20 text-lime-700 dark:text-lime-400"
+                ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]"
                 : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
             }`}>
               {phase === "live" ? "Live" : `${buildProgress}%`}
@@ -423,7 +390,7 @@ function DesktopBuildAnimation() {
             }`}
           >
             <div
-              className="h-full origin-left bg-gradient-to-r from-lime-400 to-emerald-400 transition-transform duration-700 ease-out"
+              className="h-full origin-left bg-gradient-to-r from-[var(--mkt-accent)] to-[var(--mkt-accent-2)] transition-transform duration-700 ease-out"
               style={{ transform: `scaleX(${buildProgress / 100})` }}
             />
           </div>
@@ -434,7 +401,7 @@ function DesktopBuildAnimation() {
               <aside className="h-full min-h-[400px] xl:min-h-[420px] border-r border-white/30 dark:border-white/10 bg-white/40 dark:bg-black/30 backdrop-blur-sm flex flex-col">
                 <div className="px-2 pt-2 pb-1.5 border-b border-slate-200/40 dark:border-white/8">
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-5 h-5 rounded-md shrink-0 ${lime ? "bg-lime-400" : "bg-teal-400"}`} />
+                    <span className={`w-5 h-5 rounded-md shrink-0 ${lime ? "bg-[var(--mkt-accent)]" : "bg-teal-400"}`} />
                     <div className="min-w-0">
                       <p className="text-[9px] font-bold text-slate-900 dark:text-white truncate leading-none">{tpl.name}</p>
                       <p className="text-[6px] text-slate-400 mt-0.5 uppercase tracking-wider">Admin panel</p>
@@ -458,7 +425,7 @@ function DesktopBuildAnimation() {
                               key={item.label}
                               className={`flex items-center justify-between gap-1 rounded px-1.5 py-[3px] text-[7.5px] font-semibold leading-tight ${
                                 active
-                                  ? "bg-lime-500/20 text-lime-800 dark:text-lime-300"
+                                  ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]"
                                   : "text-slate-600 dark:text-slate-400"
                               }`}
                               style={{
@@ -472,7 +439,7 @@ function DesktopBuildAnimation() {
                                 <span className="truncate">{item.label}</span>
                               </span>
                               {item.badge != null && item.badge > 0 && (
-                                <span className="shrink-0 min-w-[14px] h-[14px] px-0.5 rounded-full bg-lime-500 text-slate-950 text-[6px] font-bold flex items-center justify-center">
+                                <span className="shrink-0 min-w-[14px] h-[14px] px-0.5 rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)] text-[6px] font-bold flex items-center justify-center">
                                   {item.badge}
                                 </span>
                               )}
@@ -494,14 +461,14 @@ function DesktopBuildAnimation() {
                         key={s.id}
                         className={`flex items-center justify-between rounded px-1.5 py-[3px] text-[7.5px] font-medium mb-0.5 last:mb-0 transition-colors duration-300 ${
                           current
-                            ? "bg-white/90 dark:bg-white/10 text-slate-900 dark:text-white ring-1 ring-lime-400/55"
+                            ? "bg-white/90 dark:bg-white/10 text-slate-900 dark:text-white ring-1 ring-[var(--mkt-accent)]/55"
                             : done
                               ? "text-slate-600 dark:text-slate-300"
                               : "text-slate-400 dark:text-slate-600"
                         }`}
                       >
                         <span>{s.label}</span>
-                        <span className={`w-1.5 h-1.5 rounded-full bg-lime-500 shrink-0 transition-[opacity,transform] duration-300 ${done ? "opacity-100 scale-100" : "opacity-0 scale-50"}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full bg-[var(--mkt-accent)] shrink-0 transition-[opacity,transform] duration-300 ${done ? "opacity-100 scale-100" : "opacity-0 scale-50"}`} />
                       </div>
                     );
                   })}
@@ -526,7 +493,7 @@ function DesktopBuildAnimation() {
                   {/* Promo strip */}
                   <MagicIn show={show("hero")} from="top" delay={0}>
                     <div className={`h-[18px] flex items-center justify-center gap-1.5 text-[7px] font-semibold tracking-wide ${
-                      lime ? "bg-slate-950 text-lime-300" : "bg-slate-950 text-teal-300"
+                      lime ? "bg-slate-950 text-[var(--mkt-accent-text)]" : "bg-slate-950 text-teal-300"
                     }`}>
                       <Clock className="w-2.5 h-2.5" />
                       Same-day service · Book in 60 seconds · Licensed & insured
@@ -537,7 +504,7 @@ function DesktopBuildAnimation() {
                   <MagicIn show={show("hero")} from="top" delay={40}>
                     <div className="flex items-center justify-between px-3 h-10 border-b border-slate-100 dark:border-white/8 bg-white/95 dark:bg-[#0d1210]/95 backdrop-blur-sm">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-5 h-5 rounded-md shrink-0 shadow-sm ${lime ? "bg-lime-400" : "bg-teal-400"}`} />
+                        <span className={`w-5 h-5 rounded-md shrink-0 shadow-sm ${lime ? "bg-[var(--mkt-accent)]" : "bg-teal-400"}`} />
                         <div className="min-w-0">
                           <p className="text-[10px] font-bold text-slate-900 dark:text-white leading-none truncate">{tpl.name}</p>
                           <p className="text-[7px] text-slate-400 mt-0.5 uppercase tracking-[0.12em]">{tpl.sector}</p>
@@ -550,7 +517,7 @@ function DesktopBuildAnimation() {
                         <span>Reviews</span>
                         <span>Contact</span>
                       </div>
-                      <div className={`h-6 px-2.5 rounded-md text-[8px] font-bold flex items-center text-slate-950 shrink-0 shadow-sm ${lime ? "bg-lime-400" : "bg-teal-400"}`}>
+                      <div className={`h-6 px-2.5 rounded-md text-[8px] font-bold flex items-center text-slate-950 shrink-0 shadow-sm ${lime ? "bg-[var(--mkt-accent)]" : "bg-teal-400"}`}>
                         {tpl.cta}
                       </div>
                     </div>
@@ -558,11 +525,11 @@ function DesktopBuildAnimation() {
 
                   <div className="flex-1 relative min-h-0">
                     <div
-                      className={`absolute right-2 top-2 z-20 flex items-center gap-1 rounded-full bg-slate-950/90 text-lime-300 text-[7px] font-bold px-2 py-0.5 shadow-lg pointer-events-none transition-[opacity,transform] duration-300 ${
+                      className={`absolute right-2 top-2 z-20 flex items-center gap-1 rounded-full bg-slate-950/90 text-[var(--mkt-accent-text)] text-[7px] font-bold px-2 py-0.5 shadow-lg pointer-events-none transition-[opacity,transform] duration-300 ${
                         building && activeSection ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"
                       }`}
                     >
-                      <span className="w-1 h-1 rounded-full bg-lime-400 animate-pulse" />
+                      <span className="w-1 h-1 rounded-full bg-[var(--mkt-accent)] animate-pulse" />
                       Adding {BUILDER_SECTIONS.find((s) => s.id === activeSection)?.label ?? "section"}
                     </div>
                     <div ref={canvasRef} className="h-full overflow-y-auto overflow-x-hidden scroll-smooth mkt-preview-scroll">
@@ -664,7 +631,7 @@ function DesktopBuildAnimation() {
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <p className="text-[9px] font-bold text-slate-800 dark:text-slate-100">Featured work</p>
-                          <p className={`text-[8px] font-semibold ${lime ? "text-lime-600 dark:text-lime-400" : "text-teal-600 dark:text-teal-400"}`}>View gallery</p>
+                          <p className={`text-[8px] font-semibold ${lime ? "text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" : "text-teal-600 dark:text-teal-400"}`}>View gallery</p>
                         </div>
                         <div className="grid grid-cols-4 gap-1">
                           {tpl.gallery.map((g, i) => (
@@ -698,11 +665,11 @@ function DesktopBuildAnimation() {
                           }`}
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={tpl.review.avatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 ring-2 ring-lime-400/50" />
+                          <img src={tpl.review.avatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 ring-2 ring-[var(--mkt-accent)]/50" />
                           <div className="min-w-0">
                             <div className="flex gap-0.5 mb-1">
                               {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className="w-2 h-2 text-lime-400 fill-lime-400" />
+                                <Star key={i} className="w-2 h-2 text-[var(--mkt-accent-text)] fill-[var(--mkt-accent)]" />
                               ))}
                             </div>
                             <p className="text-[8px] text-white/90 italic leading-snug">“{tpl.review.text}”</p>
@@ -715,7 +682,7 @@ function DesktopBuildAnimation() {
                         <div
                           ref={(el) => { if (el) sectionRefs.current.cta = el; }}
                           className={`rounded-lg px-2.5 py-2.5 flex flex-col justify-center h-full shadow-sm ${
-                            lime ? "bg-lime-400" : "bg-teal-400"
+                            lime ? "bg-[var(--mkt-accent)]" : "bg-teal-400"
                           } transition-shadow duration-500 ${activeSection === "cta" && building ? "mkt-section-active" : ""}`}
                         >
                           <p className="text-[10px] font-bold text-slate-950 leading-tight">Ready when you are</p>
@@ -747,8 +714,8 @@ function DesktopBuildAnimation() {
                 }`}
               >
                 <div className="flex items-center gap-1 mb-0.5">
-                  <MessageSquare className="w-2.5 h-2.5 text-lime-600 dark:text-lime-400" />
-                  <p className="text-[8px] font-bold text-lime-700 dark:text-lime-400">New lead</p>
+                  <MessageSquare className="w-2.5 h-2.5 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
+                  <p className="text-[8px] font-bold text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]">New lead</p>
                 </div>
                 <p className="text-[9px] font-semibold text-slate-800 dark:text-white">{tpl.lead.name}</p>
                 <p className="text-[7px] text-slate-500 dark:text-slate-400">{tpl.lead.note} · Just now</p>
@@ -818,7 +785,7 @@ function BuildCursor({ phase }: { phase: Phase }) {
         <svg key={phase} width="14" height="14" viewBox="0 0 24 24" className={p.click ? "mkt-click" : ""}>
           <path d="M5 3l14 8.5-6.2 1.4L10 21 5 3z" className="fill-slate-900 dark:fill-white" />
         </svg>
-        {p.click && <span key={`r-${phase}`} className="absolute -left-0.5 -top-0.5 w-3 h-3 rounded-full border border-lime-400/70 mkt-ripple" />}
+        {p.click && <span key={`r-${phase}`} className="absolute -left-0.5 -top-0.5 w-3 h-3 rounded-full border border-[var(--mkt-accent)]/70 mkt-ripple" />}
       </div>
     </div>
   );

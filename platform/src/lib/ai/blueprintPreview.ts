@@ -1,5 +1,6 @@
 import type { WebsiteBlueprint } from "./blueprintSchema";
 import { designToTheme, resolvePageSections, slugify } from "./hydrate";
+import { designHeader, designFooter } from "@/lib/designs";
 import { canonicalPageSlug } from "./completeHome";
 import type { HeaderConfig, FooterConfig } from "@/lib/config";
 import type { RenderContext } from "@/components/site/SectionRenderer";
@@ -22,6 +23,11 @@ function ctaForType(type: string | undefined): { label: string; href: string } {
 }
 
 export function blueprintHeader(blueprint: WebsiteBlueprint): HeaderConfig {
+  const header = blueprintHeaderBase(blueprint);
+  return blueprint.design?.preset ? designHeader(header, blueprint.design.preset) : header;
+}
+
+function blueprintHeaderBase(blueprint: WebsiteBlueprint): HeaderConfig {
   const name = blueprint.website.name;
   const seen = new Set<string>();
   const nav: HeaderConfig["nav"] = [];
@@ -44,6 +50,11 @@ export function blueprintHeader(blueprint: WebsiteBlueprint): HeaderConfig {
 }
 
 export function blueprintFooter(blueprint: WebsiteBlueprint): FooterConfig {
+  const footer = blueprintFooterBase(blueprint);
+  return blueprint.design?.preset ? designFooter(footer, blueprint.design.preset) : footer;
+}
+
+function blueprintFooterBase(blueprint: WebsiteBlueprint): FooterConfig {
   const name = blueprint.website.name;
   const header = blueprintHeader(blueprint);
   const links = header.nav;

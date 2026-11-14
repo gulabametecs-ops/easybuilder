@@ -25,7 +25,20 @@ type ActiveInfo = {
 type DesignRef = { id: string; name: string };
 
 export function previewUrl(siteUrl: string, designId: string) {
-  return `${siteUrl}${siteUrl.includes("?") ? "&" : "?"}design=${designId}`;
+  try {
+    const u = new URL(siteUrl);
+    if (u.pathname.includes("/api/demo/establish")) {
+      const to = u.searchParams.get("to") || "/";
+      const dest = new URL(to, u.origin);
+      dest.searchParams.set("design", designId);
+      u.searchParams.set("to", `${dest.pathname}${dest.search}`);
+      return u.toString();
+    }
+    u.searchParams.set("design", designId);
+    return u.toString();
+  } catch {
+    return `${siteUrl}${siteUrl.includes("?") ? "&" : "?"}design=${designId}`;
+  }
 }
 
 export function DemoVerticalPanel({
@@ -38,6 +51,7 @@ export function DemoVerticalPanel({
   designs = [],
   design,
   onShowActive,
+  onActivated,
 }: {
   vertical: Vertical;
   active?: ActiveInfo;
@@ -49,6 +63,7 @@ export function DemoVerticalPanel({
   /** Selected design id — default target of the main preview button. */
   design?: string;
   onShowActive?: (verticalId: string) => void;
+  onActivated?: (info: ActiveInfo) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [copied, setCopied] = useState<"user" | "pass" | null>(null);
@@ -58,8 +73,33 @@ export function DemoVerticalPanel({
   const router = useRouter();
   // After a switch, re-read server state so the "running" banner/badges follow the new sector.
   useEffect(() => {
-    if (switchState.step === "active") router.refresh();
-  }, [switchState.step, router]);
+    if (switchState.step !== "active") return;
+    onActivated?.({
+      siteUrl: switchState.siteUrl,
+      adminUrl: switchState.adminUrl,
+      expiresAt: switchState.expiresAt,
+      minutesLeft: switchState.minutesLeft,
+      adminUsername: switchState.adminUsername,
+      adminPassword: switchState.adminPassword,
+    });
+    router.refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [switchState.step]);
+
+  useEffect(() => {
+    if (verifyState.step !== "active") return;
+    onActivated?.({
+      siteUrl: verifyState.siteUrl,
+      adminUrl: verifyState.adminUrl,
+      expiresAt: verifyState.expiresAt,
+      minutesLeft: verifyState.minutesLeft,
+      adminUsername: verifyState.adminUsername,
+      adminPassword: verifyState.adminPassword,
+    });
+    router.refresh();
+    // Parent swaps to the full-screen stage; don't retrigger if it stays mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verifyState.step]);
 
   const flow = verifyState.step !== "idle" && verifyState.step !== "error" ? verifyState : requestState;
 
@@ -92,7 +132,7 @@ export function DemoVerticalPanel({
     const current = designs.find((d) => d.id === design) ?? designs[0];
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2 rounded-xl border border-lime-500/30 bg-lime-500/10 px-3.5 py-2.5 text-sm text-lime-800 dark:text-lime-200">
+        <div className="flex items-center gap-2 rounded-xl border border-[var(--mkt-accent)]/30 bg-[var(--mkt-accent-soft)] px-3.5 py-2.5 text-sm text-[var(--mkt-accent-text)]">
           <Clock className="w-4 h-4 shrink-0" />
           Demo active · ~{live.minutesLeft} min left
         </div>
@@ -146,24 +186,9 @@ export function DemoVerticalPanel({
         </div>
 
         {designs.length > 1 && (
-          <div>
-            <p className={`text-xs font-semibold uppercase tracking-wider ${mkt.muted} mb-2`}>Preview other designs</p>
-            <div className="flex flex-wrap gap-2">
-              {designs
-                .filter((d) => d.id !== current?.id)
-                .map((d) => (
-                  <a
-                    key={d.id}
-                    href={previewUrl(live.siteUrl, d.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${mkt.btnPill} px-3 py-1.5 text-xs`}
-                  >
-                    Preview {d.name} <ExternalLink className="w-3 h-3" />
-                  </a>
-                ))}
-            </div>
-          </div>
+          <p className={`text-xs ${mkt.muted}`}>
+            Preview uses the design you picked above. Switch the cards, then open preview again.
+          </p>
         )}
       </div>
     );
@@ -181,7 +206,7 @@ export function DemoVerticalPanel({
           <button
             type="submit"
             disabled={switchPending}
-            className={`w-full ${mkt.btnPrimary} py-2.5 text-sm disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:ring-offset-2`}
+            className={`w-full ${mkt.btnPrimary} py-2.5 text-sm disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-accent)] focus-visible:ring-offset-2`}
           >
             {switchPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
             Switch to {vertical.name} demo
@@ -193,12 +218,12 @@ export function DemoVerticalPanel({
           <button
             type="button"
             onClick={() => onShowActive(blockedVerticalId)}
-            className="block mt-2 font-semibold text-lime-600 dark:text-lime-400 hover:underline focus-visible:outline-none focus-visible:underline"
+            className="block mt-2 font-semibold text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] hover:underline focus-visible:outline-none focus-visible:underline"
           >
             Back to {blockedVerticalName} demo →
           </button>
         ) : (
-          <a href={`/demos?vertical=${blockedVerticalId}`} className="block mt-2 font-semibold text-lime-600 dark:text-lime-400 hover:underline">
+          <a href={`/demos?vertical=${blockedVerticalId}`} className="block mt-2 font-semibold text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] hover:underline">
             Go to active demo →
           </a>
         )}
@@ -212,7 +237,7 @@ export function DemoVerticalPanel({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`w-full ${mkt.btnPrimary} py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:ring-offset-2`}
+          className={`w-full ${mkt.btnPrimary} py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-accent)] focus-visible:ring-offset-2`}
         >
           Start 10-min demo
         </button>

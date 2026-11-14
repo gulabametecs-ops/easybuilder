@@ -180,6 +180,36 @@ export type SectionContentMap = {
     eyebrow: string; title: string; titleHighlight: string;
     items: { title: string; description: string; link: string; icon: string }[];
   };
+  visionMission: {
+    eyebrow: string;
+    visionTitle: string;
+    visionText: string;
+    missionTitle: string;
+    missionText: string;
+    valuesTitle: string;
+    values: { icon: string; title: string; text: string }[];
+  };
+  eventList: {
+    eyebrow: string;
+    title: string;
+    titleHighlight: string;
+    subtitle: string;
+    limit: number;
+    emptyText: string;
+    groupByStatus?: boolean;
+  };
+  donatePay: {
+    eyebrow: string;
+    title: string;
+    titleHighlight: string;
+    subtitle: string;
+    suggestedAmounts: string;
+  };
+  volunteerForm: {
+    title: string;
+    subtitle: string;
+    interests: string[];
+  };
 };
 
 export type SectionType = keyof SectionContentMap;

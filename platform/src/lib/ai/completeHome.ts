@@ -46,6 +46,9 @@ function pickHomeTypes(type: string): string[] {
   if (t.includes("agency") || t.includes("saas") || t.includes("studio")) {
     return ["hero", "features", "serviceCategories", "testimonials", "cta"];
   }
+  if (t.includes("foundation") && (t.includes("social") || t.includes("section") || t.includes("grassroot"))) {
+    return ["hero", "about", "visionMission", "serviceCategories", "eventList", "stats", "cta"];
+  }
   if (t.includes("ngo") || t.includes("charity") || t.includes("nonprofit") || t.includes("foundation")) {
     return ["hero", "about", "serviceCategories", "stats", "testimonials", "cta"];
   }
@@ -152,7 +155,7 @@ function industryCopy(bp: WebsiteBlueprint): Record<string, Record<string, unkno
       highlight: isNgo ? "Donate or volunteer today" : "Get in touch",
       phones: [],
       buttonLabel: isNgo ? "Get involved" : "Contact us",
-      buttonHref: isNgo ? "/get-involved" : "/contact",
+      buttonHref: isNgo ? "/volunteer" : "/contact",
     },
   };
 }

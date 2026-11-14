@@ -1,6 +1,7 @@
 import { Icon } from "../Icon";
 import { LeadForm } from "./LeadForm";
 import { AppointmentForm } from "./AppointmentForm";
+import { VolunteerForm } from "./VolunteerForm";
 import type { SectionContentMap, FooterConfig } from "@/lib/config";
 import { readContentStyles, textStyleProps } from "@/lib/fieldStyle";
 
@@ -127,6 +128,22 @@ export function AppointmentFormBlock({
         </div>
         <div className={FORM_CARD}>
           <AppointmentForm serviceOptions={serviceOptions} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export function VolunteerFormBlock({ c }: { c: SectionContentMap["volunteerForm"] }) {
+  const fs = readContentStyles(c);
+  const interests = c.interests?.length ? c.interests : ["Education", "Healthcare", "Field Work"];
+  return (
+    <section className="site-sec py-20 sm:py-28 bg-light">
+      <div className="mx-auto max-w-3xl px-4 sm:px-6">
+        <div className={FORM_CARD}>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2" {...textStyleProps(fs.title)}>{c.title}</h2>
+          <p className="text-slate-500 mb-8" {...textStyleProps(fs.subtitle)}>{c.subtitle}</p>
+          <VolunteerForm interests={interests} />
         </div>
       </div>
     </section>

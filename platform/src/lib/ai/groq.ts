@@ -4,9 +4,36 @@ import { GROQ_DEFAULT_MODEL } from "@/lib/groqModel";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const TIMEOUT_MS = 60_000;
 
+// Groq counts prompt tokens + max_tokens against the per-minute (TPM) limit — on the
+// free tier that's 8k. Asking for a flat 8192 output tokens alone blows the budget, so
+// the output cap is sized to what's left after the prompt.
+// ponytail: ~3.6 chars/token estimate; raise TPM_BUDGET if the Groq plan is upgraded.
+const TPM_BUDGET = 7600;
+const MIN_OUTPUT_TOKENS = 2000;
+const MAX_OUTPUT_TOKENS = 6000;
+const MAX_RATE_LIMIT_WAIT_MS = 20_000;
+
+function estimateTokens(messages: GroqMessage[]): number {
+  return Math.ceil(messages.reduce((n, m) => n + m.content.length, 0) / 3.6) + 50;
+}
+
+function outputBudget(messages: GroqMessage[]): number {
+  return Math.min(MAX_OUTPUT_TOKENS, Math.max(MIN_OUTPUT_TOKENS, TPM_BUDGET - estimateTokens(messages)));
+}
+
+/** Seconds Groq asks us to wait ("Please try again in 7.66s" / "in 850ms"), if any. */
+function retryAfterMs(text: string, header: string | null): number | null {
+  const m = text.match(/try again in ([\d.]+)\s*(ms|s)/i);
+  if (m) return Math.ceil(Number(m[1]) * (m[2].toLowerCase() === "ms" ? 1 : 1000));
+  const h = Number(header);
+  return Number.isFinite(h) && h > 0 ? h * 1000 : null;
+}
+
 export type GroqMessage = { role: "system" | "user" | "assistant"; content: string };
 
 export class GroqError extends Error {
+  /** For 429s: how long Groq asked us to wait. */
+  retryAfterMs: number | null = null;
   constructor(
     message: string,
     public status?: number,
@@ -64,6 +91,10 @@ export function friendlyGroqError(e: unknown): string {
     if (e.message === "JSON_GENERATION_FAILED") {
       return "AI could not finish the website plan. Try a shorter prompt.";
     }
+    if (e.status === 429) {
+      const secs = e.retryAfterMs ? Math.ceil(e.retryAfterMs / 1000) : 30;
+      return `The AI is busy right now (usage limit reached). Please try again in about ${secs} seconds.`;
+    }
     if (isNetworkError(e) || e.message.toLowerCase() === "fetch failed") {
       return "Could not reach Groq AI. Check your internet connection and try again.";
     }
@@ -82,13 +113,16 @@ async function groqChatOnce(messages: GroqMessage[], opts: GroqCallOptions): Pro
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+  const modelId = model || GROQ_DEFAULT_MODEL;
   const body: Record<string, unknown> = {
-    model: model || GROQ_DEFAULT_MODEL,
+    model: modelId,
     messages,
     temperature: opts.temperature ?? 0.15,
-    max_tokens: opts.maxTokens ?? 8192,
+    max_tokens: opts.maxTokens ?? outputBudget(messages),
   };
   if (opts.jsonMode) body.response_format = { type: "json_object" };
+  // gpt-oss models spend output tokens on hidden reasoning — keep it short for JSON work.
+  if (/gpt-oss/i.test(modelId)) body.reasoning_effort = "low";
 
   try {
     const res = await fetch(GROQ_URL, {
@@ -108,12 +142,14 @@ async function groqChatOnce(messages: GroqMessage[], opts: GroqCallOptions): Pro
         text.includes("json_validate_failed") ||
         text.includes("Failed to generate JSON") ||
         text.includes("structured_generation_failed");
-      throw new GroqError(
+      const err = new GroqError(
         isJsonFail
           ? "JSON_GENERATION_FAILED"
           : `Groq API error (${res.status}): ${text.slice(0, 200)}`,
         res.status,
       );
+      if (res.status === 429) err.retryAfterMs = retryAfterMs(text, res.headers.get("retry-after"));
+      throw err;
     }
 
     const data = JSON.parse(text) as {
@@ -146,7 +182,13 @@ async function groqChat(messages: GroqMessage[], opts: GroqCallOptions): Promise
         e instanceof GroqError &&
         (isNetworkError(e) || e.message.includes("Could not reach Groq") || e.status === 429 || e.status === 503);
       if (!retryable || attempt === 3) throw e;
-      await new Promise((r) => setTimeout(r, 400 * attempt));
+      // Rate limited: wait as long as Groq asks (bounded), otherwise a short backoff.
+      const wait =
+        e instanceof GroqError && e.status === 429
+          ? Math.min(MAX_RATE_LIMIT_WAIT_MS, (e.retryAfterMs ?? 5000) + 500)
+          : 400 * attempt;
+      if (e instanceof GroqError && e.status === 429 && (e.retryAfterMs ?? 0) > MAX_RATE_LIMIT_WAIT_MS) throw e;
+      await new Promise((r) => setTimeout(r, wait));
     }
   }
   throw last instanceof GroqError ? last : new GroqError(friendlyGroqError(last));
@@ -160,7 +202,7 @@ function parseGroqJson<T>(raw: string): T {
   }
 }
 
-export async function callGroqJson<T>(messages: GroqMessage[], maxTokens = 8192): Promise<T> {
+export async function callGroqJson<T>(messages: GroqMessage[], maxTokens?: number): Promise<T> {
   const jsonRetryHint: GroqMessage = {
     role: "user",
     content:

@@ -19,7 +19,8 @@ INTELLIGENCE (critical):
 - Create a FULL multi-page website (typically 5–8 pages) with clear page names and URL slugs — not just Home.
 - Use pageTemplateId from PAGE TEMPLATE PRESETS when it fits (e.g. contact page → "contact", pricing → "pricing").
 - Each page should have multiple sections OR a pageTemplateId that expands to sections.
-- NGO/nonprofit: Home, About, Programs/Work, Impact, Get Involved/Donate, Gallery, Contact.
+- Classic NGO/charity: Home, About, Causes, Impact, Get Involved, Donate, Contact. Use causes, impact, donate.
+- Grassroots foundation / social trust: Home, About, Team, Initiatives, Events, Volunteer, Donate, Contact. Use visionMission, eventList, volunteerForm, team, donatePay.
 - School/coaching: add Notices, Results, Admissions, Faculty/Courses as relevant.
 - Restaurant: Menu, Gallery, Booking, Contact.
 - Agency/SaaS: Services, Portfolio, Pricing, About, Contact.
@@ -39,6 +40,8 @@ Rules:
 - Every page needs "name" and "slug" (lowercase, hyphenated)
 - Prefer pageTemplateId + customized sections per page
 - Home MUST list at least: hero, about, serviceCategories (or features), testimonials, cta
+- services: 6–9 items in 2–3 categories, at least 2 per category
+- testimonials: 3 items with realistic Indian names; features: 4 items; about points: 4
 - Hero content fields: titleTop, titleHighlight, description, primaryBtn, secondaryBtn (not only heading)
 - Use unique slugs: about (not about-us twice), contact, programs
 - Keep each text field under 120 characters

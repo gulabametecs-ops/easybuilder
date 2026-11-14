@@ -47,7 +47,7 @@ export function MarketingHeader() {
   const linkCls = (id: string) =>
     `relative rounded-full px-3 py-1.5 text-sm transition-colors ${
       onHome && active === id
-        ? "bg-lime-500/10 text-[var(--mkt-text)] font-semibold"
+        ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-text)] font-semibold"
         : "text-[var(--mkt-text-secondary)] hover:text-[var(--mkt-text)]"
     }`;
 
@@ -71,7 +71,7 @@ export function MarketingHeader() {
           <Link
             href="/ai-builder"
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-              pathname === "/ai-builder" ? "bg-lime-500/15 text-[var(--mkt-text)]" : "text-[var(--mkt-accent-text)] hover:bg-lime-500/10"
+              pathname === "/ai-builder" ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-text)]" : "text-[var(--mkt-accent-text)] hover:bg-[var(--mkt-accent-soft)]"
             }`}
           >
             <Sparkles className="h-3.5 w-3.5" /> AI Builder
@@ -79,12 +79,12 @@ export function MarketingHeader() {
           <Link
             href="/demos"
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${
-              pathname === "/demos" ? "bg-lime-500/15 text-[var(--mkt-text)]" : "text-[var(--mkt-text-secondary)] hover:text-[var(--mkt-text)]"
+              pathname === "/demos" ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-text)]" : "text-[var(--mkt-text-secondary)] hover:text-[var(--mkt-text)]"
             }`}
           >
             <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-lime-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--mkt-accent)] opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--mkt-accent)]" />
             </span>
             Live demos
           </Link>
@@ -120,7 +120,7 @@ export function MarketingHeader() {
               {l.label}
             </a>
           ))}
-          <Link href="/ai-builder" onClick={() => setOpen(false)} className="inline-flex items-center gap-2 rounded-lg px-3 py-2.5 font-semibold text-[var(--mkt-accent-text)] hover:bg-lime-500/10">
+          <Link href="/ai-builder" onClick={() => setOpen(false)} className="inline-flex items-center gap-2 rounded-lg px-3 py-2.5 font-semibold text-[var(--mkt-accent-text)] hover:bg-[var(--mkt-accent-soft)]">
             <Sparkles className="h-4 w-4" /> AI Builder
           </Link>
           <Link href="/demos" onClick={() => setOpen(false)} className="rounded-lg px-3 py-2.5 font-semibold text-[var(--mkt-text)] hover:bg-[var(--mkt-surface-muted)]">

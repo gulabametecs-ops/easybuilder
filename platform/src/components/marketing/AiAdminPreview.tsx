@@ -35,7 +35,7 @@ export function AiAdminPreview({ blueprint }: { blueprint: WebsiteBlueprint }) {
             <div
               key={item.label}
               className={`flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium ${
-                item.active ? "bg-lime-500 text-slate-950" : "text-slate-400"
+                item.active ? "bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)]" : "text-slate-400"
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -59,7 +59,7 @@ export function AiAdminPreview({ blueprint }: { blueprint: WebsiteBlueprint }) {
                   /{p.slug === "home" ? "" : p.slug} · {p.sectionCount} sections
                 </p>
               </div>
-              <span className="text-[11px] font-semibold text-lime-700 bg-lime-50 px-2 py-1 rounded-md">
+              <span className="text-[11px] font-semibold text-[var(--mkt-accent-text)] bg-[var(--mkt-accent-soft)] px-2 py-1 rounded-md">
                 {i === 0 ? "Home" : "Edit"}
               </span>
             </div>

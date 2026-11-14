@@ -77,13 +77,25 @@ export async function getDemoTokenFromCookie(): Promise<string | null> {
  * Delete all tenant DB rows created during this demo + clear overlay + kill credentials.
  * Safe to call multiple times.
  */
+function wipeSessionRows(
+  model: { deleteMany: (args: { where: { demoSessionId: string } }) => Promise<unknown> } | undefined,
+  sessionId: string,
+) {
+  if (!model?.deleteMany) return Promise.resolve();
+  return model.deleteMany({ where: { demoSessionId: sessionId } });
+}
+
 export async function cleanupDemoSessionData(sessionId: string) {
   await Promise.all([
-    db.lead.deleteMany({ where: { demoSessionId: sessionId } }),
-    db.appointment.deleteMany({ where: { demoSessionId: sessionId } }),
-    db.notice.deleteMany({ where: { demoSessionId: sessionId } }),
-    db.service.deleteMany({ where: { demoSessionId: sessionId } }),
-    db.galleryItem.deleteMany({ where: { demoSessionId: sessionId } }),
+    wipeSessionRows(db.lead, sessionId),
+    wipeSessionRows(db.appointment, sessionId),
+    wipeSessionRows(db.notice, sessionId),
+    wipeSessionRows(db.service, sessionId),
+    wipeSessionRows(db.galleryItem, sessionId),
+    wipeSessionRows(db.person, sessionId),
+    wipeSessionRows(db.siteEvent, sessionId),
+    wipeSessionRows(db.volunteer, sessionId),
+    wipeSessionRows(db.siteDonation, sessionId),
   ]);
 
   await db.demoSession.update({
@@ -201,12 +213,16 @@ export function demosUnlockUrl(verticalId: string): string {
 
 /** Sweep any active sessions past expiry (e.g. visitor never came back). */
 export async function sweepExpiredDemoSessions() {
-  const stale = await db.demoSession.findMany({
-    where: { status: "active", expiresAt: { lt: new Date() } },
-    select: { id: true },
-    take: 50,
-  });
-  for (const s of stale) {
-    await cleanupDemoSessionData(s.id);
+  try {
+    const stale = await db.demoSession.findMany({
+      where: { status: "active", expiresAt: { lt: new Date() } },
+      select: { id: true },
+      take: 50,
+    });
+    for (const s of stale) {
+      await cleanupDemoSessionData(s.id);
+    }
+  } catch (err) {
+    console.error("sweepExpiredDemoSessions failed", err);
   }
 }

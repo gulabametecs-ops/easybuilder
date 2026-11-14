@@ -40,6 +40,8 @@ import {
   Factory,
   Heart,
   Truck,
+  Leaf,
+  LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 
@@ -89,6 +91,9 @@ const MAP: Record<string, LucideIcon> = {
   package: Package,
   factory: Factory,
   truck: Truck,
+  leaf: Leaf,
+  grid: LayoutGrid,
+  linkedin: Share2,
 };
 
 /** Icon keys shown in the admin visual picker. */
@@ -98,7 +103,7 @@ export const ICON_OPTIONS = [
   "clock", "zap", "gift", "tag", "edit", "wrench", "hammer", "droplet",
   "roller", "package", "factory", "truck", "book", "graduation", "stethoscope",
   "utensils", "store", "plane", "headset", "clipboard", "handshake", "trending",
-  "arrow", "whatsapp", "instagram", "facebook",
+  "arrow", "whatsapp", "instagram", "facebook", "linkedin", "leaf", "grid",
 ] as const;
 
 export function Icon({
@@ -126,7 +131,9 @@ export function categoryIcon(category: string): string {
   if (c.includes("test") || c.includes("prep") || c.includes("course")) return "book";
   if (c.includes("visa") || c.includes("document")) return "plane";
   if (c.includes("dental") || c.includes("eye") || c.includes("skin") || c.includes("mental") || c.includes("medicine") || c.includes("clinic")) return "stethoscope";
-  if (c.includes("health")) return "heart";
+  if (c.includes("health") || c.includes("hygiene")) return "heart";
+  if (c.includes("environment") || c.includes("plant")) return "leaf";
+  if (c.includes("initiative") || c.includes("program")) return "grid";
   if (c.includes("dining") || c.includes("food") || c.includes("menu") || c.includes("event") || c.includes("cater")) return "utensils";
   if (c.includes("product") || c.includes("wholesale") || c.includes("shop")) return "store";
   return "wrench";

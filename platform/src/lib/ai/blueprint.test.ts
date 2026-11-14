@@ -12,6 +12,8 @@ import { isValidGroqModelId, resolveGroqModel, GROQ_DEFAULT_MODEL } from "@/lib/
 import { extractJsonText } from "./groq";
 import { enrichBlueprint, inferVerticalId } from "./enrichBlueprint";
 import { normalizeBlueprint } from "./normalizeBlueprint";
+import { mergeBlueprintPatch } from "./publicModify";
+import { detectColorIntent } from "./colorIntent";
 
 const validBlueprint = {
   website: { name: "Nova Digital", type: "agency", description: "Digital marketing agency" },
@@ -268,5 +270,108 @@ describe("json extraction", () => {
   it("extracts json from markdown fences", () => {
     const raw = '```json\n{"website":{"name":"Test"}}\n```';
     assert.deepEqual(JSON.parse(extractJsonText(raw)), { website: { name: "Test" } });
+  });
+});
+
+describe("AI sector playbooks", () => {
+  it("keeps a gym a gym even when the AI copy says classes / trusted / healthy", () => {
+    const bp = normalizeBlueprint({
+      website: { name: "IronPulse Fitness", type: "gym", description: "Trusted gym with group classes for a healthy life" },
+      pages: [{ name: "Home", slug: "home", sections: [] }],
+    })!;
+    const slugs = enrichBlueprint(bp, "A modern gym in Pune with membership plans and trainers").pages.map((p) => p.slug);
+    assert.ok(slugs.includes("membership"), `expected gym pages, got ${slugs.join(",")}`);
+    for (const wrong of ["courses", "faculty", "admissions", "impact", "doctors"]) {
+      assert.ok(!slugs.includes(wrong), `unexpected ${wrong} page in ${slugs.join(",")}`);
+    }
+  });
+
+  it("matches whole words only", () => {
+    const bp = normalizeBlueprint({
+      website: { name: "Blue Tile Studio", type: "interior design", description: "A trusted studio" },
+      pages: [{ name: "Home", slug: "home", sections: [] }],
+    })!;
+    const slugs = enrichBlueprint(bp, "Interior design studio website").pages.map((p) => p.slug);
+    assert.ok(!slugs.includes("get-involved"), `NGO pages leaked in: ${slugs.join(",")}`);
+    assert.ok(!slugs.includes("portfolio"), `agency pages leaked in: ${slugs.join(",")}`);
+  });
+});
+
+describe("AI refine patch merge", () => {
+  const base = normalizeBlueprint({
+    website: { name: "IronPulse", type: "gym" },
+    design: { primaryColor: "#7cb518", style: "modern" },
+    pages: [
+      { name: "Home", slug: "home", sections: [{ sectionType: "hero", content: { titleTop: "Old" } }] },
+      { name: "About", slug: "about", sections: [{ sectionType: "about" }] },
+    ],
+  })!;
+
+  it("changes only design for a colour request and keeps every page", () => {
+    const out = mergeBlueprintPatch(base, { design: { primaryColor: "#1e3a8a" } });
+    assert.equal(out.design?.primaryColor, "#1e3a8a");
+    assert.equal(out.design?.style, "modern");
+    assert.deepEqual(out.pages.map((p) => p.slug), ["home", "about"]);
+  });
+
+  it("replaces a changed page by slug, appends new pages, never removes home", () => {
+    const out = mergeBlueprintPatch(base, {
+      pages: [
+        { name: "Home", slug: "home", sections: [{ sectionType: "hero", content: { titleTop: "New" } }, { sectionType: "faq" }] },
+        { name: "Pricing", slug: "pricing", sections: [{ sectionType: "pricingPlans" }] },
+      ],
+      removePages: ["home", "about"],
+    });
+    assert.deepEqual(out.pages.map((p) => p.slug), ["home", "pricing"]);
+    assert.equal(out.pages[0].sections?.length, 2);
+    assert.equal((out.pages[0].sections?.[0].content as { titleTop: string }).titleTop, "New");
+  });
+
+  it("keeps a dark secondary colour and blocks unrequested new pages", () => {
+    const out = mergeBlueprintPatch(
+      { ...base, design: { ...base.design, secondaryColor: "#0f172a" } },
+      { design: { primaryColor: "#2563eb", secondaryColor: "#ff8a65" }, pages: [{ name: "Pricing", slug: "pricing", sections: [] }] },
+      { allowNewPages: false },
+    );
+    assert.equal(out.design?.primaryColor, "#2563eb");
+    assert.equal(out.design?.secondaryColor, "#0f172a");
+    assert.ok(!out.pages.some((p) => p.slug === "pricing"));
+  });
+});
+
+describe("colour-only refine requests", () => {
+  it("handles named colours and plain theme changes locally", () => {
+    assert.equal(detectColorIntent("make it blue")?.name, "Blue");
+    assert.equal(detectColorIntent("change the colour to purple")?.name, "Purple");
+    assert.equal(detectColorIntent("red")?.name, "Red");
+    const a = detectColorIntent("change the color theme", "#7cb518");
+    const b = detectColorIntent("change the color theme", a!.primary);
+    assert.ok(a && b && a.primary !== b.primary, "theme change should rotate palettes");
+  });
+
+  it("leaves content changes to the AI", () => {
+    assert.equal(detectColorIntent("Add an FAQ section"), null);
+    assert.equal(detectColorIntent("make the hero headline blue and shorter"), null);
+    assert.equal(detectColorIntent("add a pricing page"), null);
+  });
+});
+
+describe("AI site completeness & design presets", () => {
+  it("fills thin lists and names inner-page banners", () => {
+    const team = resolvePageSections({ name: "Our Trainers", slug: "trainers", pageTemplateId: "team" });
+    const banner = JSON.parse(team.find((s) => s.type === "banner")!.content);
+    assert.equal(`${banner.title} ${banner.titleHighlight}`.trim(), "Our Trainers");
+    const members = JSON.parse(team.find((s) => s.type === "team")!.content).members;
+    assert.equal(members.length, 4);
+    const reviews = resolvePageSections({ name: "Home", slug: "home", sections: [{ sectionType: "testimonials", content: { items: [{ name: "Asha", text: "Great", rating: 5 }] } }] });
+    assert.equal(JSON.parse(reviews[0].content).items.length, 3);
+  });
+
+  it("applies the chosen preset to theme, hero and header", () => {
+    const design = { primaryColor: "#2563eb", secondaryColor: "#0f172a", preset: "bold" };
+    const hero = resolvePageSections({ name: "Home", slug: "home", sections: [{ sectionType: "hero", content: { titleTop: "Hi" } }] }, design);
+    assert.equal(JSON.parse(hero[0].content).variant, "gradient");
+    assert.equal(designToTheme(design).font, "Sora");
+    assert.equal(designToTheme(design).colors.primary, "#2563eb");
   });
 });

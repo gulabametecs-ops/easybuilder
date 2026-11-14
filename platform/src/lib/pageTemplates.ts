@@ -29,6 +29,9 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
   { id: "downloads", label: "Downloads", icon: "download", description: "Prospectus, forms & files", category: "school", sections: ["banner", "downloads", "cta"] },
   { id: "fees", label: "Fees / menu", icon: "list", description: "Price list with FAQ", category: "business", sections: ["banner", "priceList", "faq", "cta"] },
   { id: "how-it-works", label: "How it works", icon: "steps", description: "Step-by-step process page", category: "content", sections: ["banner", "steps", "features", "cta"] },
+  { id: "volunteer", label: "Volunteer", icon: "users", description: "Volunteer roles and application form", category: "content", sections: ["banner", "features", "volunteerForm"] },
+  { id: "events-list", label: "Events list", icon: "calendar", description: "Live events from Admin → Events", category: "content", sections: ["banner", "eventList", "cta"] },
+  { id: "donate", label: "Donate", icon: "heart", description: "Plans plus UPI / Razorpay / QR", category: "content", sections: ["banner", "pricingPlans", "donatePay", "cta"] },
 ];
 
 export const TEMPLATE_CATEGORIES: { id: PageTemplate["category"]; label: string }[] = [

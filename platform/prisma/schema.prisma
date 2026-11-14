@@ -40,6 +40,10 @@ model Tenant {
   notices      Notice[]
   resultExams  ResultExam[]
   campaigns    Campaign[]
+  people       Person[]
+  events       SiteEvent[]
+  volunteers   Volunteer[]
+  donations    SiteDonation[]
 }
 
 // ─── Login accounts for a tenant's admin panel ───────────────────────────────
@@ -68,6 +72,7 @@ model SiteConfig {
   customCss String   @default("") // site-wide custom CSS injected into every page
   resultConfig String @default("{}") // JSON: marksheet/report-card template settings
   adminPrefs String @default("{}") // JSON: notifyLeads, notifyAppointments, etc.
+  payments   String @default("{}") // JSON: tenant Razorpay / UPI / bank / QR
   updatedAt DateTime @updatedAt
 }
 
@@ -226,6 +231,111 @@ model GalleryItem {
   order   Int    @default(0)
   demoSessionId String?
 
+  @@index([demoSessionId])
+}
+
+// ─── Public website people (trustees, doctors, faculty — not admin logins) ───
+model Person {
+  id            String  @id @default(cuid())
+  tenantId      String
+  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  role          String  @default("")
+  bio           String  @default("")
+  image         String  @default("")
+  groupName     String  @default("core") // leadership | core
+  experience    String  @default("")
+  linkedin      String  @default("")
+  instagram     String  @default("")
+  order         Int     @default(0)
+  published     Boolean @default(true)
+  demoSessionId String?
+
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+// ─── Public events / programs (list + detail pages) ──────────────────────────
+model SiteEvent {
+  id                 String  @id @default(cuid())
+  tenantId           String
+  tenant             Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug               String  @default("")
+  title              String
+  activityName       String  @default("")
+  shortDescription   String  @default("")
+  programDescription String  @default("")
+  date               String  @default("") // ISO date YYYY-MM-DD
+  location           String  @default("")
+  organizedBy        String  @default("")
+  dignitaries        String  @default("")
+  impact             String  @default("")
+  coverImage         String  @default("")
+  gallery            String  @default("[]") // JSON string[]
+  objectives         String  @default("[]") // JSON string[]
+  documents          String  @default("[]") // JSON { label, url }[]
+  status             String  @default("auto") // auto | upcoming | completed
+  mapUrl             String  @default("")
+  venueNote          String  @default("")
+  blocks             String  @default("[]") // JSON custom story blocks
+  enableDonate       Boolean @default(false)
+  donateAmount       Int     @default(0) // suggested INR
+  donateLabel        String  @default("")
+  showQr             Boolean @default(false)
+  qrImage            String  @default("")
+  qrCaption          String  @default("")
+  published          Boolean @default(true)
+  order              Int     @default(0)
+  demoSessionId      String?
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+// Public donations collected on a tenant site (event or donate page)
+model SiteDonation {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  eventId        String   @default("")
+  name           String   @default("")
+  email          String   @default("")
+  phone          String   @default("")
+  amount         Int      @default(0) // paise
+  status         String   @default("created") // created | paid | failed
+  gateway        String   @default("upi") // razorpay | upi | mock
+  gatewayOrderId String   @default("")
+  gatewayPayId   String   @default("")
+  note           String   @default("")
+  demoSessionId  String?
+  createdAt      DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+// ─── Volunteer applications from the public form ─────────────────────────────
+model Volunteer {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  phone         String
+  email         String   @default("")
+  age           String   @default("")
+  gender        String   @default("")
+  city          String   @default("")
+  state         String   @default("")
+  interest      String   @default("")
+  availability  String   @default("")
+  mode          String   @default("")
+  experience    String   @default("")
+  status        String   @default("new") // new | contacted | accepted | declined
+  demoSessionId String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId])
   @@index([demoSessionId])
 }
 

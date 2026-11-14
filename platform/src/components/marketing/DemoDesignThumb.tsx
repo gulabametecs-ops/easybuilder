@@ -1,7 +1,22 @@
-import type { DemoDesign } from "./DemosExplorer";
+export type DesignThumbModel = {
+  id: string;
+  name: string;
+  header: string;
+  hero: string | null;
+  colors: {
+    primary: string;
+    primaryDark: string;
+    secondary: string;
+    accent: string;
+    dark: string;
+    light: string;
+    text: string;
+    heading: string;
+  };
+};
 
-/** CSS-drawn mini website in a design's palette — header style + hero layout + cards. */
-export function DemoDesignThumb({ design }: { design: DemoDesign }) {
+/** Mini website mock — browser chrome + header + hero + cards, in that design's colours. */
+export function DemoDesignThumb({ design, compact }: { design: DesignThumbModel; compact?: boolean }) {
   const c = design.colors;
   const dark = design.header === "bold";
   const centered = design.header === "centered";
@@ -11,7 +26,7 @@ export function DemoDesignThumb({ design }: { design: DemoDesign }) {
   const links = (color: string) => (
     <span className="flex gap-1">
       {[0, 1, 2].map((i) => (
-        <span key={i} className="block h-[3px] w-3 rounded-full" style={{ background: color, opacity: 0.55 }} />
+        <span key={i} className="block h-[3px] w-3 rounded-full" style={{ background: color, opacity: 0.5 }} />
       ))}
     </span>
   );
@@ -20,16 +35,16 @@ export function DemoDesignThumb({ design }: { design: DemoDesign }) {
     switch (design.header) {
       case "bold":
         return (
-          <div className="flex items-center justify-between px-2.5 py-2" style={{ background: c.dark }}>
+          <div className="flex items-center justify-between px-2.5 py-1.5" style={{ background: c.dark }}>
             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: c.primary }} />
             {links("#fff")}
-            <span className="h-2.5 w-6 rounded" style={{ background: c.primary }} />
+            <span className="h-2.5 w-6 rounded-sm" style={{ background: c.primary }} />
           </div>
         );
       case "modern":
         return (
-          <div className="px-2 pt-2">
-            <div className="flex items-center justify-between rounded-full bg-white px-2 py-1.5 shadow-sm ring-1 ring-black/5">
+          <div className="px-2 pt-1.5">
+            <div className="flex items-center justify-between rounded-full bg-white px-2 py-1 shadow-sm ring-1 ring-black/5">
               <span className="h-2 w-2 rounded-full" style={{ background: c.primary }} />
               {links(c.heading)}
               <span className="h-2 w-5 rounded-full" style={{ background: c.primary }} />
@@ -38,27 +53,27 @@ export function DemoDesignThumb({ design }: { design: DemoDesign }) {
         );
       case "centered":
         return (
-          <div className="flex flex-col items-center gap-1 border-b py-1.5" style={{ borderColor: `color-mix(in srgb, ${c.heading} 14%, transparent)` }}>
-            {bar("28%", c.heading, 4)}
+          <div className="flex flex-col items-center gap-1 border-b py-1.5" style={{ borderColor: `${c.heading}22` }}>
+            {bar("30%", c.heading, 4)}
             {links(c.heading)}
           </div>
         );
       case "minimal":
         return (
-          <div className="flex items-center justify-between px-2.5 py-2">
-            {bar("20%", c.heading)}
+          <div className="flex items-center justify-between px-2.5 py-1.5">
+            {bar("22%", c.heading)}
             {links(c.text)}
           </div>
         );
       default:
         return (
-          <div className="flex items-center justify-between bg-white px-2.5 py-2 shadow-sm">
+          <div className="flex items-center justify-between bg-white px-2.5 py-1.5 shadow-sm">
             <span className="flex items-center gap-1">
               <span className="h-2.5 w-2.5 rounded-sm" style={{ background: c.primary }} />
-              {bar("1.25rem", c.heading)}
+              {bar("1.2rem", c.heading)}
             </span>
             {links(c.heading)}
-            <span className="h-2.5 w-6 rounded" style={{ background: c.secondary }} />
+            <span className="h-2.5 w-6 rounded-sm" style={{ background: c.secondary }} />
           </div>
         );
     }
@@ -79,41 +94,45 @@ export function DemoDesignThumb({ design }: { design: DemoDesign }) {
   return (
     <div
       aria-hidden
-      className="relative aspect-[4/3] w-full overflow-hidden rounded-lg ring-1 ring-black/10"
-      style={{ background: dark ? c.light : "#ffffff" }}
+      className={`relative w-full overflow-hidden rounded-lg bg-white shadow-inner ring-1 ring-black/10 dark:ring-white/10 ${compact ? "aspect-[2/1]" : "aspect-[16/10]"}`}
+      style={{ background: dark ? c.light : "#fff" }}
     >
+      <div className="flex items-center gap-1 border-b border-black/5 bg-[#e8e6e1] px-2 py-[5px] dark:border-white/10 dark:bg-[#2a2a28]">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#c4c0b6] dark:bg-[#5a5a56]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[#c4c0b6] dark:bg-[#5a5a56]" />
+        <span className="h-1.5 w-1.5 rounded-full bg-[#c4c0b6] dark:bg-[#5a5a56]" />
+      </div>
       {header}
-      <div className="flex gap-2 px-2.5 py-3" style={{ background: heroBg }}>
+      <div className="flex gap-2 px-2.5 py-2.5" style={{ background: heroBg }}>
         <div className={`flex flex-1 flex-col gap-1 ${align}`}>
-          {bar(design.hero === "minimal" ? "55%" : "70%", ink, 5)}
-          {bar("50%", ink, 5)}
-          <span className="mt-0.5 block h-[3px] w-2/3 rounded-full" style={{ background: ink, opacity: 0.4 }} />
+          {bar(design.hero === "minimal" ? "52%" : "72%", ink, 5)}
+          {bar("48%", ink, 5)}
+          <span className="mt-0.5 block h-[3px] w-2/3 rounded-full" style={{ background: ink, opacity: 0.35 }} />
           <span className="mt-1 flex gap-1">
-            <span className="h-2.5 w-7 rounded" style={{ background: c.primary }} />
+            <span className="h-2.5 w-7 rounded-sm" style={{ background: c.primary }} />
             {design.hero !== "minimal" && (
-              <span className="h-2.5 w-7 rounded border" style={{ borderColor: ink, opacity: 0.6 }} />
+              <span className="h-2.5 w-7 rounded-sm" style={{ background: ink, opacity: 0.25 }} />
             )}
           </span>
         </div>
-        {design.hero === "split" && <div className="w-2/5 rounded-md" style={{ background: c.primary, opacity: 0.35 }} />}
+        {design.hero === "split" && <div className="w-2/5 rounded-md" style={{ background: c.primary, opacity: 0.4 }} />}
       </div>
       <div className="grid grid-cols-3 gap-1.5 px-2.5 py-2">
         {[0, 1, 2].map((i) => (
           <div
             key={i}
-            className="flex flex-col gap-1 rounded p-1.5"
+            className="flex flex-col gap-1 rounded-md p-1.5"
             style={{
               background: design.header === "minimal" || centered ? "transparent" : c.light,
-              border: design.header === "minimal" || centered ? `1px solid color-mix(in srgb, ${c.heading} 12%, transparent)` : undefined,
+              boxShadow: design.header === "minimal" || centered ? `inset 0 0 0 1px ${c.heading}18` : undefined,
             }}
           >
             <span className="h-1.5 w-1.5 rounded-full" style={{ background: i === 1 ? c.accent : c.primary }} />
-            {bar("80%", c.heading, 2)}
+            {bar("85%", c.heading, 2)}
             {bar("60%", c.text, 2)}
           </div>
         ))}
       </div>
-      {dark && <div className="absolute inset-x-0 bottom-0 h-2" style={{ background: c.dark }} />}
     </div>
   );
 }

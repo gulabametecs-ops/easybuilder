@@ -17,7 +17,7 @@ export default function SignupPage() {
       <div className={`${mkt.container} py-12 sm:py-14 grid lg:grid-cols-2 gap-12 items-start`}>
         <div className="hidden lg:block">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">
-            Launch your <span className="text-lime-600 dark:text-lime-400">business website</span> in minutes
+            Launch your <span className="text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]">business website</span> in minutes
           </h2>
           <p className={`${mkt.muted} mt-4`}>
             A complete, ready-to-edit website plus your own admin panel — no code needed.
@@ -30,8 +30,8 @@ export default function SignupPage() {
               "Your own subdomain, free",
             ].map((t) => (
               <li key={t} className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                <span className="w-6 h-6 rounded-full bg-lime-500/15 flex items-center justify-center">
-                  <Check className="w-3.5 h-3.5 text-lime-600 dark:text-lime-400" />
+                <span className="w-6 h-6 rounded-full bg-[var(--mkt-accent-soft)] flex items-center justify-center">
+                  <Check className="w-3.5 h-3.5 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
                 </span>
                 {t}
               </li>

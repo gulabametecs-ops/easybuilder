@@ -1,4 +1,4 @@
-import { Check, Sparkles } from "lucide-react";
+import { Sparkles, KeyRound, Palette, Globe } from "lucide-react";
 import { VERTICALS, VERTICAL_CATEGORIES, categoryOf } from "@/lib/verticals";
 import { stockImg } from "@/lib/img";
 import { getTemplate } from "@/lib/templates";
@@ -6,7 +6,7 @@ import { DESIGNS } from "@/lib/designs";
 import { getDemoStatusForVertical } from "@/lib/actions/demos";
 import { DemosExplorer, type ActiveInfo, type DemoCategory, type DemoSector } from "@/components/marketing/DemosExplorer";
 import { AiDraftBanner } from "@/components/marketing/AiDraftBanner";
-import { sweepExpiredDemoSessions } from "@/lib/demoSession";
+import { sweepExpiredDemoSessions, demoSiteUrl } from "@/lib/demoSession";
 import { mkt } from "@/lib/marketingTheme";
 
 export const metadata = { title: "Live Demos — Standard SaaS" };
@@ -17,6 +17,9 @@ const CATEGORY_IMAGES: Record<string, string> = {
   "Food & Hospitality": stockImg("restaurant food", 640, 360),
   Healthcare: stockImg("doctor hospital", 640, 360),
   "Trade & Manufacturing": stockImg("manufacturing warehouse", 640, 360),
+  "Community & Non-profit": stockImg("community volunteers", 640, 360),
+  "Fitness & Wellness": stockImg("gym fitness", 640, 360),
+  "Events & Training": stockImg("conference event", 640, 360),
 };
 
 // Grouped dynamically: known categories keep their defined order, any new ones follow.
@@ -46,11 +49,19 @@ function buildSectors(): DemoSector[] {
       status: v.status,
       category: categoryOf(v.id),
       accent: v.accent,
-      image: stockImg(v.name, 640, 400),
+      image:
+        v.id === "ngo-charity"
+          ? stockImg("charity children volunteers", 640, 400)
+          : v.id === "social-foundation"
+            ? stockImg("grassroots foundation rural village plantation", 640, 400)
+            : stockImg(v.name, 640, 400),
       description: v.description,
+      look: v.look,
+      demoUrl: v.status === "live" ? demoSiteUrl(v.id) : null,
       designs: DESIGNS.map((d) => ({
         id: d.id,
         name: d.name,
+        blurb: d.blurb,
         tagline: d.tagline,
         font: d.font,
         header: d.header,
@@ -91,38 +102,47 @@ export default async function DemosPage({
 
   return (
     <main>
-      <section className={`relative overflow-hidden ${mkt.sectionDivider} bg-[var(--mkt-bg)]`}>
-        <div className="mkt-hero-wash absolute inset-0 pointer-events-none" aria-hidden />
-        <div className="mkt-hero-orb mkt-hero-orb-a" aria-hidden />
-        <div className="mkt-hero-orb mkt-hero-orb-b" aria-hidden />
-        <div className={`relative ${mkt.container} pt-16 pb-12 sm:pt-24 sm:pb-16 text-center`}>
-          <span className={`${mkt.badge} mb-6`}>
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-lime-500 opacity-60 motion-safe:animate-ping" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-lime-500" />
-            </span>
-            {live.length} live demos · {DESIGNS.length} designs each
-          </span>
-          <h1 className="mx-auto max-w-3xl text-4xl sm:text-6xl font-bold tracking-tight text-[var(--mkt-text)] text-balance">
-            See your website{" "}
-            <span className="bg-gradient-to-r from-lime-500 to-emerald-500 bg-clip-text text-transparent">before you buy it</span>
-          </h1>
-          <p className={`mx-auto mt-5 max-w-2xl text-base sm:text-lg ${mkt.muted} text-pretty`}>
-            Pick your sector, choose a design, verify with OTP and get a private 10-minute sandbox — live website and
-            admin panel included.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">
-            {["Real, working websites", "Switch between 5 designs", "Auto-reset sandbox"].map((t) => (
-              <span key={t} className="inline-flex items-center gap-1.5 text-[var(--mkt-text-secondary)]">
-                <Check className="w-4 h-4 text-lime-500" /> {t}
+      <section className="relative overflow-hidden border-b border-[var(--mkt-border)]">
+        <div className="absolute inset-0 pointer-events-none mkt-hero-wash" aria-hidden />
+        <div className={`relative ${mkt.container} grid gap-12 py-14 sm:py-16 lg:grid-cols-[1.2fr_0.8fr] lg:items-center`}>
+          <div>
+            <span className={mkt.eyebrow}>
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--mkt-accent-2)] opacity-60 motion-safe:animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--mkt-accent-2)]" />
               </span>
-            ))}
-          </div>
-          {sp.expired && !focusVertical && (
-            <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300">
-              <Sparkles className="w-4 h-4" /> Your demo session ended. Choose a sector below to start again.
+              {live.length} live websites · {DESIGNS.length} skins each
+            </span>
+            <h1 className="font-display mt-6 max-w-xl text-4xl text-balance sm:text-6xl text-[var(--mkt-text)]">
+              Walk the site. Then <span className="italic text-[var(--mkt-accent-text)]">buy the same one.</span>
+            </h1>
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-[var(--mkt-text-secondary)] sm:text-lg">
+              Every demo is a real tenant — pages, admin, leads. Unlock a private 10-minute sandbox with OTP. No card.
             </p>
-          )}
+            {sp.expired && !focusVertical && (
+              <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-[var(--mkt-accent-2)]/30 bg-[var(--mkt-accent-soft)] px-4 py-1.5 text-sm font-medium text-[var(--mkt-accent-text)]">
+                <Sparkles className="w-4 h-4" /> Your last sandbox ended. Pick a sector below to start again.
+              </p>
+            )}
+          </div>
+          <ol className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            {[
+              { icon: Palette, n: "01", t: "Pick a look", d: "Sector + design skin, including two different non-profit concepts." },
+              { icon: KeyRound, n: "02", t: "Verify OTP", d: "One phone number, one sector, a private 10-minute sandbox." },
+              { icon: Globe, n: "03", t: "Open site & admin", d: "Click around, edit a page, submit a form. It resets after." },
+            ].map((s) => (
+              <li key={s.n} className={`flex gap-3 p-4 ${mkt.card}`}>
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)]">
+                  <s.icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-[11px] font-semibold tracking-wider text-[var(--mkt-accent-text)]">{s.n}</p>
+                  <p className="font-semibold text-[var(--mkt-text)]">{s.t}</p>
+                  <p className={`mt-0.5 text-sm ${mkt.muted}`}>{s.d}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 

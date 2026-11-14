@@ -99,6 +99,7 @@ async function main() {
     { subdomain: "demo-skill", vertical: "skill-learning", name: "TalentHub Academy", email: "demo@skill.test" },
     { subdomain: "demo-gym", vertical: "gym-fitness", name: "IronPulse Fitness", email: "demo@gym.test" },
     { subdomain: "demo-ngo", vertical: "ngo-charity", name: "Asha Foundation", email: "demo@ngo.test" },
+    { subdomain: "demo-foundation", vertical: "social-foundation", name: "Rise Social Foundation", email: "demo@foundation.test" },
     { subdomain: "demo-pharmacy", vertical: "pharmacy", name: "CareWell Pharmacy", email: "demo@pharmacy.test" },
     { subdomain: "demo-events", vertical: "events-training", name: "SummitHub Events", email: "demo@events.test" },
   ];

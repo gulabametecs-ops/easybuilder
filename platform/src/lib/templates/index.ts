@@ -20,6 +20,7 @@ import { manufacturing } from "./manufacturing";
 import { skill } from "./skill";
 import { gym } from "./gym";
 import { ngo } from "./ngo";
+import { ngoFoundation } from "./ngoFoundation";
 import { pharmacy } from "./pharmacy";
 import { events } from "./events";
 
@@ -50,6 +51,7 @@ export const TEMPLATES: Record<string, TemplateDef> = {
   "skill-learning": skill,
   "gym-fitness": gym,
   "ngo-charity": ngo,
+  "social-foundation": ngoFoundation,
   "pharmacy": pharmacy,
   "events-training": events,
 };

@@ -153,3 +153,74 @@ export async function submitAppointment(_prev: FormState, formData: FormData): P
 
   return { ok: true, message: "Your appointment request is booked! We'll confirm shortly." };
 }
+
+const volunteerSchema = z.object({
+  name: z.string().min(2, "Please enter your name"),
+  phone: z.string().min(7, "Please enter a valid phone number"),
+  email: z.string().email("Please enter a valid email"),
+  age: z.string().optional().default(""),
+  gender: z.string().optional().default(""),
+  city: z.string().min(2, "Please enter your city"),
+  state: z.string().optional().default(""),
+  interest: z.string().optional().default(""),
+  availability: z.string().optional().default(""),
+  mode: z.string().optional().default(""),
+  experience: z.string().optional().default(""),
+});
+
+export async function submitVolunteer(_prev: FormState, formData: FormData): Promise<FormState> {
+  const tenant = await getCurrentTenant();
+  if (!tenant) return { ok: false, message: "Site not found." };
+
+  const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const rl = rateLimit(`volunteer:${tenant.id}:${ip}`, 8, 15 * 60_000);
+  if (!rl.ok) return { ok: false, message: `Too many submissions. Please wait ${rl.retryAfterSec}s.` };
+
+  const parsed = volunteerSchema.safeParse({
+    name: formData.get("name"),
+    phone: formData.get("phone"),
+    email: formData.get("email") ?? "",
+    age: formData.get("age") ?? "",
+    gender: formData.get("gender") ?? "",
+    city: formData.get("city") ?? "",
+    state: formData.get("state") ?? "",
+    interest: formData.get("interest") ?? "",
+    availability: formData.get("availability") ?? "",
+    mode: formData.get("mode") ?? "",
+    experience: formData.get("experience") ?? "",
+  });
+  if (!parsed.success) {
+    return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  await db.volunteer.create({
+    data: {
+      tenantId: tenant.id,
+      ...parsed.data,
+      demoSessionId:
+        isDemoSubdomain(tenant.subdomain)
+          ? (await getActiveDemoSessionForTenant(tenant))?.id ?? null
+          : null,
+    },
+  });
+
+  if (!isDemoSubdomain(tenant.subdomain)) {
+    const e = (v: string) => escapeHtml(v || "");
+    const html = `
+      <p>New volunteer application on <strong>${e(tenant.name)}</strong></p>
+      <ul>
+        <li><strong>Name:</strong> ${e(parsed.data.name)}</li>
+        <li><strong>Phone:</strong> ${e(parsed.data.phone)}</li>
+        <li><strong>Email:</strong> ${e(parsed.data.email)}</li>
+        <li><strong>City:</strong> ${e(parsed.data.city)}</li>
+        <li><strong>Interest:</strong> ${e(parsed.data.interest || "—")}</li>
+        <li><strong>Availability:</strong> ${e(parsed.data.availability || "—")}</li>
+        <li><strong>Mode:</strong> ${e(parsed.data.mode || "—")}</li>
+      </ul>
+      <p>Open Admin → Volunteers to follow up.</p>`;
+    await notifyTenantOwners(tenant.id, `New volunteer: ${parsed.data.name.slice(0, 80)}`, html).catch(() => {});
+  }
+
+  return { ok: true, message: "Thank you! We've received your volunteer application and will get in touch soon." };
+}

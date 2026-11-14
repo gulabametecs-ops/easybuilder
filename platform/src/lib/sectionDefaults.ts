@@ -31,6 +31,10 @@ export const SECTION_META: { type: SectionType; label: string; description: stri
   { type: "countdown", label: "Countdown timer", description: "Live countdown to an event / offer deadline." },
   { type: "map", label: "Map", description: "Full-width Google Map embed with address." },
   { type: "richText", label: "Rich text / HTML", description: "Free-form HTML content block." },
+  { type: "visionMission", label: "Vision & mission", description: "Vision, mission and values cards — used by NGOs and institutions." },
+  { type: "eventList", label: "Events list", description: "Live events from Admin → Events, with upcoming/completed status." },
+  { type: "volunteerForm", label: "Volunteer form", description: "Volunteer application (name, city, interest, availability)." },
+  { type: "donatePay", label: "Donate / UPI / QR", description: "Razorpay, UPI QR and bank details from Settings → Payments." },
 ];
 
 export const SECTION_DEFAULTS: { [K in SectionType]: SectionContentMap[K] } = {
@@ -185,5 +189,39 @@ export const SECTION_DEFAULTS: { [K in SectionType]: SectionContentMap[K] } = {
       { title: "Fee Structure", description: "Class-wise fee details and payment options.", link: "", icon: "tag" },
       { title: "Academic Calendar", description: "Holidays, exams and events for the year.", link: "", icon: "calendar" },
     ],
+  },
+  visionMission: {
+    eyebrow: "PURPOSE",
+    visionTitle: "Vision",
+    visionText: "A short, ambitious vision for the communities you serve.",
+    missionTitle: "Mission",
+    missionText: "How you deliver that vision through structured programs on the ground.",
+    valuesTitle: "Our Values",
+    values: [
+      { icon: "users", title: "Community First", text: "We start with the needs of the people we serve." },
+      { icon: "shield", title: "Integrity", text: "Transparent reporting and accountable use of funds." },
+      { icon: "handshake", title: "Collaboration", text: "Lasting change is built with local partners." },
+    ],
+  },
+  eventList: {
+    eyebrow: "EVENTS",
+    title: "Recent &",
+    titleHighlight: "Upcoming",
+    subtitle: "Community programs, camps and awareness drives.",
+    limit: 6,
+    emptyText: "New events will appear here once they are published.",
+    groupByStatus: false,
+  },
+  donatePay: {
+    eyebrow: "GIVE",
+    title: "Donate",
+    titleHighlight: "Easily",
+    subtitle: "Pay online, scan the QR, or transfer to the bank account below.",
+    suggestedAmounts: "500,1000,2500",
+  },
+  volunteerForm: {
+    title: "Join as a Volunteer",
+    subtitle: "Tell us how you'd like to help — our team will get in touch.",
+    interests: ["Education", "Healthcare", "Women Empowerment", "Child Welfare", "Environment", "Fundraising", "Field Work"],
   },
 };

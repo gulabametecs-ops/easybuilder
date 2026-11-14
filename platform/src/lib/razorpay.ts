@@ -15,10 +15,13 @@ export async function razorpayKeyId(): Promise<string> {
 }
 
 // Creates a Razorpay order for the given amount (in paise). Returns the order id.
-export async function createRazorpayOrder(amountPaise: number, receipt: string): Promise<{ id: string }> {
-  const { keyId, keySecret } = await getRazorpayKeys();
+export async function createRazorpayOrderWithKeys(
+  amountPaise: number,
+  receipt: string,
+  keyId: string,
+  keySecret: string,
+): Promise<{ id: string }> {
   const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
-
   const res = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Basic ${auth}` },
@@ -28,13 +31,27 @@ export async function createRazorpayOrder(amountPaise: number, receipt: string):
   return (await res.json()) as { id: string };
 }
 
-// Verifies the payment signature returned by Razorpay Checkout.
-export async function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string): Promise<boolean> {
-  const { keySecret } = await getRazorpayKeys();
+export function verifyRazorpaySignatureWithSecret(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  keySecret: string,
+): boolean {
   const expected = crypto.createHmac("sha256", keySecret).update(`${orderId}|${paymentId}`).digest("hex");
   try {
     return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
   } catch {
     return false;
   }
+}
+
+export async function createRazorpayOrder(amountPaise: number, receipt: string): Promise<{ id: string }> {
+  const { keyId, keySecret } = await getRazorpayKeys();
+  return createRazorpayOrderWithKeys(amountPaise, receipt, keyId, keySecret);
+}
+
+// Verifies the payment signature returned by Razorpay Checkout.
+export async function verifyRazorpaySignature(orderId: string, paymentId: string, signature: string): Promise<boolean> {
+  const { keySecret } = await getRazorpayKeys();
+  return verifyRazorpaySignatureWithSecret(orderId, paymentId, signature, keySecret);
 }

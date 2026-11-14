@@ -15,6 +15,7 @@ import {
   HeartHandshake,
   Pill,
   CalendarDays,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ const MAP: Record<string, LucideIcon> = {
   heart: HeartHandshake,
   pill: Pill,
   calendar: CalendarDays,
+  landmark: Landmark,
 };
 
 export function VerticalIcon({ name, className }: { name: string; className?: string }) {

@@ -4,6 +4,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { createTenantFromTemplate } from "@/lib/provision";
 import { ROOT_DOMAIN } from "@/lib/domains";
+import { headers } from "next/headers";
+import { rateLimit } from "@/lib/rateLimit";
+import { getVertical } from "@/lib/verticals";
 
 const RESERVED = new Set(["www", "admin", "api", "app", "mail", "ftp", "root", "demo", "dashboard", "static", "assets", "cdn", "help", "support", "blog"]);
 
@@ -81,15 +84,22 @@ export async function checkSubdomain(sub: string): Promise<{ available: boolean;
 // Demo request / contact form on the marketing site.
 export type ContactState = { ok: boolean; message: string };
 const contactSchema = z.object({
-  name: z.string().min(2, "Please enter your name"),
-  email: z.string().email("Enter a valid email"),
-  phone: z.string().optional().default(""),
-  company: z.string().optional().default(""),
-  message: z.string().optional().default(""),
-  type: z.string().optional().default("demo"),
+  name: z.string().trim().min(2, "Please enter your name").max(80),
+  email: z.string().trim().email("Enter a valid email").max(120),
+  phone: z.string().trim().max(20).optional().default(""),
+  company: z.string().trim().max(120).optional().default(""),
+  message: z.string().trim().max(2000, "Message is too long").optional().default(""),
+  type: z.enum(["demo", "contact"]).catch("demo"),
+  vertical: z.string().max(40).optional().default(""),
+  contactVia: z.enum(["call", "whatsapp", "email"]).catch("call"),
 });
 
 export async function submitDemoRequest(_prev: ContactState, formData: FormData): Promise<ContactState> {
+  const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const rl = rateLimit(`demo-request:${ip}`, 5, 15 * 60_000);
+  if (!rl.ok) return { ok: false, message: `Too many requests. Please try again in ${rl.retryAfterSec} seconds.` };
+
   const parsed = contactSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -97,18 +107,25 @@ export async function submitDemoRequest(_prev: ContactState, formData: FormData)
     company: formData.get("company") ?? "",
     message: formData.get("message") ?? "",
     type: formData.get("type") ?? "demo",
+    vertical: formData.get("vertical") ?? "",
+    contactVia: formData.get("contactVia") ?? "call",
   });
   if (!parsed.success) {
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
+  const d = parsed.data;
+  if (d.contactVia !== "email" && d.phone.replace(/\D/g, "").length < 7) {
+    return { ok: false, message: "Add a phone number so we can call or WhatsApp you — or choose Email." };
+  }
   await db.platformLead.create({
     data: {
-      name: parsed.data.name,
-      email: parsed.data.email,
-      phone: parsed.data.phone ?? "",
-      company: parsed.data.company ?? "",
-      message: parsed.data.message ?? "",
-      type: parsed.data.type ?? "demo",
+      name: d.name,
+      email: d.email,
+      phone: d.phone,
+      company: d.company,
+      vertical: getVertical(d.vertical) ? d.vertical : "",
+      message: `[Prefers: ${d.contactVia}] ${d.message}`.trim(),
+      type: d.type,
     },
   });
   return { ok: true, message: "Thanks! We'll reach out shortly to set up your demo." };

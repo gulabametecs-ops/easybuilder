@@ -20,6 +20,9 @@ import {
   LogOut,
   Menu,
   X,
+  Users,
+  CalendarDays,
+  HeartHandshake,
 } from "lucide-react";
 import { useState } from "react";
 import { logoutAction } from "@/lib/actions/auth";
@@ -40,12 +43,14 @@ export function Sidebar({
   userEmail,
   newLeads = 0,
   pendingAppts = 0,
+  newVolunteers = 0,
 }: {
   bizName: string;
   userName?: string;
   userEmail?: string;
   newLeads?: number;
   pendingAppts?: number;
+  newVolunteers?: number;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -57,6 +62,7 @@ export function Sidebar({
         { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
         { href: "/admin/leads", label: "Leads", icon: Inbox, badge: newLeads },
         { href: "/admin/appointments", label: "Appointments", icon: CalendarClock, badge: pendingAppts },
+        { href: "/admin/volunteers", label: "Volunteers", icon: HeartHandshake, badge: newVolunteers },
       ],
     },
     {
@@ -65,6 +71,8 @@ export function Sidebar({
         { href: "/admin/appearance", label: "Appearance", icon: Palette },
         { href: "/admin/pages", label: "Pages & Sections", icon: FileStack },
         { href: "/admin/services", label: "Services", icon: Wrench },
+        { href: "/admin/people", label: "People", icon: Users },
+        { href: "/admin/events", label: "Events", icon: CalendarDays },
         { href: "/admin/gallery", label: "Gallery", icon: Images },
         { href: "/admin/notices", label: "Notices", icon: Megaphone },
         { href: "/admin/results", label: "Results", icon: ScrollText },

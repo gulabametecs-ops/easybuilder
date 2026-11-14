@@ -3,17 +3,19 @@
 import { useActionState, useState } from "react";
 import {
   Settings, Sparkles, Globe, Building2, Lock, Users, Info, ExternalLink,
-  Bell, Download, UserCircle, Link2, Palette, Search, CreditCard, AlertTriangle,
+  Bell, Download, UserCircle, Link2, Palette, Search, CreditCard, AlertTriangle, QrCode,
 } from "lucide-react";
 import { AdminWorkspace, fieldCls, labelCls } from "./AdminWorkspace";
 import { BusinessForm, PasswordForm } from "./SettingsForms";
 import { CustomDomainCard } from "./CustomDomainCard";
 import { TeamManager } from "./TeamManager";
 import {
-  updateProfile, saveAdminPrefs, requestCancellation,
+  updateProfile, saveAdminPrefs, requestCancellation, saveTenantPayments,
   type SettingsState,
 } from "@/lib/actions/settings";
 import type { AdminPrefs } from "@/lib/adminPrefs";
+import type { TenantPayments } from "@/lib/payments";
+import { ImageInput } from "./ImageInput";
 
 type Member = { id: string; email: string; name: string | null; role: string };
 type LeadRow = { name: string; phone: string; email: string; message: string; createdAt: string };
@@ -26,6 +28,7 @@ const TABS = [
   { id: "profile", label: "Profile", icon: UserCircle },
   { id: "domain", label: "Domain", icon: Globe },
   { id: "business", label: "Business", icon: Building2 },
+  { id: "payments", label: "Payments", icon: QrCode },
   { id: "notify", label: "Alerts", icon: Bell },
   { id: "data", label: "Data", icon: Download },
   { id: "security", label: "Security", icon: Lock },
@@ -74,6 +77,9 @@ export function SettingsManager(props: {
   canManageTeam: boolean;
   isOwner: boolean;
   prefs: AdminPrefs;
+  payments: TenantPayments;
+  hasRazorpaySecret: boolean;
+  donations: { id: string; name: string; amount: number; status: string; createdAt: string }[];
   leads: LeadRow[];
   appointments: ApptRow[];
   cancelRequested: boolean;
@@ -84,7 +90,7 @@ export function SettingsManager(props: {
     planName, serviceCount, serviceLimit, expiry, status, liveUrl, subdomain,
     customDomain, domainStatus, aTarget, cnameTarget, businessName, planId,
     sessionEmail, sessionRole, sessionName, members, currentUserId,
-    canManageTeam, isOwner, prefs, leads, appointments, cancelRequested, supportEmail,
+    canManageTeam, isOwner, prefs, payments, hasRazorpaySecret, donations, leads, appointments, cancelRequested, supportEmail,
   } = props;
 
   return (
@@ -166,6 +172,10 @@ export function SettingsManager(props: {
 
       {tab === "business" && <BusinessForm name={businessName} />}
 
+      {tab === "payments" && (
+        <PaymentsForm payments={payments} hasSecret={hasRazorpaySecret} donations={donations} />
+      )}
+
       {tab === "notify" && <NotifyForm prefs={prefs} />}
 
       {tab === "data" && (
@@ -218,6 +228,79 @@ function ProfileForm({ name, email, role }: { name: string; email: string; role:
         {pending ? "Saving…" : "Save profile"}
       </button>
     </form>
+  );
+}
+
+function PaymentsForm({
+  payments,
+  hasSecret,
+  donations,
+}: {
+  payments: TenantPayments;
+  hasSecret: boolean;
+  donations: { id: string; name: string; amount: number; status: string; createdAt: string }[];
+}) {
+  const [state, action, pending] = useActionState(saveTenantPayments, init);
+  return (
+    <div className="max-w-xl space-y-6">
+      <form action={action} className="space-y-3">
+        <p className="text-sm font-semibold text-slate-800 dark:text-white">How supporters pay you</p>
+        <p className="text-xs text-slate-500">Shown on Donate and on events where you enable donate / QR. Razorpay is optional — UPI QR works without it.</p>
+        <label className="block">
+          <span className={labelCls}>UPI ID</span>
+          <input name="upiId" defaultValue={payments.upiId} placeholder="yourtrust@upi" className={fieldCls} />
+        </label>
+        <ImageInput name="upiQrImage" label="UPI QR image (optional — we can auto-make one from UPI ID)" defaultValue={payments.upiQrImage} aspect="aspect-square" />
+        <label className="block">
+          <span className={labelCls}>Bank name</span>
+          <input name="bankName" defaultValue={payments.bankName} className={fieldCls} />
+        </label>
+        <label className="block">
+          <span className={labelCls}>Account name</span>
+          <input name="accountName" defaultValue={payments.accountName} className={fieldCls} />
+        </label>
+        <div className="grid sm:grid-cols-2 gap-2">
+          <label className="block">
+            <span className={labelCls}>Account number</span>
+            <input name="accountNumber" defaultValue={payments.accountNumber} className={fieldCls} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>IFSC</span>
+            <input name="ifsc" defaultValue={payments.ifsc} className={fieldCls} />
+          </label>
+        </div>
+        <label className="block">
+          <span className={labelCls}>Note under QR (80G, PAN, etc.)</span>
+          <textarea name="paymentNote" rows={2} defaultValue={payments.paymentNote} className={fieldCls} />
+        </label>
+        <p className="text-xs font-semibold text-slate-600 pt-2">Razorpay (optional)</p>
+        <label className="block">
+          <span className={labelCls}>Key ID</span>
+          <input name="razorpayKeyId" defaultValue={payments.razorpayKeyId} placeholder="rzp_live_…" className={fieldCls} />
+        </label>
+        <label className="block">
+          <span className={labelCls}>Key secret {hasSecret ? "(saved — leave blank to keep)" : ""}</span>
+          <input name="razorpayKeySecret" type="password" placeholder={hasSecret ? "••••••••" : "rzp_secret"} className={fieldCls} />
+        </label>
+        <Msg state={state} />
+        <button disabled={pending} className="w-full rounded-xl bg-lime-500 text-white text-sm font-bold py-2.5 hover:bg-lime-600 disabled:opacity-60">
+          {pending ? "Saving…" : "Save payment details"}
+        </button>
+      </form>
+      {donations.length > 0 && (
+        <div>
+          <p className="text-sm font-semibold mb-2">Recent donations</p>
+          <ul className="text-xs space-y-1">
+            {donations.map((d) => (
+              <li key={d.id} className="flex justify-between border-b border-slate-100 dark:border-slate-800 py-1.5">
+                <span>{d.name || "Supporter"} · {d.status}</span>
+                <span>₹{(d.amount / 100).toLocaleString("en-IN")}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -9,6 +9,7 @@ import { mkt } from "@/lib/marketingTheme";
 import { readAiDraft, clearAiDraft } from "@/lib/ai/promptStorage";
 import { inferVerticalId } from "@/lib/ai/enrichBlueprint";
 import { DESIGNS, isDesignId } from "@/lib/designs";
+import { DesignPicker } from "./DesignPicker";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global { interface Window { Razorpay: any } }
@@ -130,19 +131,19 @@ export function SubscribeFlow({
   if (view.status === "success") {
     clearAiDraft();
     return (
-      <div className={`${mkt.card} border-lime-500/30 bg-lime-500/10 p-8 sm:p-10 text-center max-w-lg mx-auto`}>
-        <div className="w-14 h-14 rounded-full bg-lime-500/20 flex items-center justify-center mx-auto mb-4">
-          <Check className="w-7 h-7 text-lime-600 dark:text-lime-400" />
+      <div className={`${mkt.card} border-[var(--mkt-accent)]/30 bg-[var(--mkt-accent-soft)] p-8 sm:p-10 text-center max-w-lg mx-auto`}>
+        <div className="w-14 h-14 rounded-full bg-[var(--mkt-accent-soft)] flex items-center justify-center mx-auto mb-4">
+          <Check className="w-7 h-7 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Payment successful — you&apos;re live!</h2>
         <p className={`${mkt.muted} mt-2`}>{view.planLabel}</p>
         <div className="mt-6 space-y-3 text-left">
           <a
             href={view.url}
-            className={`flex items-center justify-between rounded-xl px-4 py-3 ${mkt.cardSoft} hover:border-lime-500/30 transition`}
+            className={`flex items-center justify-between rounded-xl px-4 py-3 ${mkt.cardSoft} hover:border-[var(--mkt-accent)]/30 transition`}
           >
             <span className="text-slate-600 dark:text-slate-300 text-sm">Your website</span>
-            <span className="text-lime-600 dark:text-lime-400 text-sm flex items-center gap-1">
+            <span className="text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] text-sm flex items-center gap-1">
               {view.url.replace(/^https?:\/\//, "")} <ExternalLink className="w-3.5 h-3.5" />
             </span>
           </a>
@@ -176,9 +177,9 @@ export function SubscribeFlow({
       <input type="hidden" name="design" value={aiBlueprint ? "" : design} />
 
       {aiSiteName && (
-        <div className={`${mkt.card} border-lime-500/40 bg-lime-500/10 p-4 sm:p-5 flex items-start gap-3`}>
-          <span className="w-10 h-10 rounded-xl bg-lime-500/20 flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-lime-600 dark:text-lime-400" />
+        <div className={`${mkt.card} border-[var(--mkt-accent)]/40 bg-[var(--mkt-accent-soft)] p-4 sm:p-5 flex items-start gap-3`}>
+          <span className="w-10 h-10 rounded-xl bg-[var(--mkt-accent-soft)] flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
           </span>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-slate-900 dark:text-white">
@@ -195,7 +196,7 @@ export function SubscribeFlow({
                 href="/ai-preview"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-lime-600 dark:text-lime-400 hover:underline"
+                className="inline-flex items-center gap-1.5 mt-2 text-sm font-medium text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] hover:underline"
               >
                 <ExternalLink className="w-3.5 h-3.5" /> Preview again
               </a>
@@ -207,8 +208,8 @@ export function SubscribeFlow({
       {/* Sector */}
       <section className={`${mkt.card} p-5 sm:p-6`}>
         <div className="flex items-start gap-3 mb-4">
-          <span className="w-10 h-10 rounded-xl bg-lime-500/15 flex items-center justify-center shrink-0">
-            <Globe className="w-5 h-5 text-lime-600 dark:text-lime-400" />
+          <span className="w-10 h-10 rounded-xl bg-[var(--mkt-accent-soft)] flex items-center justify-center shrink-0">
+            <Globe className="w-5 h-5 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
           </span>
           <div>
             <h2 className="font-bold text-slate-900 dark:text-white">1. Choose your sector</h2>
@@ -231,28 +232,40 @@ export function SubscribeFlow({
           </p>
         )}
         {isLive && !aiBlueprint && (
-          <fieldset className="mt-6">
-            <legend className={label}>Design style</legend>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-              {DESIGNS.map((d) => (
-                <label
-                  key={d.id}
-                  className={`cursor-pointer rounded-xl border p-3 transition ${
-                    design === d.id
-                      ? "border-lime-500 bg-lime-500/10 ring-1 ring-lime-500"
-                      : "border-[var(--mkt-border)] hover:border-lime-500/50"
-                  }`}
-                >
-                  <input type="radio" name="designPick" value={d.id} checked={design === d.id} onChange={() => setDesign(d.id)} className="sr-only" />
-                  <span className="block text-sm font-semibold text-slate-900 dark:text-white">{d.name}</span>
-                  <span className={`block text-[11px] leading-snug mt-0.5 ${mkt.muted}`}>{d.tagline}</span>
-                </label>
-              ))}
-            </div>
+          <div className="mt-6">
+            <DesignPicker
+              designs={DESIGNS.map((d) => ({
+                id: d.id,
+                name: d.name,
+                blurb: d.blurb,
+                tagline: d.tagline,
+                header: d.header,
+                hero: d.hero ?? null,
+                colors: d.palette({
+                  primary: "#b45309",
+                  primaryDark: "#92400e",
+                  secondary: "#171717",
+                  accent: "#b45309",
+                  dark: "#171717",
+                  light: "#faf9f6",
+                  text: "#525252",
+                  heading: "#171717",
+                }),
+              }))}
+              value={design}
+              onChange={(id) => { if (isDesignId(id)) setDesign(id); }}
+              layout="checkout"
+              label="Choose a design"
+              hint="Same pages — only the look changes. Preview on live demos, or restyle later in admin."
+            />
             <p className={`mt-2 text-xs ${mkt.muted}`}>
-              Preview every style on the <a href={`/demos?vertical=${vertical}`} className="text-lime-600 dark:text-lime-400 hover:underline">live demos</a> page. You can change colours, fonts and layouts anytime from your admin.
+              See them live on the{" "}
+              <a href={`/demos?vertical=${vertical}`} className="text-[var(--mkt-accent-text)] hover:underline">
+                demos
+              </a>{" "}
+              page.
             </p>
-          </fieldset>
+          </div>
         )}
       </section>
 
@@ -273,7 +286,7 @@ export function SubscribeFlow({
                   onClick={() => setDurId(d.id)}
                   className={`rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
                     active
-                      ? "bg-lime-500/15 text-lime-800 dark:text-lime-300 ring-1 ring-lime-500/40 shadow-sm"
+                      ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] ring-1 ring-[var(--mkt-accent)]/40 shadow-sm"
                       : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.03] dark:hover:bg-white/5"
                   }`}
                 >
@@ -281,7 +294,7 @@ export function SubscribeFlow({
                   {d.badge && (
                     <span
                       className={`ml-1.5 text-[11px] sm:text-xs ${
-                        active ? "text-lime-700 dark:text-lime-400" : "text-lime-600 dark:text-lime-500"
+                        active ? "text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" : "text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent)]"
                       }`}
                     >
                       {d.badge}
@@ -312,14 +325,14 @@ export function SubscribeFlow({
                 onClick={() => setTierId(t.id)}
                 className={`relative flex flex-col text-left rounded-2xl p-6 sm:p-7 border transition-all duration-300 ${
                   active
-                    ? "border-lime-500 bg-white dark:bg-white/[0.04] shadow-xl shadow-lime-500/10 ring-2 ring-lime-500/30 md:scale-[1.02] z-10"
+                    ? "border-[var(--mkt-accent)] bg-white dark:bg-white/[0.04] shadow-xl shadow-[var(--mkt-accent)]/10 ring-2 ring-[var(--mkt-accent)]/30 md:scale-[1.02] z-10"
                     : t.popular
-                      ? "border-lime-500/50 bg-white dark:bg-white/[0.03] hover:border-lime-500 hover:shadow-lg"
-                      : `${mkt.card} hover:border-lime-500/25 hover:shadow-lg`
+                      ? "border-[var(--mkt-accent)]/50 bg-white dark:bg-white/[0.03] hover:border-[var(--mkt-accent)] hover:shadow-lg"
+                      : `${mkt.card} hover:border-[var(--mkt-accent)]/25 hover:shadow-lg`
                 }`}
               >
                 {t.popular && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-lime-500 text-slate-950">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)]">
                     Most popular
                   </span>
                 )}
@@ -339,7 +352,7 @@ export function SubscribeFlow({
                 <ul className="mt-5 space-y-2.5 flex-1">
                   {t.features.map((f) => (
                     <li key={f} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300">
-                      <Check className="w-4 h-4 text-lime-500 mt-0.5 shrink-0" strokeWidth={2.5} />
+                      <Check className="w-4 h-4 text-[var(--mkt-accent)] mt-0.5 shrink-0" strokeWidth={2.5} />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -347,7 +360,7 @@ export function SubscribeFlow({
                 <span
                   className={`mt-5 block text-center rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                     active
-                      ? "bg-lime-500 text-slate-950"
+                      ? "bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)]"
                       : "border border-black/15 dark:border-white/20 text-slate-700 dark:text-slate-200"
                   }`}
                 >
@@ -369,7 +382,7 @@ export function SubscribeFlow({
 
           <input type="hidden" name="coupon" value={couponRes?.valid ? couponRes.code : ""} />
           <div className="flex items-stretch gap-2 mb-4">
-            <div className={`flex-1 flex items-center rounded-xl border border-black/12 dark:border-white/12 bg-black/[0.02] dark:bg-white/5 px-3 focus-within:border-lime-500 focus-within:ring-2 focus-within:ring-lime-500/20 transition`}>
+            <div className={`flex-1 flex items-center rounded-xl border border-black/12 dark:border-white/12 bg-black/[0.02] dark:bg-white/5 px-3 focus-within:border-[var(--mkt-accent)] focus-within:ring-2 focus-within:ring-[var(--mkt-accent)]/20 transition`}>
               <Tag className="w-4 h-4 text-slate-400 shrink-0" />
               <input
                 value={coupon}
@@ -391,7 +404,7 @@ export function SubscribeFlow({
             </button>
           </div>
           {couponRes?.message && (
-            <p className={`text-xs mb-4 ${couponRes.valid ? "text-lime-600 dark:text-lime-400" : "text-red-500"}`}>
+            <p className={`text-xs mb-4 ${couponRes.valid ? "text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" : "text-red-500"}`}>
               {couponRes.message}
             </p>
           )}
@@ -406,7 +419,7 @@ export function SubscribeFlow({
               className={mkt.input}
             />
             {isLive && (
-              <div className="flex items-stretch rounded-xl border border-black/12 dark:border-white/12 bg-black/[0.02] dark:bg-white/5 overflow-hidden focus-within:border-lime-500 focus-within:ring-2 focus-within:ring-lime-500/20 transition">
+              <div className="flex items-stretch rounded-xl border border-black/12 dark:border-white/12 bg-black/[0.02] dark:bg-white/5 overflow-hidden focus-within:border-[var(--mkt-accent)] focus-within:ring-2 focus-within:ring-[var(--mkt-accent)]/20 transition">
                 <input
                   name="subdomain"
                   required
@@ -469,7 +482,7 @@ export function SubscribeFlow({
           )}
           {isLive && !mock && (
             <p className={`text-xs mt-3 flex items-center justify-center gap-1.5 ${mkt.muted}`}>
-              <ShieldCheck className="w-3.5 h-3.5 text-lime-500" /> Secure payment via Razorpay
+              <ShieldCheck className="w-3.5 h-3.5 text-[var(--mkt-accent)]" /> Secure payment via Razorpay
             </p>
           )}
         </div>
@@ -493,7 +506,7 @@ export function SubscribeFlow({
             {isLive && sub && (
               <div className="flex justify-between gap-3">
                 <dt className={mkt.muted}>Subdomain</dt>
-                <dd className="text-lime-600 dark:text-lime-400 font-medium text-right break-all">
+                <dd className="text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] font-medium text-right break-all">
                   {sub}.{ROOT}
                 </dd>
               </div>
@@ -508,8 +521,8 @@ export function SubscribeFlow({
             )}
             {discountPct > 0 && (
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-lime-600 dark:text-lime-400">Coupon ({discountPct}% off)</span>
-                <span className="text-lime-600 dark:text-lime-400">−{formatINR(total - displayTotal)}</span>
+                <span className="text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]">Coupon ({discountPct}% off)</span>
+                <span className="text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]">−{formatINR(total - displayTotal)}</span>
               </div>
             )}
             <div className="flex justify-between items-baseline">
@@ -521,7 +534,7 @@ export function SubscribeFlow({
           <ul className="mt-5 space-y-2">
             {["Instant provisioning", "Free subdomain", "Full admin panel", "Cancel anytime"].map((t) => (
               <li key={t} className={`flex items-center gap-2 text-xs ${mkt.muted}`}>
-                <Check className="w-3.5 h-3.5 text-lime-500 shrink-0" />
+                <Check className="w-3.5 h-3.5 text-[var(--mkt-accent)] shrink-0" />
                 {t}
               </li>
             ))}

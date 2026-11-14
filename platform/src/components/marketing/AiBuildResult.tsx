@@ -31,15 +31,15 @@ export function AiBuildResultSummary({ blueprint, questions, onFullPreview }: Om
   return (
     <div className="space-y-6 ai-result-enter">
       {/* Success banner */}
-      <div className="relative overflow-hidden rounded-2xl border border-lime-500/35 bg-gradient-to-br from-lime-500/15 via-emerald-500/8 to-transparent p-5 sm:p-6">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-lime-400/20 rounded-full blur-3xl pointer-events-none" aria-hidden />
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--mkt-accent)]/35 bg-gradient-to-br from-[var(--mkt-accent-soft)] via-transparent to-[var(--mkt-accent-2)]/10 p-5 sm:p-6">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-[var(--mkt-accent)]/20 rounded-full blur-3xl pointer-events-none" aria-hidden />
         <div className="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-start gap-3 min-w-0">
-            <span className="ai-build-success flex items-center justify-center w-12 h-12 rounded-2xl bg-lime-500 text-slate-950 shadow-lg shadow-lime-500/30 shrink-0">
+            <span className="ai-build-success flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)] shadow-lg shadow-[var(--mkt-accent)]/30 shrink-0">
               <Check className="w-6 h-6" strokeWidth={2.5} />
             </span>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-lime-700 dark:text-lime-400 mb-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] mb-1">
                 Build complete
               </p>
               <h3 className="text-xl sm:text-2xl font-bold text-[var(--mkt-text)] tracking-tight">
@@ -50,11 +50,11 @@ export function AiBuildResultSummary({ blueprint, questions, onFullPreview }: Om
               )}
               <div className="flex flex-wrap gap-2 mt-3">
                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--mkt-surface)] border border-[var(--mkt-border)]">
-                  <Layout className="w-3.5 h-3.5 text-lime-600" />
+                  <Layout className="w-3.5 h-3.5 text-[var(--mkt-accent-text)]" />
                   {stats.pages.length} pages
                 </span>
                 <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-[var(--mkt-surface)] border border-[var(--mkt-border)]">
-                  <Layers className="w-3.5 h-3.5 text-lime-600" />
+                  <Layers className="w-3.5 h-3.5 text-[var(--mkt-accent-text)]" />
                   {stats.totalSections} sections
                 </span>
                 {style && (
@@ -78,7 +78,7 @@ export function AiBuildResultSummary({ blueprint, questions, onFullPreview }: Om
       {/* Pages breakdown */}
       <div className="rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface-muted)]/60 p-4 sm:p-5">
         <p className="text-sm font-semibold text-[var(--mkt-text)] mb-3 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-lime-600" />
+          <Sparkles className="w-4 h-4 text-[var(--mkt-accent-text)]" />
           What we built for you
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -87,8 +87,8 @@ export function AiBuildResultSummary({ blueprint, questions, onFullPreview }: Om
               key={p.slug}
               className="flex items-start gap-2.5 rounded-xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-2.5"
             >
-              <span className="w-6 h-6 rounded-full bg-lime-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                <Check className="w-3.5 h-3.5 text-lime-600" />
+              <span className="w-6 h-6 rounded-full bg-[var(--mkt-accent-soft)] flex items-center justify-center shrink-0 mt-0.5">
+                <Check className="w-3.5 h-3.5 text-[var(--mkt-accent-text)]" />
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-[var(--mkt-text)] truncate">{p.name}</p>
@@ -119,8 +119,8 @@ export function AiBuildResultActions({ onPersist, onReset }: Pick<Props, "onPers
   return (
     <div className="space-y-4 ai-result-enter" style={{ animationDelay: "120ms" }}>
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="rounded-2xl border-2 border-lime-500/40 bg-lime-500/5 p-5 sm:p-6 flex flex-col">
-          <div className="flex items-center gap-2 text-lime-700 dark:text-lime-400 font-semibold text-sm mb-2">
+        <div className="rounded-2xl border-2 border-[var(--mkt-accent)]/40 bg-[var(--mkt-accent)]/5 p-5 sm:p-6 flex flex-col">
+          <div className="flex items-center gap-2 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] font-semibold text-sm mb-2">
             <ShoppingBag className="w-4 h-4" />
             Buy & launch your site
           </div>
@@ -135,8 +135,8 @@ export function AiBuildResultActions({ onPersist, onReset }: Pick<Props, "onPers
                 onClick={onPersist}
                 className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition ${
                   t.popular
-                    ? "border-lime-500 bg-lime-500 text-white hover:bg-lime-600"
-                    : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] hover:border-lime-500/40"
+                    ? "border-[var(--mkt-accent)] bg-[var(--mkt-accent)] text-white hover:bg-[var(--mkt-accent-hover)]"
+                    : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] hover:border-[var(--mkt-accent)]/40"
                 }`}
               >
                 {t.name}
@@ -155,7 +155,7 @@ export function AiBuildResultActions({ onPersist, onReset }: Pick<Props, "onPers
 
         <div className="rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface-muted)]/50 p-5 sm:p-6 flex flex-col">
           <div className="flex items-center gap-2 text-[var(--mkt-text)] font-semibold text-sm mb-2">
-            <Play className="w-4 h-4 text-lime-600" />
+            <Play className="w-4 h-4 text-[var(--mkt-accent-text)]" />
             Just explore the platform
           </div>
           <p className={`text-sm ${mkt.muted} flex-1`}>

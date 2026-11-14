@@ -43,6 +43,7 @@ export function img(_seed: string, w = 800, h = 600): string {
 // Order matters — first match wins, so specific sectors come before generic words.
 const STOCK: [RegExp, string][] = [
   [/gym|fitness|workout/i, "1534438327276-14e5300c3a48"],
+  [/plantation|sapling|rural village|grassroots|foundation/i, "1542601906990-b4d3fb778b09"],
   [/ngo|charity|non-profit|community/i, "1488521787991-ed7bbaae773c"],
   [/pharmac|medicine|chemist/i, "1631549916768-4119b2e5f926"],
   [/event|webinar|seminar|conference/i, "1540575467063-178a50c2df87"],

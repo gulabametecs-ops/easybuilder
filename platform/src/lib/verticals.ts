@@ -15,6 +15,7 @@ export type Vertical = {
   demoSubdomain?: string; // demo tenant subdomain when live
   demoEmail?: string; // demo admin login (password is always demo1234)
   accent: string; // hex, for catalog card
+  look?: string; // short label when two templates share a category
 };
 
 // Shared demo admin password for all live demos.
@@ -158,11 +159,24 @@ export const VERTICALS: Vertical[] = [
     name: "NGO / Charity / Trust",
     tagline: "Causes, programs, donations & volunteers",
     icon: "heart",
-    description: "Trustworthy website for NGOs and trusts — causes, impact, donation tiers with 80G note, volunteer sign-up and events.",
+    description: "Registered charity website — causes, measurable impact, 80G donations, volunteer sign-up and event gallery.",
     status: "live",
     demoSubdomain: "demo-ngo",
     demoEmail: "demo@ngo.test",
     accent: "#0d9488",
+    look: "Classic charity",
+  },
+  {
+    id: "social-foundation",
+    name: "Social Foundation",
+    tagline: "Section 8 · initiatives, events & volunteers",
+    icon: "landmark",
+    description: "Grassroots foundation look — six program areas, public leadership team, live event reports and a full volunteer application desk.",
+    status: "live",
+    demoSubdomain: "demo-foundation",
+    demoEmail: "demo@foundation.test",
+    accent: "#1e4d8c",
+    look: "Grassroots foundation",
   },
   {
     id: "pharmacy",
@@ -222,6 +236,7 @@ const CATEGORY_OF: Record<string, string> = {
   "manufacturing": "Trade & Manufacturing",
   "gym-fitness": "Fitness & Wellness",
   "ngo-charity": "Community & Non-profit",
+  "social-foundation": "Community & Non-profit",
   "pharmacy": "Healthcare",
   "events-training": "Events & Training",
 };

@@ -10,6 +10,8 @@ import {
   type SeoConfig,
 } from "./config";
 import { defaultTheme, defaultHeader, defaultFooter, defaultSeo } from "./template";
+import { parseBlocks, parseDocs, parseStringList as parseEventList, resolveEventKind, type EventBlock } from "./eventContent";
+import { parsePayments, toPublicPayments, type PublicPayments } from "./payments";
 
 // Reads the tenant key/kind that the proxy attached to the request.
 export async function getTenantKey(): Promise<{ key: string; kind: string } | null> {
@@ -37,6 +39,7 @@ export type TenantConfig = {
   seo: SeoConfig;
   customCss: string;
   resultConfig: string;
+  payments: PublicPayments;
 };
 
 // Loads + parses the site-wide config (theme/header/footer/seo) for a tenant.
@@ -49,6 +52,7 @@ export const getTenantConfig = cache(async (tenantId: string, bizName: string): 
     seo: parseJson<SeoConfig>(cfg?.seo, defaultSeo(bizName)),
     customCss: cfg?.customCss ?? "",
     resultConfig: cfg?.resultConfig ?? "{}",
+    payments: toPublicPayments(parsePayments(cfg?.payments)),
   };
 });
 
@@ -136,4 +140,130 @@ export const getGalleryGrouped = cache(async (tenantId: string) => {
     groups.get(g.category)!.push(g);
   }
   return groups;
+});
+
+function parseStringList(raw: string): string[] {
+  try {
+    const v = JSON.parse(raw || "[]");
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export type PublicPerson = {
+  id: string;
+  name: string;
+  role: string;
+  bio: string;
+  image: string;
+  groupName: string;
+  experience: string;
+  linkedin: string;
+  instagram: string;
+};
+
+export type PublicEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  activityName: string;
+  shortDescription: string;
+  programDescription: string;
+  date: string;
+  location: string;
+  organizedBy: string;
+  dignitaries: string;
+  impact: string;
+  coverImage: string;
+  gallery: string[];
+  objectives: string[];
+  documents: { label: string; url: string }[];
+  status: "upcoming" | "completed";
+  mapUrl: string;
+  venueNote: string;
+  blocks: EventBlock[];
+  enableDonate: boolean;
+  donateAmount: number;
+  donateLabel: string;
+  showQr: boolean;
+  qrImage: string;
+  qrCaption: string;
+};
+
+function mapEvent(row: {
+  id: string; slug: string; title: string; activityName: string; shortDescription: string;
+  programDescription: string; date: string; location: string; organizedBy: string;
+  dignitaries: string; impact: string; coverImage: string; gallery: string; objectives: string; documents: string;
+  status?: string; mapUrl?: string; venueNote?: string; blocks?: string;
+  enableDonate?: boolean; donateAmount?: number; donateLabel?: string;
+  showQr?: boolean; qrImage?: string; qrCaption?: string;
+}): PublicEvent {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    activityName: row.activityName,
+    shortDescription: row.shortDescription,
+    programDescription: row.programDescription,
+    date: row.date,
+    location: row.location,
+    organizedBy: row.organizedBy,
+    dignitaries: row.dignitaries,
+    impact: row.impact,
+    coverImage: row.coverImage,
+    gallery: parseEventList(row.gallery),
+    objectives: parseStringList(row.objectives),
+    documents: parseDocs(row.documents),
+    status: resolveEventKind(row.date, row.status || "auto"),
+    mapUrl: row.mapUrl || "",
+    venueNote: row.venueNote || "",
+    blocks: parseBlocks(row.blocks || "[]"),
+    enableDonate: !!row.enableDonate,
+    donateAmount: row.donateAmount || 0,
+    donateLabel: row.donateLabel || "",
+    showQr: !!row.showQr,
+    qrImage: row.qrImage || "",
+    qrCaption: row.qrCaption || "",
+  };
+}
+
+export const getSitePeople = cache(async (tenantId: string): Promise<PublicPerson[]> => {
+  const { getActiveDemoSession } = await import("./demoSession");
+  const demo = await getActiveDemoSession();
+  const where = demo
+    ? { tenantId, published: true, OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] }
+    : { tenantId, published: true };
+  const rows = await db.person.findMany({ where, orderBy: { order: "asc" } });
+  return rows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    role: p.role,
+    bio: p.bio,
+    image: p.image,
+    groupName: p.groupName,
+    experience: p.experience,
+    linkedin: p.linkedin,
+    instagram: p.instagram,
+  }));
+});
+
+export const getSiteEvents = cache(async (tenantId: string): Promise<PublicEvent[]> => {
+  const { getActiveDemoSession } = await import("./demoSession");
+  const demo = await getActiveDemoSession();
+  const where = demo
+    ? { tenantId, published: true, OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] }
+    : { tenantId, published: true };
+  const rows = await db.siteEvent.findMany({ where, orderBy: [{ date: "desc" }, { order: "asc" }] });
+  return rows.map(mapEvent);
+});
+
+export const getSiteEventBySlug = cache(async (tenantId: string, slug: string): Promise<PublicEvent | null> => {
+  const { getActiveDemoSession } = await import("./demoSession");
+  const demo = await getActiveDemoSession();
+  const where = demo
+    ? { tenantId, slug, published: true, OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] }
+    : { tenantId, slug, published: true };
+  const row = await db.siteEvent.findFirst({ where });
+  return row ? mapEvent(row) : null;
 });

@@ -62,9 +62,10 @@ export default async function DashLayout({ children }: { children: React.ReactNo
 
   const demoId = demoSession?.id ?? null;
   const scope = demoVisibleWhere(authed.tenant.id, demoId);
-  const [newLeads, pendingAppts] = await Promise.all([
+  const [newLeads, pendingAppts, newVolunteers] = await Promise.all([
     db.lead.count({ where: { ...scope, status: "new" } }),
     db.appointment.count({ where: { ...scope, status: "pending" } }),
+    db.volunteer.count({ where: { ...scope, status: "new" } }),
   ]);
 
   return (
@@ -75,6 +76,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
         userEmail={authed.session.email}
         newLeads={newLeads}
         pendingAppts={pendingAppts}
+        newVolunteers={newVolunteers}
       />
       <div className="flex-1 min-w-0 flex flex-col min-h-0 admin-shell">
         {demoSession?.expiresAt && <DemoTimerBar expiresAt={demoSession.expiresAt.toISOString()} />}

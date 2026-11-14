@@ -13,6 +13,19 @@ type Body = {
 };
 
 export async function POST(request: Request) {
+  // Guards (demo mode, expired plan) throw — always answer with JSON so the client can show why.
+  try {
+    return await handle(request);
+  } catch (e) {
+    console.error("[ai/generate]", e);
+    // Only surface the guard's user-facing messages; hide internals (DB errors etc.).
+    const msg = e instanceof Error ? e.message : "";
+    const error = /unauthorized|forbidden|demo|suspended|expired/i.test(msg) ? msg : "AI website generation failed. Please try again.";
+    return NextResponse.json({ success: false, error }, { status: 400 });
+  }
+}
+
+async function handle(request: Request) {
   const authed = await getAuthedSession();
   if (!authed) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });

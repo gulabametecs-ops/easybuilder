@@ -4,10 +4,17 @@ import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
 
 export function ThemeToggle() {
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
+    let isDark = false;
+    try {
+      isDark = localStorage.getItem("theme") === "dark";
+    } catch {
+      isDark = document.documentElement.classList.contains("dark");
+    }
+    document.documentElement.classList.toggle("dark", isDark);
+    setDark(isDark);
   }, []);
 
   const toggle = () => {
@@ -21,7 +28,7 @@ export function ThemeToggle() {
     <button
       onClick={toggle}
       aria-label="Toggle theme"
-      className="w-9 h-9 rounded-full flex items-center justify-center border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] text-[var(--mkt-text)] hover:bg-lime-500/10 transition-colors shadow-sm"
+      className="w-9 h-9 rounded-full flex items-center justify-center border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] text-[var(--mkt-text)] hover:bg-[var(--mkt-accent-soft)] transition-colors shadow-sm"
     >
       {dark ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
     </button>

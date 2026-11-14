@@ -23,10 +23,10 @@ export function AiDraftBanner() {
   if (!siteName) return null;
 
   return (
-    <div className={`${mkt.card} border-lime-500/35 bg-lime-500/8 p-4 sm:p-5 mb-8 flex flex-col sm:flex-row sm:items-center gap-4`}>
+    <div className={`${mkt.card} border-[var(--mkt-accent)]/35 bg-[var(--mkt-accent)]/8 p-4 sm:p-5 mb-8 flex flex-col sm:flex-row sm:items-center gap-4`}>
       <div className="flex items-start gap-3 min-w-0 flex-1">
-        <span className="w-10 h-10 rounded-xl bg-lime-500/15 flex items-center justify-center shrink-0">
-          <Sparkles className="w-5 h-5 text-lime-600 dark:text-lime-400" />
+        <span className="w-10 h-10 rounded-xl bg-[var(--mkt-accent-soft)] flex items-center justify-center shrink-0">
+          <Sparkles className="w-5 h-5 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
         </span>
         <div>
           <p className="font-semibold text-[var(--mkt-text)]">AI plan ready: {siteName}</p>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 import { TIERS, DURATIONS, priceFor, perMonth, formatINR, type Tier } from "@/lib/plans";
 import { MarketingSection } from "./MarketingSection";
 import { SectionHeader } from "./SectionHeader";
@@ -11,109 +11,134 @@ import { mkt } from "@/lib/marketingTheme";
 export function PricingSection({ tiers = TIERS }: { tiers?: Tier[] }) {
   const [durId, setDurId] = useState("1y");
   const duration = DURATIONS.find((d) => d.id === durId)!;
+  const lifetime = duration.months === null;
 
   return (
     <MarketingSection id="pricing" variant="default">
       <SectionHeader
-        eyebrow={<p className={mkt.eyebrow}>Plans for every stage</p>}
-        title="Simple, transparent pricing"
-        description="Choose a plan — switch the duration to see the price. Longer plans cost less per month."
+        title="Simple pricing, everything included"
+        description="Website, admin panel, hosting and SSL in every plan. Pay longer, save more."
       />
 
-      <div className="flex justify-center mb-10 sm:mb-12">
-        <div className={`inline-flex flex-wrap justify-center gap-2 p-1.5 rounded-2xl ${mkt.card}`}>
-          {DURATIONS.map((d) => {
-            const active = durId === d.id;
-            return (
-              <button
-                key={d.id}
-                type="button"
-                onClick={() => setDurId(d.id)}
-                className={`rounded-xl px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
-                  active
-                    ? "bg-lime-500/15 text-lime-800 dark:text-lime-300 ring-1 ring-lime-500/40 shadow-sm"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-black/[0.03] dark:hover:bg-white/5"
-                }`}
-              >
-                {d.label}
-                {d.badge && (
-                  <span
-                    className={`ml-1.5 text-[11px] sm:text-xs ${
-                      active ? "text-lime-700 dark:text-lime-400" : "text-lime-600 dark:text-lime-500"
-                    }`}
-                  >
-                    {d.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+      {/* Billing period — one line; swipes on small screens instead of wrapping */}
+      <div className="mb-10 flex justify-center">
+        <div className="max-w-full overflow-x-auto scrollbar-none">
+          <div role="tablist" aria-label="Billing period" className="inline-flex gap-1 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface-muted)] p-1">
+            {DURATIONS.map((d) => {
+              const active = durId === d.id;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setDurId(d.id)}
+                  className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    active
+                      ? "bg-[var(--mkt-surface)] text-[var(--mkt-text)] shadow-sm ring-1 ring-[var(--mkt-border)]"
+                      : "text-[var(--mkt-text-muted)] hover:text-[var(--mkt-text)]"
+                  }`}
+                >
+                  {d.label}
+                  {d.discountPct > 0 && (
+                    <span className="ml-1.5 rounded-full bg-[var(--mkt-accent-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--mkt-accent-text)]">
+                      −{d.discountPct}%
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-5 lg:gap-6 items-stretch">
+      <div className="mx-auto grid max-w-5xl items-stretch gap-5 md:grid-cols-3">
         {tiers.map((t) => {
           const total = priceFor(t, duration);
           const monthly = perMonth(t, duration);
+          const gross = duration.months ? t.monthlyBase * duration.months : total;
           const href = `/subscribe?tier=${t.id}&duration=${durId}`;
 
           return (
             <div
               key={t.id}
-              className={`relative flex flex-col rounded-2xl p-6 sm:p-7 border transition-all duration-300 ${
+              className={`relative flex flex-col rounded-2xl border p-6 transition-shadow ${
                 t.popular
-                  ? "border-lime-500 bg-[var(--mkt-surface)] shadow-xl shadow-lime-500/15 md:scale-[1.02] z-10"
-                  : `${mkt.card} ${mkt.cardHover}`
+                  ? "border-[var(--mkt-accent)] bg-[var(--mkt-surface)] shadow-xl shadow-[var(--mkt-accent)]/10 ring-1 ring-[var(--mkt-accent)]"
+                  : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] shadow-[var(--mkt-card-shadow)] hover:shadow-md"
               }`}
             >
               {t.popular && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-lime-500 text-slate-950">
+                <span className="absolute -top-3 left-6 rounded-full bg-[var(--mkt-accent)] px-3 py-1 text-[11px] font-bold text-[var(--mkt-accent-on)]">
                   Most popular
                 </span>
               )}
 
-              <div>
-                <h3 className="font-bold text-xl text-[var(--mkt-text)]">{t.name}</h3>
-                <p className={`text-sm mt-1 ${mkt.muted}`}>{t.tagline}</p>
-              </div>
+              <h3 className="text-lg font-bold text-[var(--mkt-text)]">{t.name}</h3>
+              <p className={`mt-1 text-sm ${mkt.muted}`}>{t.tagline}</p>
 
-              <div className="mt-5 pb-6 border-b border-black/5 dark:border-white/10">
-                <p className="flex items-baseline flex-wrap gap-x-1">
-                    <span className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--mkt-text)]">
-                    {formatINR(total)}
-                  </span>
-                  <span className={`text-sm ${mkt.muted}`}>/ {duration.label.toLowerCase()}</span>
-                </p>
-                <p className="text-sm text-slate-400 mt-1.5">~ {formatINR(monthly)} per month</p>
+              <div className="mt-6">
+                {lifetime ? (
+                  <>
+                    <p className="flex items-baseline gap-1.5">
+                      <span className="text-3xl font-bold tracking-tight text-[var(--mkt-text)]">{formatINR(total)}</span>
+                    </p>
+                    <p className={`mt-1 text-sm ${mkt.muted}`}>One-time payment · yours for life</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold tracking-tight text-[var(--mkt-text)]">{formatINR(monthly)}</span>
+                      <span className={`text-sm ${mkt.muted}`}>/month</span>
+                    </p>
+                    <p className={`mt-1 flex flex-wrap items-center gap-x-2 text-sm ${mkt.muted}`}>
+                      {duration.months === 1 ? (
+                        <span>Billed monthly</span>
+                      ) : (
+                        <>
+                          <span>
+                            {formatINR(total)} billed every {duration.label.toLowerCase()}
+                          </span>
+                          {gross > total && <span className="line-through opacity-60">{formatINR(gross)}</span>}
+                        </>
+                      )}
+                    </p>
+                  </>
+                )}
               </div>
 
               <Link
                 href={href}
-                className={`mt-6 block text-center rounded-xl px-5 py-3 font-semibold text-sm transition ${
+                className={`mt-6 inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
                   t.popular
-                    ? "bg-lime-500 text-slate-950 hover:bg-lime-400 shadow-sm shadow-lime-500/20"
-                    : "border border-black/15 dark:border-white/20 text-slate-800 dark:text-white hover:border-lime-500/40 hover:bg-lime-500/5"
+                    ? "bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)] hover:bg-[var(--mkt-accent-hover)]"
+                    : "border border-[var(--mkt-border-strong)] text-[var(--mkt-text)] hover:border-[var(--mkt-accent)]/60 hover:bg-[var(--mkt-accent-soft)]"
                 }`}
               >
-                Choose {t.name}
+                Get {t.name} <ArrowRight className="h-4 w-4" />
               </Link>
 
-              <ul className="mt-6 space-y-3 flex-1">
-                {t.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm text-slate-600 dark:text-slate-300">
-                    <Check className="w-4 h-4 text-lime-500 mt-0.5 shrink-0" strokeWidth={2.5} />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-6 border-t border-[var(--mkt-border)] pt-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--mkt-text-muted)]">What&apos;s included</p>
+                <ul className="mt-3 space-y-2.5">
+                  {t.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-sm text-[var(--mkt-text-secondary)]">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mkt-accent)]" strokeWidth={2.5} />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           );
         })}
       </div>
 
-      <p className={`text-center text-sm mt-10 ${mkt.muted}`}>
-        All plans include website + admin panel. GST extra where applicable.{" "}
-        <Link href="/terms" className="text-lime-600 dark:text-lime-400 hover:underline">View terms</Link>
+      <p className={`mt-8 text-center text-sm ${mkt.muted}`}>
+        Prices in INR · GST extra where applicable ·{" "}
+        <Link href="/terms" className="font-medium text-[var(--mkt-accent-text)] hover:underline">Terms</Link>
+        {" · "}
+        <a href="#contact" className="font-medium text-[var(--mkt-accent-text)] hover:underline">Need help choosing?</a>
       </p>
     </MarketingSection>
   );

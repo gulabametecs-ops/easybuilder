@@ -49,7 +49,7 @@ export default async function SubscribePage({ searchParams }: Props) {
       >
         <Link
           href={selected ? `/demos?vertical=${selected.id}` : "/demos"}
-          className={`mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-lime-600 dark:text-lime-400 hover:underline`}
+          className={`mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)] hover:underline`}
         >
           <ArrowLeft className="w-4 h-4" />
           {selected ? "Try live demo first" : "Explore live demos"}

@@ -5,12 +5,15 @@ import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Check, Clock, Search, SearchX, X } from "lucide-react";
 import { VerticalIcon } from "./VerticalIcon";
 import { DemoVerticalPanel, previewUrl } from "./DemoVerticalPanel";
-import { DemoDesignThumb } from "./DemoDesignThumb";
+import { DesignPicker } from "./DesignPicker";
+import { DemoConceptPreview } from "./DemoConceptPreview";
+import { DemoLiveStage } from "./DemoLiveStage";
 import { mkt } from "@/lib/marketingTheme";
 
 export type DemoDesign = {
   id: string;
   name: string;
+  blurb: string;
   tagline: string;
   font: string;
   header: string;
@@ -37,6 +40,9 @@ export type DemoSector = {
   accent: string;
   image: string;
   description: string;
+  look?: string;
+  /** Public demo tenant origin, e.g. http://demo-coaching.localhost:3000 */
+  demoUrl?: string | null;
   designs: DemoDesign[];
 };
 
@@ -61,7 +67,7 @@ type Props = {
 
 const ALL = "All";
 const focusRing =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-bg)]";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-bg)]";
 
 export function DemosExplorer({ categories, sectors, activeByVertical, focusVertical, expired }: Props) {
   const [category, setCategory] = useState(ALL);
@@ -87,14 +93,16 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
   const liveCount = sectors.filter((s) => s.status === "live").length;
 
   const tabs = [{ name: ALL, image: "", count: sectors.length }, ...categories];
+  const charity = sectors.find((s) => s.id === "ngo-charity");
+  const foundation = sectors.find((s) => s.id === "social-foundation");
 
   return (
     <div className={`${mkt.container} py-10 sm:py-14`}>
       {globalActive && (
-        <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-lime-500/30 bg-lime-500/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-[var(--mkt-accent)]/30 bg-[var(--mkt-accent-soft)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500/20">
-              <Clock className="h-5 w-5 text-lime-700 dark:text-lime-300" />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--mkt-accent-soft)]">
+              <Clock className="h-5 w-5 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
             </span>
             <div>
               <p className="font-semibold text-[var(--mkt-text)]">{globalActive.sector.name} demo is running</p>
@@ -127,6 +135,46 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
         </p>
       )}
 
+      {charity && foundation && category === ALL && !q && (
+        <section className="mb-10 overflow-hidden rounded-3xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)]">
+          <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="bg-[var(--mkt-ink)] px-6 py-8 text-white sm:px-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mkt-accent-text)]">Two non-profit concepts</p>
+              <h2 className="font-display mt-3 text-2xl sm:text-3xl">Same cause. Completely different sites.</h2>
+              <p className="mt-3 text-sm leading-relaxed text-white/70">
+                Classic charity is donation-and-impact led. Social Foundation is grassroots — initiatives, public team, live event reports and volunteer applications.
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2">
+              {[charity, foundation].map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSelectedId(s.id)}
+                  className={`group flex flex-col text-left transition-colors hover:bg-[var(--mkt-accent-soft)] ${focusRing} ${s.id === "social-foundation" ? "sm:border-l sm:border-[var(--mkt-border)]" : ""}`}
+                >
+                  <div className="relative aspect-[16/7] overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={s.image} alt="" className="h-full w-full object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: s.accent }}>
+                      {s.look}
+                    </span>
+                  </div>
+                  <div className="flex flex-1 flex-col p-5">
+                    <span className="text-lg font-semibold text-[var(--mkt-text)]">{s.name}</span>
+                    <span className={`mt-1 text-sm ${mkt.muted}`}>{s.tagline}</span>
+                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[var(--mkt-accent-text)]">
+                      Open this look <ArrowRight className="h-4 w-4 transition-transform motion-safe:group-hover:translate-x-1" />
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Toolbar: category pills + search */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div
@@ -146,14 +194,14 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
                 className={`inline-flex shrink-0 items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-sm font-medium transition-colors ${focusRing} ${
                   on
                     ? "border-transparent bg-[var(--mkt-text)] text-[var(--mkt-bg)]"
-                    : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-[var(--mkt-text-secondary)] hover:border-lime-500/40"
+                    : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-[var(--mkt-text-secondary)] hover:border-[var(--mkt-accent)]/40"
                 }`}
               >
                 {t.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={t.image} alt="" className="h-6 w-6 rounded-full object-cover" />
                 ) : (
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-[10px] font-bold text-slate-950">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mkt-accent)] text-[10px] font-bold text-[var(--mkt-accent-on)]">
                     {liveCount}
                   </span>
                 )}
@@ -177,7 +225,14 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
         </label>
       </div>
 
-      {/* Grid */}
+      <div className="mt-8 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mkt-accent-text)]">Catalog</p>
+          <h2 className="mt-1 text-xl font-semibold text-[var(--mkt-text)] sm:text-2xl">Browse every sector</h2>
+        </div>
+        <p className={`hidden text-sm sm:block ${mkt.muted}`}>{visible.length} templates</p>
+      </div>
+
       {visible.length === 0 ? (
         <div className={`${mkt.cardSoft} mt-8 flex flex-col items-center px-6 py-16 text-center`}>
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--mkt-accent-soft)]">
@@ -202,7 +257,7 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
           </div>
         </div>
       ) : (
-        <ul className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((s) => {
             const live = s.status === "live";
             const running = !!activeByVertical[s.id];
@@ -213,7 +268,7 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
                   id={`demo-${s.id}`}
                   onClick={() => setSelectedId(s.id)}
                   aria-haspopup="dialog"
-                  className={`group flex h-full w-full flex-col overflow-hidden text-left ${mkt.card} transition-transform duration-300 ease-out hover:border-lime-500/40 motion-safe:hover:-translate-y-1 ${focusRing}`}
+                  className={`group flex h-full w-full flex-col overflow-hidden text-left ${mkt.card} transition-transform duration-300 ease-out hover:border-[var(--mkt-accent)]/40 motion-safe:hover:-translate-y-1 ${focusRing}`}
                 >
                   <div className="relative aspect-[16/10] w-full overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -235,7 +290,7 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
                         live ? "bg-black/55 text-white" : "bg-white/85 text-slate-800"
                       }`}
                     >
-                      <span className={`h-1.5 w-1.5 rounded-full ${live ? "bg-lime-400" : "bg-amber-500"}`} />
+                      <span className={`h-1.5 w-1.5 rounded-full ${live ? "bg-[var(--mkt-accent)]" : "bg-amber-500"}`} />
                       {running ? "Running" : live ? "Live" : "Coming soon"}
                     </span>
                     <span className="absolute bottom-3 left-3 flex -space-x-1.5" aria-hidden>
@@ -249,7 +304,9 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
                     </span>
                   </div>
                   <div className="flex flex-1 flex-col p-5">
-                    <p className={`text-[11px] font-semibold uppercase tracking-wider ${mkt.muted}`}>{s.category}</p>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wider ${mkt.muted}`}>
+                      {s.look ?? s.category}
+                    </p>
                     <h3 className="mt-1 font-semibold text-[var(--mkt-text)]">{s.name}</h3>
                     <p className={`mt-1 text-sm ${mkt.muted}`}>{s.tagline}</p>
                     <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[var(--mkt-accent-text)]">
@@ -308,6 +365,10 @@ function DemoDrawer({
   const live = sector.status === "live";
   const current = sector.designs.find((d) => d.id === design) ?? sector.designs[0];
   const titleId = `demo-drawer-${sector.id}`;
+  const [started, setStarted] = useState<ActiveInfo | undefined>(active);
+  useEffect(() => {
+    setStarted(active);
+  }, [active]);
 
   // Escape closes, background scroll locked, focus moved in and restored on close.
   useEffect(() => {
@@ -324,23 +385,64 @@ function DemoDrawer({
     };
   }, [onClose]);
 
-  const included = [
-    `Ready-made ${sector.name} website with real content`,
-    "Admin panel — edit pages, services, gallery & SEO",
-    "Enquiry & lead capture built in",
-    `${sector.designs.length} switchable designs, mobile-ready`,
-  ];
+  const included =
+    sector.id === "social-foundation"
+      ? [
+          "Six grassroots program areas + public leadership team",
+          "Live events with reports, gallery and documents",
+          "Volunteer applications inbox in admin",
+          `${sector.designs.length} colour skins, mobile-ready`,
+        ]
+      : sector.id === "ngo-charity"
+        ? [
+            "Causes, impact stats, 80G donate page",
+            "Volunteer enquiry + event gallery",
+            "Admin for pages, services, gallery & SEO",
+            `${sector.designs.length} switchable designs, mobile-ready`,
+          ]
+        : [
+            `Ready-made ${sector.name} website with real content`,
+            "Admin panel — edit pages, services, gallery & SEO",
+            "Enquiry & lead capture built in",
+            `${sector.designs.length} switchable designs, mobile-ready`,
+          ];
+
+  if (started) {
+    return (
+      <DemoLiveStage
+        sector={sector}
+        active={started}
+        design={current?.id ?? "classic"}
+        onDesign={onDesign}
+        onClose={onClose}
+      />
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div
-        className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity duration-300 starting:opacity-0 motion-reduce:transition-none"
+        className="absolute inset-0 bg-slate-950/80 transition-opacity duration-300 starting:opacity-0 motion-reduce:transition-none"
         onClick={onClose}
         aria-hidden
       />
-      <div className="absolute inset-y-0 right-0 flex w-full max-w-2xl flex-col bg-[var(--mkt-bg)] shadow-2xl transition-[transform,opacity] duration-300 ease-out starting:translate-x-8 starting:opacity-0 motion-reduce:transition-none sm:border-l sm:border-[var(--mkt-border)]">
+      <div className="relative flex h-full w-full">
+        <div className="hidden min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white lg:flex">
+          {live && sector.demoUrl && current ? (
+            <DemoSiteFrame
+              src={`${sector.demoUrl.replace(/\/$/, "")}/?design=${encodeURIComponent(current.id)}`}
+              host={`${sector.name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.yoursite.in`}
+              title={`${sector.name} ${current.name} website`}
+            />
+          ) : current ? (
+            <div className="flex h-full items-center justify-center bg-[#0c0b0a] px-8">
+              <DemoConceptPreview sector={sector} design={current} />
+            </div>
+          ) : null}
+        </div>
+      <div className="relative ml-auto flex h-full w-full max-w-2xl shrink-0 flex-col bg-[var(--mkt-bg)] shadow-2xl transition-[transform,opacity] duration-300 ease-out starting:translate-x-8 starting:opacity-0 motion-reduce:transition-none sm:border-l sm:border-[var(--mkt-border)] lg:max-w-[26rem] xl:max-w-[28rem]">
         {/* Header */}
-        <div className="relative h-40 shrink-0 overflow-hidden sm:h-48">
+        <div className="relative h-40 shrink-0 overflow-hidden sm:h-48 lg:h-28">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={sector.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
@@ -379,46 +481,20 @@ function DemoDrawer({
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {included.map((t) => (
                 <li key={t} className="flex items-start gap-2 text-sm text-[var(--mkt-text-secondary)]">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-lime-500" /> {t}
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mkt-accent)]" /> {t}
                 </li>
               ))}
             </ul>
           </section>
 
-          <section>
-            <div className="flex items-baseline justify-between gap-3">
-              <h3 className="font-semibold text-[var(--mkt-text)]">Choose a design</h3>
-              {current && <p className={`truncate text-xs ${mkt.muted}`}>{current.tagline}</p>}
-            </div>
-            <div role="radiogroup" aria-label="Design" className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {sector.designs.map((d) => {
-                const on = d.id === current?.id;
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    onClick={() => onDesign(d.id)}
-                    className={`group rounded-xl border p-2 text-left transition-transform duration-200 motion-safe:hover:-translate-y-0.5 ${focusRing} ${
-                      on
-                        ? "border-lime-500 bg-[var(--mkt-accent-soft)] ring-1 ring-lime-500"
-                        : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] hover:border-lime-500/40"
-                    }`}
-                  >
-                    <DemoDesignThumb design={d} />
-                    <span className="mt-2 flex items-center justify-between gap-1 px-0.5">
-                      <span className="text-sm font-semibold text-[var(--mkt-text)]">{d.name}</span>
-                      {on && <Check className="h-4 w-4 text-lime-500" />}
-                    </span>
-                    <span className={`block px-0.5 text-[11px] ${mkt.muted}`}>
-                      {d.font || "Template font"} · {d.header} header
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+          <DesignPicker
+            designs={sector.designs}
+            value={current?.id ?? sector.designs[0]?.id ?? "classic"}
+            onChange={onDesign}
+            layout="drawer"
+            label="Choose a design"
+            hint="Same pages and content — only the look changes."
+          />
 
           <section>
             <h3 className="mb-3 font-semibold text-[var(--mkt-text)]">{live ? "Try it live" : "Coming soon"}</h3>
@@ -433,6 +509,7 @@ function DemoDrawer({
                 designs={sector.designs}
                 design={current?.id}
                 onShowActive={onShowActive}
+                onActivated={setStarted}
               />
             ) : (
               <div className={`${mkt.cardSoft} px-4 py-4 text-sm text-[var(--mkt-text-secondary)]`}>
@@ -467,6 +544,7 @@ function DemoDrawer({
             </Link>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

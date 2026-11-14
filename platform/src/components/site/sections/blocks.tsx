@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Icon, categoryIcon } from "../Icon";
@@ -366,7 +367,12 @@ export function ServiceCategoriesBlock({
   c: SectionContentMap["serviceCategories"];
   servicesByCategory: Map<string, ServiceRow[]>;
 }) {
-  const cats = c.categories?.length ? c.categories : Array.from(servicesByCategory.keys());
+  // Categories may arrive as objects (AI output) or name categories with no services;
+  // keep only real names that have services, else show every service category.
+  const named = (c.categories ?? [])
+    .map((x: unknown) => (typeof x === "string" ? x : ((x as { name?: string; title?: string; category?: string } | null)?.name ?? (x as { title?: string })?.title ?? (x as { category?: string })?.category ?? "")))
+    .filter((x): x is string => !!x && servicesByCategory.has(x));
+  const cats = [...new Set(named.length ? named : Array.from(servicesByCategory.keys()))];
   return (
     <section className={`${SEC} bg-light`}>
       <div className={WRAP}>
@@ -532,32 +538,221 @@ export function CtaBlock({ c }: { c: SectionContentMap["cta"] }) {
 }
 
 // ─── Team (doctors / trainers / faculty / consultants) ──────────────────────
-export function TeamBlock({ c }: { c: SectionContentMap["team"] }) {
+export type LivePerson = {
+  id: string;
+  name: string;
+  role: string;
+  bio: string;
+  image: string;
+  groupName: string;
+  experience: string;
+  linkedin: string;
+  instagram: string;
+};
+
+function PersonCard({
+  name, role, image, note, bio, linkedin, instagram, featured, cardCss,
+}: {
+  name: string; role: string; image: string; note?: string; bio?: string;
+  linkedin?: string; instagram?: string; featured?: boolean; cardCss?: CSSProperties;
+}) {
+  return (
+    <div className={`sec-card card site-lift overflow-hidden text-center group ${featured ? "sm:col-span-1" : ""}`} style={cardCss}>
+      <div className="overflow-hidden">
+        <Media src={image} w={IMAGE_SLOTS.team.w} h={IMAGE_SLOTS.team.h} alt={name} className="w-full aspect-square transition-transform duration-500 group-hover:scale-105" />
+      </div>
+      <div className={`p-5 ${featured ? "sm:p-7" : ""}`}>
+        <h4 className={`font-semibold ${featured ? "text-lg sm:text-xl" : "text-base sm:text-lg"}`}>{name}</h4>
+        <p className="text-primary text-sm font-medium mt-0.5">{role}</p>
+        {note && <p className="site-muted text-xs mt-2">{note}</p>}
+        {bio && <p className="site-muted text-sm mt-3 leading-relaxed">{bio}</p>}
+        {(linkedin || instagram) && (
+          <div className="mt-4 flex justify-center gap-2">
+            {linkedin ? <a href={linkedin} className="w-8 h-8 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center" aria-label="LinkedIn"><Icon name="linkedin" className="w-3.5 h-3.5" /></a> : null}
+            {instagram ? <a href={instagram} className="w-8 h-8 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center" aria-label="Instagram"><Icon name="instagram" className="w-3.5 h-3.5" /></a> : null}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function TeamBlock({ c, people }: { c: SectionContentMap["team"]; people?: LivePerson[] }) {
   const styles = readContentStyles(c);
   const allCards = styles.members;
+  const live = (people ?? []).filter((p) => p.name);
+  const leadership = live.filter((p) => p.groupName === "leadership");
+  const core = live.filter((p) => p.groupName !== "leadership");
+
   return (
     <section className={`${SEC} bg-white`}>
       <div className={WRAP}>
         <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
-        <div className="sec-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-          {c.members.map((m, i) => {
-            const row = m as typeof m & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
-            const cardCss = cardStyleCss(readItemStyle(row) ?? allCards);
-            const t = row.__styles ?? {};
-            return (
-              <div key={i} className="sec-card card site-lift overflow-hidden text-center group" style={cardCss}>
-                <div className="overflow-hidden">
-                  <Media src={m.image} w={IMAGE_SLOTS.team.w} h={IMAGE_SLOTS.team.h} alt={m.name} className="w-full aspect-square transition-transform duration-500 group-hover:scale-105" />
-                </div>
-                <div className="p-5">
-                  <h4 className="font-semibold text-base sm:text-lg" {...textStyleProps(t.name)}>{m.name}</h4>
-                  <p className="text-primary text-sm font-medium mt-0.5" {...textStyleProps(t.role)}>{m.role}</p>
-                  {m.note && <p className="site-muted text-xs mt-2" {...textStyleProps(t.note)}>{m.note}</p>}
-                </div>
+        {live.length > 0 ? (
+          <>
+            {leadership.length > 0 && (
+              <div className={`sec-grid grid gap-6 ${leadership.length === 1 ? "max-w-md mx-auto" : "sm:grid-cols-2 max-w-4xl mx-auto"} mb-10`}>
+                {leadership.map((m) => (
+                  <PersonCard key={m.id} name={m.name} role={m.role} image={m.image} note={m.experience} bio={m.bio} linkedin={m.linkedin} instagram={m.instagram} featured cardCss={cardStyleCss(allCards)} />
+                ))}
               </div>
-            );
-          })}
+            )}
+            {core.length > 0 && (
+              <div className="sec-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                {core.map((m) => (
+                  <PersonCard key={m.id} name={m.name} role={m.role} image={m.image} note={m.experience} bio={m.bio} linkedin={m.linkedin} instagram={m.instagram} cardCss={cardStyleCss(allCards)} />
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="sec-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {c.members.map((m, i) => {
+              const row = m as typeof m & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
+              const cardCss = cardStyleCss(readItemStyle(row) ?? allCards);
+              const t = row.__styles ?? {};
+              return (
+                <div key={i} className="sec-card card site-lift overflow-hidden text-center group" style={cardCss}>
+                  <div className="overflow-hidden">
+                    <Media src={m.image} w={IMAGE_SLOTS.team.w} h={IMAGE_SLOTS.team.h} alt={m.name} className="w-full aspect-square transition-transform duration-500 group-hover:scale-105" />
+                  </div>
+                  <div className="p-5">
+                    <h4 className="font-semibold text-base sm:text-lg" {...textStyleProps(t.name)}>{m.name}</h4>
+                    <p className="text-primary text-sm font-medium mt-0.5" {...textStyleProps(t.role)}>{m.role}</p>
+                    {m.note && <p className="site-muted text-xs mt-2" {...textStyleProps(t.note)}>{m.note}</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function VisionMissionBlock({ c }: { c: SectionContentMap["visionMission"] }) {
+  const fs = readContentStyles(c);
+  return (
+    <section className={`${SEC} bg-light`}>
+      <div className={WRAP}>
+        {c.eyebrow && <p className="text-center text-xs font-bold tracking-[0.2em] text-primary mb-8">{c.eyebrow}</p>}
+        <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
+          {[
+            { icon: "star", title: c.visionTitle, text: c.visionText, titleKey: "visionTitle", textKey: "visionText" },
+            { icon: "trending", title: c.missionTitle, text: c.missionText, titleKey: "missionTitle", textKey: "missionText" },
+          ].map((card) => (
+            <div key={card.title} className="relative overflow-hidden rounded-[calc(var(--site-radius)*1.6)] bg-dark text-white p-8 sm:p-10 min-h-[240px] flex flex-col justify-end">
+              <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-primary/35 via-transparent to-black/40" />
+              <div className="relative">
+                <span className="w-12 h-12 rounded-2xl bg-white/10 ring-1 ring-white/15 inline-flex items-center justify-center mb-4">
+                  <Icon name={card.icon} className="w-6 h-6 text-primary" />
+                </span>
+                <h3 className="text-2xl font-bold" {...textStyleProps(fs[card.titleKey as keyof typeof fs])}>{card.title}</h3>
+                <p className="mt-3 text-white/75 leading-relaxed" {...textStyleProps(fs[card.textKey as keyof typeof fs])}>{card.text}</p>
+              </div>
+            </div>
+          ))}
         </div>
+        {c.values?.length > 0 && (
+          <div className="mt-12">
+            <h3 className="text-center text-xl sm:text-2xl font-bold mb-8" {...textStyleProps(fs.valuesTitle)}>{c.valuesTitle}</h3>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {c.values.map((v, i) => (
+                <div key={i} className="rounded-[calc(var(--site-radius)*1.2)] bg-[var(--site-surface)] ring-1 ring-[var(--site-line)] p-6 text-center">
+                  <span className={`${CHIP} w-12 h-12 mx-auto mb-3`}><Icon name={v.icon || "star"} className="w-5 h-5" /></span>
+                  <h4 className="font-semibold">{v.title}</h4>
+                  {v.text && <p className="site-muted text-sm mt-2">{v.text}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export type LiveEvent = {
+  id: string;
+  slug: string;
+  title: string;
+  shortDescription: string;
+  date: string;
+  coverImage: string;
+  location?: string;
+  status?: "upcoming" | "completed";
+};
+
+function eventStatus(ev: LiveEvent): { label: string; upcoming: boolean } {
+  const upcoming = ev.status ? ev.status === "upcoming" : (() => {
+    if (!ev.date) return true;
+    const t = new Date(ev.date).getTime();
+    if (Number.isNaN(t)) return true;
+    return t >= Date.now() - 24 * 3600 * 1000;
+  })();
+  return { label: upcoming ? "Upcoming" : "Completed", upcoming };
+}
+
+function EventCards({ list }: { list: LiveEvent[] }) {
+  return (
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {list.map((ev) => {
+        const st = eventStatus(ev);
+        const formatted = ev.date ? new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+        return (
+          <Link key={ev.id} href={`/events/${ev.slug}`} className="sec-card card site-lift overflow-hidden group block">
+            <div className="relative">
+              <Media src={ev.coverImage} w={800} h={500} alt={ev.title} className="w-full aspect-[16/10]" />
+              {formatted && (
+                <span className="absolute top-3 left-3 rounded-full bg-white/95 text-slate-800 text-[11px] font-semibold px-3 py-1">{formatted}</span>
+              )}
+              <span className={`absolute top-3 right-3 rounded-full text-[11px] font-semibold px-3 py-1 ${st.upcoming ? "bg-primary text-white" : "bg-slate-900/80 text-white"}`}>{st.label}</span>
+            </div>
+            <div className="p-5">
+              <h3 className="font-bold text-lg group-hover:text-primary transition-colors">{ev.title}</h3>
+              {ev.location && <p className="text-xs site-muted mt-1">{ev.location}</p>}
+              {ev.shortDescription && <p className="site-muted text-sm mt-2 line-clamp-3">{ev.shortDescription}</p>}
+              <span className="inline-flex items-center gap-1 text-primary text-sm font-semibold mt-4">
+                {st.upcoming ? "View details" : "See report & photos"} <Icon name="arrow" className="w-3.5 h-3.5" />
+              </span>
+            </div>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+export function EventListBlock({ c, events }: { c: SectionContentMap["eventList"]; events?: LiveEvent[] }) {
+  const fs = readContentStyles(c);
+  const limit = c.limit && c.limit > 0 ? c.limit : 6;
+  const all = events ?? [];
+  const grouped = !!c.groupByStatus;
+  const upcoming = all.filter((e) => eventStatus(e).upcoming);
+  const completed = all.filter((e) => !eventStatus(e).upcoming);
+  const list = grouped ? all : all.slice(0, limit);
+  return (
+    <section className={`${SEC} bg-white`}>
+      <div className={WRAP}>
+        <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
+        {c.subtitle && <p className="text-center site-muted -mt-8 mb-12 max-w-2xl mx-auto" {...textStyleProps(fs.subtitle)}>{c.subtitle}</p>}
+        {list.length === 0 && upcoming.length === 0 && completed.length === 0 ? (
+          <p className="text-center site-muted">{c.emptyText || "Events will appear here once published."}</p>
+        ) : grouped ? (
+          <div className="space-y-14">
+            <div>
+              <h3 className="text-xl font-bold mb-6">Upcoming</h3>
+              {upcoming.length ? <EventCards list={upcoming.slice(0, limit)} /> : <p className="site-muted">No upcoming events right now.</p>}
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-6">Completed</h3>
+              {completed.length ? <EventCards list={completed.slice(0, limit)} /> : <p className="site-muted">Completed programs will show here with reports and photos.</p>}
+            </div>
+          </div>
+        ) : (
+          <EventCards list={list} />
+        )}
       </div>
     </section>
   );

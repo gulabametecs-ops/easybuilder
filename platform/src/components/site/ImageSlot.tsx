@@ -25,7 +25,7 @@ export function ImageSlot({ src, alt, className = "", w, h, imgClassName = "w-fu
       {showBadge && placeholder && (
         <span className="absolute top-2 left-2 z-10 max-w-[calc(100%-1rem)] rounded-md bg-slate-950/75 text-white text-[10px] sm:text-xs font-semibold px-2 py-1 shadow-sm tabular-nums leading-tight">
           {w} × {h} px
-          <span className="hidden sm:inline font-medium opacity-80"> · Admin se upload karein</span>
+          <span className="hidden sm:inline font-medium opacity-80"> · Upload from admin</span>
         </span>
       )}
     </div>

@@ -8,6 +8,8 @@ import {
   getServicesGrouped,
   getGalleryGrouped,
   getSiteNotices,
+  getSitePeople,
+  getSiteEvents,
 } from "@/lib/tenant";
 import { getAuthedSession } from "@/lib/auth";
 import { faqJsonLd } from "@/lib/seo";
@@ -94,11 +96,13 @@ export default async function SitePage({ params, searchParams }: Props) {
     sections = sections.filter((s) => s.visible);
   }
 
-  const [config, servicesByCategory, galleryByCategory, notices] = await Promise.all([
+  const [config, servicesByCategory, galleryByCategory, notices, people, events] = await Promise.all([
     getTenantConfig(tenant.id, tenant.name),
     getServicesGrouped(tenant.id),
     getGalleryGrouped(tenant.id),
     getSiteNotices(tenant.id),
+    getSitePeople(tenant.id),
+    getSiteEvents(tenant.id),
   ]);
 
   const ctx: RenderContext = {
@@ -108,6 +112,10 @@ export default async function SitePage({ params, searchParams }: Props) {
     footer: config.footer,
     phones: config.header.topbar.phones,
     notices,
+    people,
+    events,
+    payments: config.payments,
+    orgName: tenant.name,
   };
 
   const faqItems = config.seo.faqSchema !== false

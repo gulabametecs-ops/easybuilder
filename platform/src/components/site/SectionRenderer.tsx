@@ -10,6 +10,8 @@ import {
   StepsBlock,
   CtaBlock,
   TeamBlock,
+  VisionMissionBlock,
+  EventListBlock,
   PriceListBlock,
   TestimonialsBlock,
   FaqBlock,
@@ -20,8 +22,10 @@ import {
   ContactInfoBlock,
   RichTextBlock,
 } from "./sections/blocks";
-import { QuoteFormBlock, ContactFormBlock, AppointmentFormBlock } from "./sections/FormSections";
-import { PricingPlansBlock, OpeningHoursBlock, CountdownBlock, MapBlock, NoticeBoardBlock, ToppersBlock, DownloadsBlock } from "./sections/newBlocks";
+import { QuoteFormBlock, ContactFormBlock, AppointmentFormBlock, VolunteerFormBlock } from "./sections/FormSections";
+import type { PublicEvent, PublicPerson } from "@/lib/tenant";
+import { PricingPlansBlock, OpeningHoursBlock, CountdownBlock, MapBlock, NoticeBoardBlock, ToppersBlock, DownloadsBlock, DonatePayBlock } from "./sections/newBlocks";
+import type { PublicPayments } from "@/lib/payments";
 
 type ServiceRow = { id: string; category: string; title: string; description: string; image: string; slug?: string };
 type GalleryRow = { id: string; category: string; image: string; caption: string };
@@ -35,6 +39,10 @@ export type RenderContext = {
   footer: FooterConfig;
   phones: string[];
   notices: NoticeItem[];
+  people?: PublicPerson[];
+  events?: PublicEvent[];
+  payments?: PublicPayments;
+  orgName?: string;
 };
 
 export function SectionRenderer({
@@ -93,7 +101,13 @@ function renderBlock(section: { type: string; content: string }, ctx: RenderCont
     case "cta":
       return <CtaBlock c={parseSectionContent("cta", section.content)} />;
     case "team":
-      return <TeamBlock c={parseSectionContent("team", section.content)} />;
+      return <TeamBlock c={parseSectionContent("team", section.content)} people={ctx.people} />;
+    case "visionMission":
+      return <VisionMissionBlock c={parseSectionContent("visionMission", section.content)} />;
+    case "eventList":
+      return <EventListBlock c={parseSectionContent("eventList", section.content)} events={ctx.events} />;
+    case "volunteerForm":
+      return <VolunteerFormBlock c={parseSectionContent("volunteerForm", section.content)} />;
     case "priceList":
       return <PriceListBlock c={parseSectionContent("priceList", section.content)} />;
     case "testimonials":
@@ -132,6 +146,8 @@ function renderBlock(section: { type: string; content: string }, ctx: RenderCont
       return <ToppersBlock c={parseSectionContent("toppers", section.content)} />;
     case "downloads":
       return <DownloadsBlock c={parseSectionContent("downloads", section.content)} />;
+    case "donatePay":
+      return <DonatePayBlock c={parseSectionContent("donatePay", section.content)} payments={ctx.payments} orgName={ctx.orgName} />;
     default:
       return null;
   }

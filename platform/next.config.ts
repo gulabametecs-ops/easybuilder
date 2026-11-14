@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // Dev only: Next 16 blocks dev assets/HMR from hosts other than localhost,
+  // which leaves the page un-hydrated (hero invisible, AI builder dead).
+  allowedDevOrigins: ["127.0.0.1", "*.localhost"],
   // Tenant sites use uploaded/remote images from any host in production.
   images: {
     remotePatterns: [{ protocol: "https", hostname: "**" }],

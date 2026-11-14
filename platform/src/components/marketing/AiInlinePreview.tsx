@@ -6,10 +6,11 @@ import type { WebsiteBlueprint } from "@/lib/ai/blueprintSchema";
 import { blueprintStats } from "@/lib/ai/blueprintPreview";
 import { AiBlueprintLivePreview } from "./AiBlueprintLivePreview";
 
-export function AiInlinePreview({ blueprint }: { blueprint: WebsiteBlueprint }) {
+export function AiInlinePreview({ blueprint, initialSlug }: { blueprint: WebsiteBlueprint; initialSlug?: string }) {
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const stats = blueprintStats(blueprint);
-  const [pageIdx, setPageIdx] = useState(0);
+  // Open on the page a refine just changed (the parent remounts us via key).
+  const [pageIdx, setPageIdx] = useState(() => Math.max(0, stats.pages.findIndex((p) => p.slug === initialSlug)));
   const activePage = stats.pages[pageIdx] ?? stats.pages[0];
 
   return (
@@ -19,7 +20,7 @@ export function AiInlinePreview({ blueprint }: { blueprint: WebsiteBlueprint }) 
           <button
             type="button"
             onClick={() => setDevice("desktop")}
-            className={`p-1.5 rounded-md ${device === "desktop" ? "bg-lime-500 text-white" : "text-[var(--mkt-text-muted)]"}`}
+            className={`p-1.5 rounded-md ${device === "desktop" ? "bg-[var(--mkt-accent)] text-white" : "text-[var(--mkt-text-muted)]"}`}
             aria-label="Desktop"
           >
             <Monitor className="w-3.5 h-3.5" />
@@ -27,7 +28,7 @@ export function AiInlinePreview({ blueprint }: { blueprint: WebsiteBlueprint }) 
           <button
             type="button"
             onClick={() => setDevice("mobile")}
-            className={`p-1.5 rounded-md ${device === "mobile" ? "bg-lime-500 text-white" : "text-[var(--mkt-text-muted)]"}`}
+            className={`p-1.5 rounded-md ${device === "mobile" ? "bg-[var(--mkt-accent)] text-white" : "text-[var(--mkt-text-muted)]"}`}
             aria-label="Phone"
           >
             <Smartphone className="w-3.5 h-3.5" />
@@ -40,7 +41,7 @@ export function AiInlinePreview({ blueprint }: { blueprint: WebsiteBlueprint }) 
               type="button"
               onClick={() => setPageIdx(i)}
               className={`shrink-0 text-[11px] px-2 py-1 rounded-md font-medium ${
-                i === pageIdx ? "bg-lime-500 text-white" : "text-[var(--mkt-text-muted)] hover:bg-[var(--mkt-surface-muted)]"
+                i === pageIdx ? "bg-[var(--mkt-accent)] text-white" : "text-[var(--mkt-text-muted)] hover:bg-[var(--mkt-surface-muted)]"
               }`}
             >
               {p.name}
@@ -49,7 +50,7 @@ export function AiInlinePreview({ blueprint }: { blueprint: WebsiteBlueprint }) 
         </div>
       </div>
       <div className="flex-1 overflow-auto p-3 flex justify-center">
-        <div className={`bg-white overflow-hidden shadow-lg ${device === "mobile" ? "w-[390px] rounded-xl" : "w-full rounded-lg"}`}>
+        <div className={`bg-white overflow-hidden shadow-lg ${device === "mobile" ? "w-[390px] rounded-xl" : "w-full rounded-lg [zoom:0.8]"}`}>
           {activePage && (
             <AiBlueprintLivePreview
               blueprint={blueprint}
