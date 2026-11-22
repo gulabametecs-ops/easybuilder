@@ -1,15 +1,17 @@
 "use client";
 
-import { useActionState, useState, useRef, useEffect } from "react";
+import { useActionState, useState, useRef } from "react";
 import { subscribe, verifyPayment, type CheckoutState } from "@/lib/actions/checkout";
 import { validateCoupon, type CouponResult } from "@/lib/actions/coupons";
-import { TIERS, DURATIONS, getDuration, priceFor, perMonth, formatINR, type Tier } from "@/lib/plans";
-import { Check, ArrowRight, ExternalLink, Loader2, Tag, ShieldCheck, Globe, Sparkles } from "lucide-react";
+import { TIERS, DURATIONS, priceFor, perMonth, formatINR, type Tier, type Duration } from "@/lib/plans";
+import { Check, ArrowRight, ExternalLink, Tag, ShieldCheck, Globe, Sparkles } from "lucide-react";
 import { mkt } from "@/lib/marketingTheme";
-import { readAiDraft, clearAiDraft } from "@/lib/ai/promptStorage";
+import { useAiDraftItem, clearAiDraft, AI_BLUEPRINT_KEY, AI_PROMPT_KEY } from "@/lib/ai/promptStorage";
 import { inferVerticalId } from "@/lib/ai/enrichBlueprint";
 import { DESIGNS, isDesignId } from "@/lib/designs";
 import { DesignPicker } from "./DesignPicker";
+import { LegalConsent } from "./LegalConsent";
+import { BrandSpinner } from "@/components/BrandLogo";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare global { interface Window { Razorpay: any } }
@@ -27,8 +29,10 @@ export function SubscribeFlow({
   defaultDuration,
   mock,
   tiers = TIERS,
+  durations = DURATIONS,
   fromAi = false,
   defaultDesign,
+  defaultReferral = "",
 }: {
   verticals: V[];
   defaultVertical: string;
@@ -36,68 +40,16 @@ export function SubscribeFlow({
   defaultDuration?: string;
   mock: boolean;
   tiers?: Tier[];
+  durations?: Duration[];
   fromAi?: boolean;
   defaultDesign?: string;
+  defaultReferral?: string;
 }) {
-  const [state, action, pending] = useActionState(subscribe, initial);
   const [finalState, setFinalState] = useState<CheckoutState | null>(null);
   const [paying, setPaying] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-  const [vertical, setVertical] = useState(defaultVertical || verticals[0]?.id);
-  const [design, setDesign] = useState(isDesignId(defaultDesign) ? defaultDesign : "classic");
-  const [tierId, setTierId] = useState(defaultTier || "professional");
-  const [durId, setDurId] = useState(
-    defaultDuration && DURATIONS.some((d) => d.id === defaultDuration) ? defaultDuration : "1y",
-  );
-  const [sub, setSub] = useState("");
-  const [coupon, setCoupon] = useState("");
-  const [couponRes, setCouponRes] = useState<CouponResult | null>(null);
-  const [couponBusy, setCouponBusy] = useState(false);
-  const [aiBlueprint, setAiBlueprint] = useState("");
-  const [aiSiteName, setAiSiteName] = useState("");
-  const [businessName, setBusinessName] = useState("");
 
-  useEffect(() => {
-    const draft = readAiDraft();
-    if (!draft?.blueprint) return;
-    setAiBlueprint(draft.blueprint);
-    try {
-      const bp = JSON.parse(draft.blueprint) as {
-        website?: { name?: string; type?: string; description?: string };
-        pages?: unknown;
-      };
-      const name = bp.website?.name?.trim() ?? "";
-      if (name) {
-        setAiSiteName(name);
-        setBusinessName((prev) => prev || name);
-      }
-      const inferred = inferVerticalId(bp, draft.prompt);
-      if (inferred && (!defaultVertical || defaultVertical === "home-services" || fromAi)) {
-        setVertical(inferred);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [defaultVertical, fromAi]);
-
-  const view = finalState ?? state;
-  const selectedVertical = verticals.find((v) => v.id === vertical);
-  const isLive = selectedVertical?.status === "live";
-  const tier = tiers.find((t) => t.id === tierId) ?? tiers[0];
-  const duration = getDuration(durId)!;
-  const total = priceFor(tier, duration);
-  const discountPct = couponRes?.valid ? couponRes.percentOff : 0;
-  const displayTotal = Math.round(total * (1 - discountPct / 100));
-
-  async function applyCoupon() {
-    setCouponBusy(true);
-    setCouponRes(await validateCoupon(coupon));
-    setCouponBusy(false);
-  }
-
-  useEffect(() => {
-    if (state.status !== "razorpay" || finalState) return;
-    const s = state;
+  // Opened from the form action (not an effect) once the server returns a Razorpay order.
+  function openRazorpay(s: Extract<CheckoutState, { status: "razorpay" }>) {
     if (typeof window === "undefined" || !window.Razorpay) {
       setFinalState({ status: "error", message: "Payment library failed to load. Please retry." });
       return;
@@ -108,7 +60,7 @@ export function SubscribeFlow({
       amount: s.amount,
       currency: "INR",
       order_id: s.rzpOrderId,
-      name: "StandardSaaS",
+      name: "SitePixl",
       description: s.planLabel,
       prefill: { name: s.name, email: s.email, contact: s.phone },
       theme: { color: "#84cc16" },
@@ -126,7 +78,70 @@ export function SubscribeFlow({
       modal: { ondismiss: () => setPaying(false) },
     });
     rzp.open();
-  }, [state, finalState]);
+  }
+
+  const [state, action, pending] = useActionState(async (prev: CheckoutState, fd: FormData) => {
+    setFinalState(null);
+    const s = await subscribe(prev, fd);
+    if (s.status === "razorpay") openRazorpay(s);
+    return s;
+  }, initial);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [vertical, setVertical] = useState(defaultVertical || verticals[0]?.id);
+  const [design, setDesign] = useState(isDesignId(defaultDesign) ? defaultDesign : "classic");
+  const [tierId, setTierId] = useState(defaultTier || "professional");
+  const [durId, setDurId] = useState(
+    defaultDuration && durations.some((d) => d.id === defaultDuration) ? defaultDuration : "1y",
+  );
+  const [sub, setSub] = useState("");
+  const [coupon, setCoupon] = useState("");
+  const [couponRes, setCouponRes] = useState<CouponResult | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [businessName, setBusinessName] = useState("");
+
+  // AI draft from localStorage ("" until hydrated). Seed the editable fields once per draft,
+  // adjusting state during render rather than in an effect.
+  const aiBlueprint = useAiDraftItem(AI_BLUEPRINT_KEY) ?? "";
+  const aiPrompt = useAiDraftItem(AI_PROMPT_KEY) ?? "";
+  const [aiSiteName, setAiSiteName] = useState("");
+  const seedKey = `${aiBlueprint}|${aiPrompt}|${defaultVertical}|${fromAi}`;
+  const [seededKey, setSeededKey] = useState("");
+  if (aiBlueprint && seededKey !== seedKey) {
+    setSeededKey(seedKey);
+    try {
+      const bp = JSON.parse(aiBlueprint) as {
+        website?: { name?: string; type?: string; description?: string };
+        pages?: unknown;
+      };
+      const name = bp.website?.name?.trim() ?? "";
+      if (name) {
+        setAiSiteName(name);
+        setBusinessName((prev) => prev || name);
+      }
+      const inferred = inferVerticalId(bp, aiPrompt);
+      if (inferred && (!defaultVertical || defaultVertical === "home-services" || fromAi)) {
+        setVertical(inferred);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const view = finalState ?? state;
+  const selectedVertical = verticals.find((v) => v.id === vertical);
+  const isLive = selectedVertical?.status === "live";
+  const tier = tiers.find((t) => t.id === tierId) ?? tiers[0];
+  const duration = durations.find((d) => d.id === durId) ?? durations[0];
+  const total = priceFor(tier, duration);
+  const discountPct = couponRes?.valid ? couponRes.percentOff : 0;
+  const displayTotal = Math.round(total * (1 - discountPct / 100));
+
+  async function applyCoupon() {
+    setCouponBusy(true);
+    setCouponRes(await validateCoupon(coupon));
+    setCouponBusy(false);
+  }
+
 
   if (view.status === "success") {
     clearAiDraft();
@@ -277,7 +292,7 @@ export function SubscribeFlow({
         </div>
         <div className="flex justify-center">
           <div className={`inline-flex flex-wrap justify-center gap-2 p-1.5 rounded-2xl ${mkt.card}`}>
-            {DURATIONS.map((d) => {
+            {durations.map((d) => {
               const active = durId === d.id;
               return (
                 <button
@@ -439,6 +454,16 @@ export function SubscribeFlow({
             </div>
             {isLive && (
               <input
+                name="referralCode"
+                defaultValue={defaultReferral}
+                maxLength={16}
+                placeholder="Referral code (optional)"
+                className={`${mkt.input} uppercase`}
+                autoComplete="off"
+              />
+            )}
+            {isLive && (
+              <input
                 name="password"
                 type="password"
                 required
@@ -459,7 +484,7 @@ export function SubscribeFlow({
           >
             {pending || paying ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <BrandSpinner className="w-4 h-4" />
                 {paying ? "Waiting for payment…" : "Processing…"}
               </>
             ) : isLive ? (
@@ -474,6 +499,19 @@ export function SubscribeFlow({
               </>
             )}
           </button>
+          <LegalConsent
+            className="mt-3 text-center"
+            lead={isLive ? "By paying you agree to our" : "By continuing you agree to our"}
+          />
+          {isLive && (
+            <p className="mt-1 text-center text-xs text-[var(--mkt-text-muted)]">
+              See our{" "}
+              <a href="/refund" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-[var(--mkt-accent-text)]">
+                Refund &amp; Cancellation Policy
+              </a>
+              .
+            </p>
+          )}
 
           {isLive && mock && (
             <p className="text-xs text-amber-600 dark:text-amber-400/80 mt-3">

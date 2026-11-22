@@ -1,5 +1,6 @@
-// Standard SaaS — multi-tenant website builder for home-services businesses.
-// Dev DB: SQLite. Production: switch `provider` to "postgresql" + set DATABASE_URL.
+// SitePixl — multi-tenant website builder for home-services businesses.
+// Database: MySQL 8 (DATABASE_URL=mysql://user:pass@host:3306/db).
+// Non-key strings are MEDIUMTEXT; keys stay VARCHAR(191) so they can be indexed.
 // All JSON-shaped config is stored as String (portable across SQLite/Postgres);
 // typed helpers in src/lib/config.ts handle (de)serialization.
 
@@ -9,25 +10,27 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
 }
 
 // ─── A client's account (one business = one tenant) ──────────────────────────
 model Tenant {
-  id           String   @id @default(cuid())
-  name         String
-  subdomain    String   @unique
-  customDomain String?  @unique
-  domainStatus String   @default("none") // none | pending | connected
-  vertical     String   @default("home-services") // which sector template
-  status       String   @default("active") // active | suspended | cancelled | trial
-  plan         String   @default("free") // free | starter | professional | premium
-  subscriptionEndsAt DateTime? // null = no expiry (lifetime/free)
+  id                    String    @id @default(cuid())
+  name                  String    @db.MediumText
+  subdomain             String    @unique
+  customDomain          String?   @unique
+  domainStatus          String    @default("none") @db.MediumText // none | pending | connected
+  vertical              String    @default("home-services") @db.MediumText // which sector template
+  status                String    @default("active") @db.MediumText // active | suspended | cancelled | trial
+  plan                  String    @default("free") @db.MediumText // free | starter | professional | premium
+  subscriptionEndsAt    DateTime? // null = no expiry (lifetime/free)
   lastRenewalReminderAt DateTime? // last time an expiry reminder was sent
-  cancelledAt  DateTime?
-  cancelReason String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  cancelledAt           DateTime?
+  cancelReason          String?   @db.MediumText
+  referralCode          String?   @unique // lazily created, shared as ?ref=CODE
+  referredByTenantId    String? // tenant whose referral brought this customer (permanent)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   users        User[]
   orders       Order[]
@@ -42,8 +45,14 @@ model Tenant {
   campaigns    Campaign[]
   people       Person[]
   events       SiteEvent[]
+  properties   Property[]
+  causes       Cause[]
   volunteers   Volunteer[]
   donations    SiteDonation[]
+  mediaFiles   MediaFile[]
+  referralCommissions ReferralCommission[]
+  referralWithdrawals ReferralWithdrawal[]
+  pageViews    PageView[]
 }
 
 // ─── Login accounts for a tenant's admin panel ───────────────────────────────
@@ -52,9 +61,9 @@ model User {
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   email     String
-  password  String // bcrypt hash
-  name      String?
-  role      String   @default("owner") // owner | admin | staff
+  password  String   @db.MediumText // bcrypt hash
+  name      String?  @db.MediumText
+  role      String   @default("owner") @db.MediumText // owner | admin | staff
   createdAt DateTime @default(now())
 
   @@unique([tenantId, email])
@@ -62,18 +71,19 @@ model User {
 
 // ─── Site-wide look & feel + header/footer (one per tenant) ───────────────────
 model SiteConfig {
-  id        String   @id @default(cuid())
-  tenantId  String   @unique
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  theme     String   @default("{}") // JSON: colors, font, radius
-  header    String   @default("{}") // JSON: logo, topbar contact, nav, cta
-  footer    String   @default("{}") // JSON: about, columns, social, contact
-  seo       String   @default("{}") // JSON: title, description, favicon, ogImage
-  customCss String   @default("") // site-wide custom CSS injected into every page
-  resultConfig String @default("{}") // JSON: marksheet/report-card template settings
-  adminPrefs String @default("{}") // JSON: notifyLeads, notifyAppointments, etc.
-  payments   String @default("{}") // JSON: tenant Razorpay / UPI / bank / QR
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  tenantId     String   @unique
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  theme        String   @default("{}") @db.MediumText // JSON: colors, font, radius
+  header       String   @default("{}") @db.MediumText // JSON: logo, topbar contact, nav, cta
+  footer       String   @default("{}") @db.MediumText // JSON: about, columns, social, contact
+  seo          String   @default("{}") @db.MediumText // JSON: title, description, favicon, ogImage
+  customCss    String   @default("") @db.MediumText // site-wide custom CSS injected into every page
+  resultConfig String   @default("{}") @db.MediumText // JSON: marksheet/report-card template settings
+  adminPrefs   String   @default("{}") @db.MediumText // JSON: notifyLeads, notifyAppointments, etc.
+  payments     String   @default("{}") @db.MediumText // JSON: tenant Razorpay / UPI / bank / QR
+  integrations String   @default("{}") @db.MediumText // JSON: third-party integrations (chat, analytics, pay links…)
+  updatedAt    DateTime @updatedAt
 }
 
 // ─── Ad campaigns (marketing manager) ─────────────────────────────────────────
@@ -81,25 +91,25 @@ model Campaign {
   id        String   @id @default(cuid())
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name      String
-  platform  String   @default("google") // google | meta | instagram | whatsapp | local | other
-  objective String   @default("leads")  // leads | traffic | awareness | sales | calls
-  service   String   @default("")       // which service/product this ad promotes
-  adImage   String   @default("")        // creative image for this ad
-  headline  String   @default("")
-  adText    String   @default("")
-  targetUrl String   @default("")
-  budget    Int      @default(0)  // total planned budget
-  startDate String   @default("")
-  endDate   String   @default("")
+  name      String   @db.MediumText
+  platform  String   @default("google") @db.MediumText // google | meta | instagram | whatsapp | local | other
+  objective String   @default("leads") @db.MediumText // leads | traffic | awareness | sales | calls
+  service   String   @default("") @db.MediumText // which service/product this ad promotes
+  adImage   String   @default("") @db.MediumText // creative image for this ad
+  headline  String   @default("") @db.MediumText
+  adText    String   @default("") @db.MediumText
+  targetUrl String   @default("") @db.MediumText
+  budget    Int      @default(0) // total planned budget
+  startDate String   @default("") @db.MediumText
+  endDate   String   @default("") @db.MediumText
   // Audience targeting
-  gender    String   @default("all") // all | male | female
+  gender    String   @default("all") @db.MediumText // all | male | female
   ageMin    Int      @default(18)
   ageMax    Int      @default(65)
-  interests String   @default("[]") // JSON array of interest keywords
-  locations String   @default("[]") // JSON array of target cities/areas
-  radiusKm  Int      @default(0)     // target radius around locations
-  status    String   @default("draft") // draft | active | paused | completed
+  interests String   @default("[]") @db.MediumText // JSON array of interest keywords
+  locations String   @default("[]") @db.MediumText // JSON array of target cities/areas
+  radiusKm  Int      @default(0) // target radius around locations
+  status    String   @default("draft") @db.MediumText // draft | active | paused | completed
   spend     Int      @default(0)
   clicks    Int      @default(0)
   leads     Int      @default(0)
@@ -110,20 +120,20 @@ model Campaign {
 
 // ─── Notices / circulars (managed from the admin panel) ───────────────────────
 model Notice {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  date      String   @default("") // display date e.g. "20 Jul 2026"
-  title     String
-  category  String   @default("News") // Result | Admission | Exam | Event | Holiday | News
-  link      String   @default("")
-  attachmentUrl  String @default("") // uploaded image / PDF / document
-  attachmentName String @default("") // original file name (for display)
-  pinned    Boolean  @default(false)
-  published Boolean  @default(true)
-  order     Int      @default(0)
-  demoSessionId String? // set during OTP demo sandbox — deleted when session expires
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  date           String   @default("") @db.MediumText // display date e.g. "20 Jul 2026"
+  title          String   @db.MediumText
+  category       String   @default("News") @db.MediumText // Result | Admission | Exam | Event | Holiday | News
+  link           String   @default("") @db.MediumText
+  attachmentUrl  String   @default("") @db.MediumText // uploaded image / PDF / document
+  attachmentName String   @default("") @db.MediumText // original file name (for display)
+  pinned         Boolean  @default(false)
+  published      Boolean  @default(true)
+  order          Int      @default(0)
+  demoSessionId  String? // set during OTP demo sandbox — deleted when session expires
+  createdAt      DateTime @default(now())
 
   @@index([tenantId])
   @@index([demoSessionId])
@@ -150,41 +160,42 @@ model StudentResult {
   exam       ResultExam @relation(fields: [examId], references: [id], onDelete: Cascade)
   tenantId   String
   rollNo     String
-  name       String
-  className  String     @default("")
-  section    String     @default("")
-  fatherName String     @default("")
-  motherName String     @default("")
-  dob        String     @default("")
-  subjects   String     @default("[]") // JSON: [{ name, max, obtained }]
+  name       String     @db.MediumText
+  className  String     @default("") @db.MediumText
+  section    String     @default("") @db.MediumText
+  fatherName String     @default("") @db.MediumText
+  motherName String     @default("") @db.MediumText
+  dob        String     @default("") @db.MediumText
+  subjects   String     @default("[]") @db.MediumText // JSON: [{ name, max, obtained }]
   total      Int        @default(0)
   maxTotal   Int        @default(0)
   percentage Float      @default(0)
-  grade      String     @default("")
-  status     String     @default("") // Pass | Fail
-  remarks    String     @default("")
+  grade      String     @default("") @db.MediumText
+  status     String     @default("") @db.MediumText // Pass | Fail
+  remarks    String     @default("") @db.MediumText
 
   @@index([tenantId, rollNo])
 }
 
 // ─── Pages (system pages + client's custom pages) ─────────────────────────────
 model Page {
-  id        String    @id @default(cuid())
-  tenantId  String
-  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  slug      String // "home", "about", "services", or a custom slug
-  title     String
-  isSystem  Boolean   @default(false) // system pages can't be deleted
-  published Boolean   @default(true)
-  order     Int       @default(0) // order in nav
-  showInNav Boolean   @default(true)
-  seoTitle       String @default("") // per-page SEO title override
-  seoDescription String @default("") // per-page SEO meta description
-  seoImage       String @default("") // per-page Open Graph share image
-  noindex        Boolean @default(false) // hide this page from search engines
-  sections  Section[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug           String // "home", "about", "services", or a custom slug
+  title          String    @db.MediumText
+  isSystem       Boolean   @default(false) // system pages can't be deleted
+  published      Boolean   @default(true)
+  order          Int       @default(0) // order in nav
+  showInNav      Boolean   @default(true)
+  seoTitle       String    @default("") @db.MediumText // per-page SEO title override
+  seoDescription String    @default("") @db.MediumText // per-page SEO meta description
+  seoImage       String    @default("") @db.MediumText // per-page Open Graph share image
+  noindex        Boolean   @default(false) // hide this page from search engines
+  focusKeyword   String    @default("") @db.MediumText // SEO cockpit: the phrase this page should rank for
+  sections       Section[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@unique([tenantId, slug])
 }
@@ -194,27 +205,27 @@ model Section {
   id      String  @id @default(cuid())
   pageId  String
   page    Page    @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  type    String // hero | features | serviceCategories | gallery | about | stats | cta | contactForm | quoteForm | appointmentForm | faq | richText | html
+  type    String  @db.MediumText // hero | features | serviceCategories | gallery | about | stats | cta | contactForm | quoteForm | appointmentForm | faq | richText | html
   order   Int     @default(0)
   visible Boolean @default(true)
-  content String  @default("{}") // JSON blob whose shape depends on `type`
-  style   String  @default("{}") // JSON: background, spacing, container width, custom class
+  content String  @default("{}") @db.MediumText // JSON blob whose shape depends on `type`
+  style   String  @default("{}") @db.MediumText // JSON: background, spacing, container width, custom class
 }
 
 // ─── Services catalogue ───────────────────────────────────────────────────────
 model Service {
-  id          String @id @default(cuid())
-  tenantId    String
-  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category    String // "Electrical", "Plumbing", ...
-  title       String
-  description String @default("")
-  image       String @default("")
-  order       Int    @default(0)
-  slug            String @default("") // URL slug for the service detail page
-  longDescription String @default("") // richer content shown on the detail page
-  seoTitle        String @default("") // per-service SEO title
-  seoDescription  String @default("") // per-service SEO meta description
+  id              String  @id @default(cuid())
+  tenantId        String
+  tenant          Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category        String  @db.MediumText // "Electrical", "Plumbing", ...
+  title           String  @db.MediumText
+  description     String  @default("") @db.MediumText
+  image           String  @default("") @db.MediumText
+  order           Int     @default(0)
+  slug            String  @default("") @db.MediumText // URL slug for the service detail page
+  longDescription String  @default("") @db.MediumText // richer content shown on the detail page
+  seoTitle        String  @default("") @db.MediumText // per-service SEO title
+  seoDescription  String  @default("") @db.MediumText // per-service SEO meta description
   demoSessionId   String? // demo sandbox create — cleaned on expiry
 
   @@index([demoSessionId])
@@ -222,13 +233,13 @@ model Service {
 
 // ─── Gallery ──────────────────────────────────────────────────────────────────
 model GalleryItem {
-  id       String @id @default(cuid())
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category String
-  image    String
-  caption String @default("")
-  order   Int    @default(0)
+  id            String  @id @default(cuid())
+  tenantId      String
+  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category      String  @db.MediumText
+  image         String  @db.MediumText
+  caption       String  @default("") @db.MediumText
+  order         Int     @default(0)
   demoSessionId String?
 
   @@index([demoSessionId])
@@ -239,18 +250,104 @@ model Person {
   id            String  @id @default(cuid())
   tenantId      String
   tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name          String
-  role          String  @default("")
-  bio           String  @default("")
-  image         String  @default("")
-  groupName     String  @default("core") // leadership | core
-  experience    String  @default("")
-  linkedin      String  @default("")
-  instagram     String  @default("")
+  name          String  @db.MediumText
+  role          String  @default("") @db.MediumText
+  bio           String  @default("") @db.MediumText
+  image         String  @default("") @db.MediumText
+  groupName     String  @default("core") @db.MediumText // leadership | core
+  experience    String  @default("") @db.MediumText
+  linkedin      String  @default("") @db.MediumText
+  instagram     String  @default("") @db.MediumText
   order         Int     @default(0)
   published     Boolean @default(true)
   demoSessionId String?
 
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+// ─── NGO fundraising causes (goal, live raised total, impact tiers) ──────────
+model Cause {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug          String   @default("")
+  title         String   @db.MediumText
+  category      String   @default("") @db.MediumText // e.g. Education, Health, Relief
+  summary       String   @default("") @db.MediumText // one line for cards
+  story         String   @default("") @db.MediumText // long text (paragraphs separated by blank lines)
+  coverImage    String   @default("") @db.MediumText
+  gallery       String   @default("[]") @db.MediumText // JSON string[]
+  goalAmount    Int      @default(0) // INR; 0 = open-ended
+  offlineRaised Int      @default(0) // INR raised outside the site (cheques, events); online paid donations are added on top
+  offlineDonors Int      @default(0)
+  deadline      String   @default("") @db.MediumText // YYYY-MM-DD; "" = ongoing
+  urgent        Boolean  @default(false)
+  beneficiaries String   @default("") @db.MediumText // "1,200 children in 14 villages"
+  location      String   @default("") @db.MediumText
+  impactTiers   String   @default("[]") @db.MediumText // JSON { amount: number, label: string }[] — "₹500 feeds 20 children"
+  updates       String   @default("[]") @db.MediumText // JSON { date: string, title: string, text: string }[]
+  status        String   @default("active") @db.MediumText // active | completed | paused
+  featured      Boolean  @default(false)
+  published     Boolean  @default(true)
+  order         Int      @default(0)
+  demoSessionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+// ─── Real-estate listings (broker / PG / builder sites) ───────────────────────
+model Property {
+  id            String  @id @default(cuid())
+  tenantId      String
+  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug          String  @default("")
+  title         String  @db.MediumText
+  purpose       String  @default("sale") @db.MediumText // sale | rent | pg | project
+  propertyType  String  @default("apartment") @db.MediumText // apartment | villa | house | plot | commercial | office | shop | pg-room | hostel
+  price         Int     @default(0) // INR; 0 = "price on request"
+  priceNote     String  @default("") @db.MediumText // e.g. "onwards", "per month", "per bed"
+  deposit       Int     @default(0) // INR (rent / PG)
+  maintenance   Int     @default(0) // INR per month
+  bhk           String  @default("") @db.MediumText // "2 BHK", "1 RK", "Single sharing"…
+  areaSqft      Int     @default(0)
+  furnishing    String  @default("") @db.MediumText // furnished | semi-furnished | unfurnished
+  bathrooms     Int     @default(0)
+  floor         String  @default("") @db.MediumText // "5 of 12"
+  facing        String  @default("") @db.MediumText
+  parking       String  @default("") @db.MediumText
+  availableFrom String  @default("") @db.MediumText // "Immediate" | YYYY-MM-DD
+  possession    String  @default("") @db.MediumText // builder projects: "Dec 2027" / "Ready to move"
+  rera          String  @default("") @db.MediumText // RERA registration no.
+  sharing       String  @default("") @db.MediumText // PG: single / double / triple (comma list)
+  foodIncluded  Boolean @default(false) // PG meals
+  gender        String  @default("") @db.MediumText // PG: boys | girls | co-living
+  locality      String  @default("") @db.MediumText
+  city          String  @default("") @db.MediumText
+  address       String  @default("") @db.MediumText
+  mapUrl        String  @default("") @db.MediumText
+  summary       String  @default("") @db.MediumText // one line for cards
+  description   String  @default("") @db.MediumText
+  highlights    String  @default("[]") @db.MediumText // JSON string[]
+  amenities     String  @default("[]") @db.MediumText // JSON string[] (ids from lib/property AMENITIES)
+  coverImage    String  @default("") @db.MediumText
+  gallery       String  @default("[]") @db.MediumText // JSON string[]
+  floorPlans    String  @default("[]") @db.MediumText // JSON { label, image, area? }[]
+  brochureUrl   String  @default("") @db.MediumText
+  videoUrl      String  @default("") @db.MediumText
+  status        String  @default("available") @db.MediumText // available | under-offer | sold | rented
+  featured      Boolean @default(false)
+  published     Boolean @default(true)
+  order         Int     @default(0)
+  demoSessionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, slug])
   @@index([tenantId])
   @@index([demoSessionId])
 }
@@ -261,29 +358,29 @@ model SiteEvent {
   tenantId           String
   tenant             Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   slug               String  @default("")
-  title              String
-  activityName       String  @default("")
-  shortDescription   String  @default("")
-  programDescription String  @default("")
-  date               String  @default("") // ISO date YYYY-MM-DD
-  location           String  @default("")
-  organizedBy        String  @default("")
-  dignitaries        String  @default("")
-  impact             String  @default("")
-  coverImage         String  @default("")
-  gallery            String  @default("[]") // JSON string[]
-  objectives         String  @default("[]") // JSON string[]
-  documents          String  @default("[]") // JSON { label, url }[]
-  status             String  @default("auto") // auto | upcoming | completed
-  mapUrl             String  @default("")
-  venueNote          String  @default("")
-  blocks             String  @default("[]") // JSON custom story blocks
+  title              String  @db.MediumText
+  activityName       String  @default("") @db.MediumText
+  shortDescription   String  @default("") @db.MediumText
+  programDescription String  @default("") @db.MediumText
+  date               String  @default("") @db.MediumText // ISO date YYYY-MM-DD
+  location           String  @default("") @db.MediumText
+  organizedBy        String  @default("") @db.MediumText
+  dignitaries        String  @default("") @db.MediumText
+  impact             String  @default("") @db.MediumText
+  coverImage         String  @default("") @db.MediumText
+  gallery            String  @default("[]") @db.MediumText // JSON string[]
+  objectives         String  @default("[]") @db.MediumText // JSON string[]
+  documents          String  @default("[]") @db.MediumText // JSON { label, url }[]
+  status             String  @default("auto") @db.MediumText // auto | upcoming | completed
+  mapUrl             String  @default("") @db.MediumText
+  venueNote          String  @default("") @db.MediumText
+  blocks             String  @default("[]") @db.MediumText // JSON custom story blocks
   enableDonate       Boolean @default(false)
   donateAmount       Int     @default(0) // suggested INR
-  donateLabel        String  @default("")
+  donateLabel        String  @default("") @db.MediumText
   showQr             Boolean @default(false)
-  qrImage            String  @default("")
-  qrCaption          String  @default("")
+  qrImage            String  @default("") @db.MediumText
+  qrCaption          String  @default("") @db.MediumText
   published          Boolean @default(true)
   order              Int     @default(0)
   demoSessionId      String?
@@ -298,16 +395,17 @@ model SiteDonation {
   id             String   @id @default(cuid())
   tenantId       String
   tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  eventId        String   @default("")
-  name           String   @default("")
-  email          String   @default("")
-  phone          String   @default("")
+  eventId        String   @default("") @db.MediumText
+  causeId        String   @default("") @db.MediumText // Cause.id when given to a fundraising cause
+  name           String   @default("") @db.MediumText
+  email          String   @default("") @db.MediumText
+  phone          String   @default("") @db.MediumText
   amount         Int      @default(0) // paise
-  status         String   @default("created") // created | paid | failed
-  gateway        String   @default("upi") // razorpay | upi | mock
-  gatewayOrderId String   @default("")
-  gatewayPayId   String   @default("")
-  note           String   @default("")
+  status         String   @default("created") @db.MediumText // created | paid | failed
+  gateway        String   @default("upi") @db.MediumText // razorpay | upi | mock
+  gatewayOrderId String   @default("") @db.MediumText
+  gatewayPayId   String   @default("") @db.MediumText
+  note           String   @default("") @db.MediumText
   demoSessionId  String?
   createdAt      DateTime @default(now())
 
@@ -320,18 +418,18 @@ model Volunteer {
   id            String   @id @default(cuid())
   tenantId      String
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name          String
-  phone         String
-  email         String   @default("")
-  age           String   @default("")
-  gender        String   @default("")
-  city          String   @default("")
-  state         String   @default("")
-  interest      String   @default("")
-  availability  String   @default("")
-  mode          String   @default("")
-  experience    String   @default("")
-  status        String   @default("new") // new | contacted | accepted | declined
+  name          String   @db.MediumText
+  phone         String   @db.MediumText
+  email         String   @default("") @db.MediumText
+  age           String   @default("") @db.MediumText
+  gender        String   @default("") @db.MediumText
+  city          String   @default("") @db.MediumText
+  state         String   @default("") @db.MediumText
+  interest      String   @default("") @db.MediumText
+  availability  String   @default("") @db.MediumText
+  mode          String   @default("") @db.MediumText
+  experience    String   @default("") @db.MediumText
+  status        String   @default("new") @db.MediumText // new | contacted | accepted | declined
   demoSessionId String?
   createdAt     DateTime @default(now())
 
@@ -341,18 +439,18 @@ model Volunteer {
 
 // ─── Quote / contact-form submissions ─────────────────────────────────────────
 model Lead {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name      String
-  phone     String
-  email     String   @default("")
-  service   String   @default("")
-  location  String   @default("")
-  message   String   @default("")
-  status    String   @default("new") // new | contacted | converted | closed
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String   @db.MediumText
+  phone         String   @db.MediumText
+  email         String   @default("") @db.MediumText
+  service       String   @default("") @db.MediumText
+  location      String   @default("") @db.MediumText
+  message       String   @default("") @db.MediumText
+  status        String   @default("new") @db.MediumText // new | contacted | converted | closed
   demoSessionId String? // demo sandbox — deleted when session expires
-  createdAt DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   @@index([tenantId])
   @@index([demoSessionId])
@@ -360,19 +458,19 @@ model Lead {
 
 // ─── Appointment bookings ─────────────────────────────────────────────────────
 model Appointment {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name      String
-  phone     String
-  email     String   @default("")
-  service   String   @default("")
-  date      String   @default("")
-  time      String   @default("")
-  message   String   @default("")
-  status    String   @default("pending") // pending | confirmed | completed | cancelled
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String   @db.MediumText
+  phone         String   @db.MediumText
+  email         String   @default("") @db.MediumText
+  service       String   @default("") @db.MediumText
+  date          String   @default("") @db.MediumText
+  time          String   @default("") @db.MediumText
+  message       String   @default("") @db.MediumText
+  status        String   @default("pending") @db.MediumText // pending | confirmed | completed | cancelled
   demoSessionId String? // demo sandbox — deleted when session expires
-  createdAt DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   @@index([tenantId])
   @@index([demoSessionId])
@@ -381,14 +479,14 @@ model Appointment {
 // ─── Marketing site: demo requests & signups for the platform itself ──────────
 model PlatformLead {
   id        String   @id @default(cuid())
-  name      String
-  email     String
-  phone     String   @default("")
-  company   String   @default("")
-  vertical  String   @default("") // sector they're interested in
-  type      String   @default("demo") // demo | signup | contact
-  message   String   @default("")
-  status    String   @default("new")
+  name      String   @db.MediumText
+  email     String   @db.MediumText
+  phone     String   @default("") @db.MediumText
+  company   String   @default("") @db.MediumText
+  vertical  String   @default("") @db.MediumText // sector they're interested in
+  type      String   @default("demo") @db.MediumText // demo | signup | contact
+  message   String   @default("") @db.MediumText
+  status    String   @default("new") @db.MediumText
   verified  Boolean  @default(false) // OTP verified for demo leads
   createdAt DateTime @default(now())
 
@@ -397,26 +495,26 @@ model PlatformLead {
 
 // ─── Isolated demo sandbox session (10 min, per vertical, per visitor) ────────
 model DemoSession {
-  id             String   @id @default(cuid())
-  name           String
-  email          String
+  id             String        @id @default(cuid())
+  name           String        @db.MediumText
+  email          String        @db.MediumText
   phone          String
-  company        String   @default("")
-  vertical       String   // locked to one sector
-  token          String   @unique @default(cuid())
-  otpHash        String   @default("")
+  company        String        @default("") @db.MediumText
+  vertical       String // locked to one sector
+  token          String        @unique @default(cuid())
+  otpHash        String        @default("") @db.MediumText
   otpExpiresAt   DateTime?
   verifiedAt     DateTime?
-  status         String   @default("pending_otp") // pending_otp | active | expired
+  status         String        @default("pending_otp") // pending_otp | active | expired
   expiresAt      DateTime?
-  overlay        String   @default("{}") // per-session customizations (never touches tenant DB)
-  pagesViewed    String   @default("[]") // JSON array of page slugs
-  adminUsername  String   @default("") // temporary unique admin username (cleared on expire)
-  adminPassword  String   @default("") // temporary admin password (cleared on expire)
+  overlay        String        @default("{}") @db.MediumText // per-session customizations (never touches tenant DB)
+  pagesViewed    String        @default("[]") @db.MediumText // JSON array of page slugs
+  adminUsername  String        @default("") // temporary unique admin username (cleared on expire)
+  adminPassword  String        @default("") @db.MediumText // temporary admin password (cleared on expire)
   platformLeadId String?
   platformLead   PlatformLead? @relation(fields: [platformLeadId], references: [id], onDelete: SetNull)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@index([phone, vertical])
   @@index([token])
@@ -426,35 +524,42 @@ model DemoSession {
 
 // ─── Platform-wide settings (single row) ─────────────────────────────────────
 model PlatformConfig {
-  id                String   @id @default("singleton")
-  razorpayKeyId     String   @default("")
-  razorpayKeySecret String   @default("")
-  platformName      String   @default("StandardSaaS")
-  supportEmail      String   @default("")
-  supportPhone      String   @default("")
-  broadcastShow     Boolean  @default(false)
-  broadcastText     String   @default("")
+  id                  String   @id @default("singleton")
+  razorpayKeyId       String   @default("") @db.MediumText
+  razorpayKeySecret   String   @default("") @db.MediumText
+  platformName        String   @default("SitePixl") @db.MediumText
+  supportEmail        String   @default("") @db.MediumText
+  supportPhone        String   @default("") @db.MediumText
+  broadcastShow       Boolean  @default(false)
+  broadcastText       String   @default("") @db.MediumText
   // GST / invoicing
-  gstin             String   @default("")
-  businessAddress   String   @default("")
-  gstRate           Int      @default(18)
-  invoicePrefix     String   @default("INV")
-  // No-code plan overrides (JSON: { tierId: { monthlyBase, maxServices } })
-  planOverrides     String   @default("{}")
+  gstin               String   @default("") @db.MediumText
+  businessAddress     String   @default("") @db.MediumText
+  gstRate             Int      @default(18)
+  invoicePrefix       String   @default("INV") @db.MediumText
+  // No-code plan overrides (JSON: { tierId: { monthlyBase, limits: {...} } }; legacy maxServices ok)
+  planOverrides       String   @default("{}") @db.MediumText
   // Renewal reminders (email)
-  remindersEnabled  Boolean  @default(false)
-  reminderDays      Int      @default(7)
-  resendApiKey      String   @default("")
-  senderEmail       String   @default("")
+  remindersEnabled    Boolean  @default(false)
+  reminderDays        Int      @default(7)
+  resendApiKey        String   @default("") @db.MediumText
+  senderEmail         String   @default("") @db.MediumText
   // Demo gate: OTP + isolated sandbox sessions
-  demoOtpMode       String   @default("screen") // screen | whatsapp
-  demoDurationMinutes Int    @default(10)
-  demoWhatsAppToken String   @default("")
-  demoWhatsAppPhoneId String @default("")
+  demoOtpMode         String   @default("screen") @db.MediumText // screen | whatsapp
+  demoDurationMinutes Int      @default(10)
+  demoWhatsAppToken   String   @default("") @db.MediumText
+  demoWhatsAppPhoneId String   @default("") @db.MediumText
   // AI Website Builder (Groq — server-side only)
-  groqApiKey        String   @default("")
-  groqModel         String   @default("") // blank = openai/gpt-oss-120b
-  updatedAt         DateTime @updatedAt
+  groqApiKey          String   @default("") @db.MediumText
+  groqModel           String   @default("") @db.MediumText // blank = openai/gpt-oss-120b
+  // Multi-provider AI (lib/ai/providers.ts). groqApiKey/groqModel stay as the Groq fallback.
+  aiProvider          String   @default("groq") @db.MediumText // groq | openai | gemini | openrouter | deepseek | custom
+  aiKeys              String   @default("{}") @db.MediumText // JSON { provider: apiKey }
+  aiModels            String   @default("{}") @db.MediumText // JSON { provider: model }
+  aiBaseUrl           String   @default("") @db.MediumText // custom provider endpoint (OpenAI-compatible)
+  // Referral program settings (JSON, see lib/referral.ts resolveReferralSettings)
+  referralSettings    String   @default("{}") @db.MediumText
+  updatedAt           DateTime @updatedAt
 }
 
 // ─── Discount coupons for the marketing checkout ──────────────────────────────
@@ -473,55 +578,128 @@ model Coupon {
 model AiGeneration {
   id         String   @id @default(cuid())
   tenantId   String
-  kind       String   // plan | generate | modify | apply
-  prompt     String
-  blueprint  String   @default("{}") // structured plan JSON
-  operations String   @default("[]") // modify ops JSON
-  snapshot   String   @default("{}") // pre-modify snapshot for rollback
-  status     String   @default("completed") // pending | completed | failed
-  error      String   @default("")
-  pageId     String   @default("") // optional page scope
+  kind       String   @db.MediumText // plan | generate | modify | apply
+  prompt     String   @db.MediumText
+  blueprint  String   @default("{}") @db.MediumText // structured plan JSON
+  operations String   @default("[]") @db.MediumText // modify ops JSON
+  snapshot   String   @default("{}") @db.MediumText // pre-modify snapshot for rollback
+  status     String   @default("completed") @db.MediumText // pending | completed | failed
+  error      String   @default("") @db.MediumText
+  pageId     String   @default("") @db.MediumText // optional page scope
   createdAt  DateTime @default(now())
 
   @@index([tenantId, createdAt])
+}
+
+// ─── Uploaded files (storage accounting: usage = SUM(bytes) per tenant) ───────
+model MediaFile {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  url          String   @unique @db.VarChar(512)
+  bytes        Int
+  mime         String   @db.MediumText
+  originalName String   @default("") @db.MediumText
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId])
 }
 
 // ─── Super-admin (platform owner) accounts ────────────────────────────────────
 model PlatformUser {
   id        String   @id @default(cuid())
   email     String   @unique
-  password  String // bcrypt hash
-  name      String?
+  password  String   @db.MediumText // bcrypt hash
+  name      String?  @db.MediumText
   createdAt DateTime @default(now())
 }
 
 // ─── Subscription orders / payments ───────────────────────────────────────────
 model Order {
-  id              String   @id @default(cuid())
-  customerName    String
-  email           String
-  phone           String   @default("")
-  company         String   @default("")
-  vertical        String
-  subdomain       String
-  plan            String // 1m | 3m | 6m | 1y | 2y | lifetime
-  amount          Int // in paise (INR)
-  currency        String   @default("INR")
-  status          String   @default("created") // created | paid | failed | provisioned | refunded
-  gateway         String   @default("mock") // mock | razorpay | manual-*
-  gatewayOrderId  String   @default("")
-  gatewayPayId    String   @default("")
-  invoiceNo       String?  @unique // assigned once paid/provisioned
-  refundReason    String   @default("")
-  refundedAt      DateTime?
-  passwordHash    String   @default("") // bcrypt of the admin password chosen at checkout (for provisioning/recovery)
-  provisionError  String   @default("") // last provisioning error, for diagnostics/retry
-  couponCode      String   @default("") // applied only after payment succeeds
-  aiBlueprint     String   @default("{}") // JSON plan from marketing AI builder
-  design          String   @default("") // design preset id (lib/designs.ts); "" = template as designed
-  kind            String   @default("new") // new | renew | upgrade
-  tenantId        String? // set after provisioning (or for renewals, set at create)
-  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(cuid())
+  customerName   String    @db.MediumText
+  email          String    @db.MediumText
+  phone          String    @default("") @db.MediumText
+  company        String    @default("") @db.MediumText
+  vertical       String    @db.MediumText
+  subdomain      String    @db.MediumText
+  plan           String    @db.MediumText // 1m | 3m | 6m | 1y | 2y | lifetime
+  amount         Int // in paise (INR)
+  currency       String    @default("INR") @db.MediumText
+  status         String    @default("created") @db.MediumText // created | paid | failed | provisioned | refunded
+  gateway        String    @default("mock") @db.MediumText // mock | razorpay | manual-*
+  gatewayOrderId String    @default("") @db.MediumText
+  gatewayPayId   String    @default("") @db.MediumText
+  invoiceNo      String?   @unique // assigned once paid/provisioned
+  refundReason   String    @default("") @db.MediumText
+  refundedAt     DateTime?
+  passwordHash   String    @default("") @db.MediumText // bcrypt of the admin password chosen at checkout (for provisioning/recovery)
+  provisionError String    @default("") @db.MediumText // last provisioning error, for diagnostics/retry
+  couponCode     String    @default("") @db.MediumText // applied only after payment succeeds
+  aiBlueprint    String    @default("{}") @db.MediumText // JSON plan from marketing AI builder
+  design         String    @default("") @db.MediumText // design preset id (lib/designs.ts); "" = template as designed
+  kind           String    @default("new") @db.MediumText // new | renew | upgrade
+  referrerTenantId String? // tenant credited for this sale (referral program)
+  tenantId       String? // set after provisioning (or for renewals, set at create)
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+// ─── Referral program (lib/referral.ts = money math, lib/referralServer.ts = DB) ─
+// One commission per qualifying paid order (orderId unique = idempotent).
+model ReferralCommission {
+  id               String    @id @default(cuid())
+  referrerTenantId String
+  referrer         Tenant    @relation(fields: [referrerTenantId], references: [id], onDelete: Cascade)
+  orderId          String    @unique
+  referredTenantId String?
+  referredName     String    @default("") @db.MediumText
+  baseAmount       Int // order amount before GST, paise
+  ratePct          Int
+  amount           Int // commission, paise
+  status           String    @default("earned") @db.MediumText // earned | requested | paid | reversed (pending/available derived from availableAt)
+  availableAt      DateTime // end of the hold period
+  withdrawalId     String?
+  reversedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([referrerTenantId])
+  @@index([withdrawalId])
+}
+
+model ReferralWithdrawal {
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount        Int // gross, paise
+  tdsPct        Int       @default(0)
+  tdsAmount     Int       @default(0)
+  netAmount     Int
+  method        String    @db.MediumText // upi | bank
+  upiId         String    @default("") @db.MediumText
+  accountName   String    @default("") @db.MediumText
+  accountNumber String    @default("") @db.MediumText
+  ifsc          String    @default("") @db.MediumText
+  pan           String    @default("") @db.MediumText
+  status        String    @default("requested") @db.MediumText // requested | paid | rejected
+  reference     String    @default("") @db.MediumText // UTR when paid
+  rejectReason  String    @default("") @db.MediumText
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([tenantId])
+}
+
+// ─── First-party visitor analytics: one aggregate row per tenant/day/path ─────
+// No IPs, cookies or user agents stored. Purged after 13 months (lib/retention.ts).
+model PageView {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  day      String @db.VarChar(10) // "YYYY-MM-DD" (IST)
+  path     String @db.VarChar(191)
+  views    Int    @default(0)
+
+  @@unique([tenantId, day, path])
 }

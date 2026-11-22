@@ -1,7 +1,7 @@
-import { getGroqConfig } from "@/lib/platformConfig";
-import { GROQ_DEFAULT_MODEL } from "@/lib/groqModel";
-
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+// Chat client for the AI website builder. Name kept for history: it now talks to whichever
+// provider Super Admin picked (Groq, OpenAI, Gemini, OpenRouter, DeepSeek, custom) —
+// all use the OpenAI chat/completions format. See lib/ai/providers.ts.
+import { getAiConfig } from "@/lib/platformConfig";
 const TIMEOUT_MS = 60_000;
 
 // Groq counts prompt tokens + max_tokens against the per-minute (TPM) limit — on the
@@ -17,8 +17,10 @@ function estimateTokens(messages: GroqMessage[]): number {
   return Math.ceil(messages.reduce((n, m) => n + m.content.length, 0) / 3.6) + 50;
 }
 
-function outputBudget(messages: GroqMessage[]): number {
-  return Math.min(MAX_OUTPUT_TOKENS, Math.max(MIN_OUTPUT_TOKENS, TPM_BUDGET - estimateTokens(messages)));
+function outputBudget(messages: GroqMessage[], tpm = TPM_BUDGET): number {
+  // Only Groq's free tier needs squeezing; other providers get a roomy cap.
+  const max = tpm > TPM_BUDGET ? 8000 : MAX_OUTPUT_TOKENS;
+  return Math.min(max, Math.max(MIN_OUTPUT_TOKENS, tpm - estimateTokens(messages)));
 }
 
 /** Seconds Groq asks us to wait ("Please try again in 7.66s" / "in 850ms"), if any. */
@@ -96,36 +98,41 @@ export function friendlyGroqError(e: unknown): string {
       return `The AI is busy right now (usage limit reached). Please try again in about ${secs} seconds.`;
     }
     if (isNetworkError(e) || e.message.toLowerCase() === "fetch failed") {
-      return "Could not reach Groq AI. Check your internet connection and try again.";
+      return "Could not reach the AI service. Check your internet connection and try again.";
     }
     return e.message;
   }
   if (isNetworkError(e)) {
-    return "Could not reach Groq AI. Check your internet connection and try again.";
+    return "Could not reach the AI service. Check your internet connection and try again.";
   }
   return e instanceof Error ? e.message : "AI request failed";
 }
 
 async function groqChatOnce(messages: GroqMessage[], opts: GroqCallOptions): Promise<string> {
-  const { apiKey: key, model } = await getGroqConfig();
-  if (!key) throw new GroqError("AI is not configured. Add a Groq API key in Super Admin → Settings.");
+  const { provider, url, apiKey: key, model } = await getAiConfig();
+  if (!key) throw new GroqError(`AI is not configured. Add a ${provider.name} API key in Super Admin → Settings → AI.`);
+  if (!url) throw new GroqError("AI is not configured. Set the provider base URL in Super Admin → Settings → AI.");
+  if (!model) throw new GroqError(`Choose a ${provider.name} model in Super Admin → Settings → AI.`);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  const modelId = model || GROQ_DEFAULT_MODEL;
-  const body: Record<string, unknown> = {
-    model: modelId,
-    messages,
-    temperature: opts.temperature ?? 0.15,
-    max_tokens: opts.maxTokens ?? outputBudget(messages),
-  };
+  const modelId = model;
+  const maxTokens = opts.maxTokens ?? outputBudget(messages, provider.tpm);
+  // OpenAI reasoning models (o-series, gpt-5) take max_completion_tokens and no temperature.
+  const reasoningOpenAi = provider.id === "openai" && /^(o\d|gpt-5)/i.test(modelId);
+  const body: Record<string, unknown> = { model: modelId, messages };
+  if (reasoningOpenAi) body.max_completion_tokens = maxTokens;
+  else {
+    body.max_tokens = maxTokens;
+    body.temperature = opts.temperature ?? 0.15;
+  }
   if (opts.jsonMode) body.response_format = { type: "json_object" };
   // gpt-oss models spend output tokens on hidden reasoning — keep it short for JSON work.
-  if (/gpt-oss/i.test(modelId)) body.reasoning_effort = "low";
+  if (/gpt-oss/i.test(modelId) || reasoningOpenAi) body.reasoning_effort = "low";
 
   try {
-    const res = await fetch(GROQ_URL, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
@@ -145,7 +152,7 @@ async function groqChatOnce(messages: GroqMessage[], opts: GroqCallOptions): Pro
       const err = new GroqError(
         isJsonFail
           ? "JSON_GENERATION_FAILED"
-          : `Groq API error (${res.status}): ${text.slice(0, 200)}`,
+          : `${provider.name} API error (${res.status}): ${text.slice(0, 200)}`,
         res.status,
       );
       if (res.status === 429) err.retryAfterMs = retryAfterMs(text, res.headers.get("retry-after"));
@@ -157,7 +164,7 @@ async function groqChatOnce(messages: GroqMessage[], opts: GroqCallOptions): Pro
     };
     const choice = data.choices?.[0];
     const content = choice?.message?.content;
-    if (!content) throw new GroqError("Empty response from Groq");
+    if (!content) throw new GroqError("The AI returned an empty response. Please try again.");
     if (choice?.finish_reason === "length") {
       throw new GroqError("JSON_GENERATION_FAILED");
     }
@@ -198,7 +205,7 @@ function parseGroqJson<T>(raw: string): T {
   try {
     return JSON.parse(extractJsonText(raw)) as T;
   } catch {
-    throw new GroqError("Groq returned invalid JSON");
+    throw new GroqError("AI returned invalid JSON");
   }
 }
 
@@ -216,6 +223,7 @@ export async function callGroqJson<T>(messages: GroqMessage[], maxTokens?: numbe
     const retry =
       first instanceof GroqError &&
       (first.message === "JSON_GENERATION_FAILED" ||
+        first.message === "AI returned invalid JSON" ||
         first.status === 400 ||
         first.message.includes("Could not reach Groq"));
     if (!retry) throw first;
@@ -229,7 +237,7 @@ export async function callGroqJson<T>(messages: GroqMessage[], maxTokens?: numbe
     });
     return parseGroqJson<T>(raw);
   } catch (second) {
-    if (second instanceof GroqError && second.message !== "Groq returned invalid JSON") throw second;
+    if (second instanceof GroqError && second.message !== "AI returned invalid JSON") throw second;
     throw new GroqError("AI could not produce a valid website plan. Try a shorter, simpler prompt.");
   }
 }

@@ -3,8 +3,10 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { requestDemoOtp, verifyDemoOtp, switchDemo, type DemoFlowState } from "@/lib/actions/demos";
-import { Lock, ExternalLink, LayoutDashboard, Clock, Copy, Check, ArrowLeftRight, Loader2 } from "lucide-react";
+import { Lock, ExternalLink, LayoutDashboard, Clock, Copy, Check, ArrowLeftRight } from "lucide-react";
 import { mkt } from "@/lib/marketingTheme";
+import { LegalConsent } from "./LegalConsent";
+import { BrandSpinner } from "@/components/BrandLogo";
 
 const initial: DemoFlowState = { step: "idle" };
 
@@ -39,6 +41,18 @@ export function previewUrl(siteUrl: string, designId: string) {
   } catch {
     return `${siteUrl}${siteUrl.includes("?") ? "&" : "?"}design=${designId}`;
   }
+}
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-[var(--mkt-text-secondary)]">
+        {label}
+        {required && <span className="text-red-500"> *</span>}
+      </span>
+      {children}
+    </label>
+  );
 }
 
 export function DemoVerticalPanel({
@@ -208,7 +222,7 @@ export function DemoVerticalPanel({
             disabled={switchPending}
             className={`w-full ${mkt.btnPrimary} py-2.5 text-sm disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-accent)] focus-visible:ring-offset-2`}
           >
-            {switchPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
+            {switchPending ? <BrandSpinner className="w-4 h-4" /> : <ArrowLeftRight className="w-4 h-4" />}
             Switch to {vertical.name} demo
           </button>
         </form>
@@ -280,14 +294,63 @@ export function DemoVerticalPanel({
         <Lock className="w-3.5 h-3.5 shrink-0" />
         OTP unlocks this sector only · 10-minute private sandbox
       </p>
-      <div className="grid sm:grid-cols-2 gap-2">
-        <input name="name" required placeholder="Your name *" className={mkt.input} />
-        <input name="phone" required placeholder="WhatsApp / phone *" className={mkt.input} />
+      <div className="grid gap-x-3 gap-y-3 sm:grid-cols-2">
+        <Field label="Your name" required>
+          <input name="name" required autoComplete="name" placeholder="Rahul Sharma" className={mkt.input} />
+        </Field>
+        <Field label="WhatsApp / phone" required>
+          <input name="phone" required type="tel" autoComplete="tel" placeholder="98765 43210" className={mkt.input} />
+        </Field>
+        <Field label="Email" required>
+          <input name="email" type="email" required autoComplete="email" placeholder="you@business.com" className={mkt.input} />
+        </Field>
+        <Field label="Business name" required>
+          <input name="company" required autoComplete="organization" placeholder="Bright Smile Dental" className={mkt.input} />
+        </Field>
+        <Field label="City" required>
+          <input name="city" required autoComplete="address-level2" placeholder="Pune" className={mkt.input} />
+        </Field>
+        <Field label="Your role" required>
+          <select name="role" required defaultValue="" className={mkt.input}>
+            <option value="" disabled>Select…</option>
+            {["Owner / Founder", "Manager", "Staff member", "Agency / Freelancer", "Other"].map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Already have a website?">
+          <select name="website" defaultValue="" className={mkt.input}>
+            <option value="">Select…</option>
+            {["No, this is my first", "Yes, needs a redesign", "Yes, want to switch"].map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="When do you want to go live?">
+          <select name="timeline" defaultValue="" className={mkt.input}>
+            <option value="">Select…</option>
+            {["This week", "This month", "In 1–3 months", "Just exploring"].map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+        </Field>
       </div>
-      <div className="grid sm:grid-cols-2 gap-2">
-        <input name="email" type="email" required placeholder="Email *" className={mkt.input} />
-        <input name="company" required placeholder="Business name *" className={mkt.input} />
-      </div>
+      <fieldset>
+        <legend className="mb-1 block text-xs font-semibold text-[var(--mkt-text-secondary)]">Best way to reach you</legend>
+        <div className="grid grid-cols-3 gap-2">
+          {["WhatsApp", "Call", "Email"].map((o, i) => (
+            <label key={o} className="cursor-pointer">
+              <input type="radio" name="contactVia" value={o} defaultChecked={i === 0} className="peer sr-only" />
+              <span className="block rounded-xl border border-[var(--mkt-border-strong)] py-2 text-center text-sm font-medium text-[var(--mkt-text-secondary)] transition peer-checked:border-[var(--mkt-accent-2)] peer-checked:bg-[var(--mkt-accent-soft)] peer-checked:text-[var(--mkt-accent-text)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--mkt-accent-2)]/40">
+                {o}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <Field label="What do you need? (optional)">
+        <textarea name="needs" rows={2} maxLength={1000} placeholder="e.g. Online appointments, gallery and a WhatsApp button" className={`${mkt.input} resize-none`} />
+      </Field>
       {requestState.step === "error" && <p className="text-sm text-red-500">{requestState.message}</p>}
       <button
         type="submit"
@@ -296,6 +359,7 @@ export function DemoVerticalPanel({
       >
         {requestPending ? "Sending OTP…" : "Get OTP & continue"}
       </button>
+      <LegalConsent className="text-center" />
     </form>
   );
 }

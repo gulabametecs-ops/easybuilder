@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { rateLimit } from "@/lib/rateLimit";
 import { planWebsiteFromPublicPrompt } from "@/lib/ai/publicPlan";
+import { inferVerticalId } from "@/lib/ai/enrichBlueprint";
+import { getTemplate } from "@/lib/templates";
 
 export const maxDuration = 90;
 export const dynamic = "force-dynamic";
@@ -55,9 +57,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: plan.error }, { status: 502 });
   }
 
+  // No brand colours from the visitor: use the closest industry template's
+  // designer palette instead of a generic default (AI's own pick still wins).
+  const bp = plan.blueprint;
+  if (!body.primaryColor && !body.secondaryColor) {
+    const c = getTemplate(inferVerticalId(bp, prompt)).theme.colors;
+    bp.design = {
+      ...bp.design,
+      primaryColor: bp.design?.primaryColor || c.primary,
+      secondaryColor: bp.design?.secondaryColor || c.secondary,
+    };
+  }
+
   return NextResponse.json({
     success: true,
-    blueprint: plan.blueprint,
+    blueprint: bp,
     questions: plan.questions,
   });
 }

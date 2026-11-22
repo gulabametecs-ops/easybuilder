@@ -7,7 +7,6 @@ import { Icon, ICON_OPTIONS } from "@/components/site/Icon";
 export function IconPicker({
   value,
   onChange,
-  label = "Icon",
 }: {
   value: string;
   onChange: (name: string) => void;

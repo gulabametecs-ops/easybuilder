@@ -5,9 +5,10 @@ import type { TemplateDef } from "./types";
 export const skill: TemplateDef = {
   theme: {
     colors: { primary: "#db2777", primaryDark: "#be185d", secondary: "#1e1b4b", accent: "#f59e0b", dark: "#1a1033", light: "#fdf2f8", text: "#3f3f46", heading: "#1e1b4b" },
-    font: "Outfit", radius: "1.1rem",
+    font: "Outfit", radius: "1.25rem",
   },
   header: (biz) => ({
+    design: "centered",
     logoText: biz, logoImage: "",
     announcement: { show: true, text: "✨ New weekend & evening batches starting soon — book a FREE trial class!", link: "/join" },
     topbar: { show: true, address: "Martial arts · Music · Dance · Art — for ages 4 to 60", phones: ["9000000000"], email: "hello@example.com", social: { facebook: "#", instagram: "#", whatsapp: "#" } },
@@ -17,6 +18,7 @@ export const skill: TemplateDef = {
     cta: { label: "Book Free Trial", href: "/join" },
   }),
   footer: (biz) => ({
+    design: "gradient",
     about: "Unlock your potential — learn karate, music, dance and art from certified trainers in a fun, supportive and safe space.",
     columns: [
       { title: "Quick Links", links: [ { label: "Home", href: "/" }, { label: "About Us", href: "/about" }, { label: "Classes", href: "/classes" }, { label: "Trainers", href: "/trainers" }, { label: "Fees", href: "/fees" }, { label: "Book Trial", href: "/join" } ] },
@@ -47,28 +49,41 @@ export const skill: TemplateDef = {
       slug: "home", title: "Home", isSystem: true, order: 0,
       sections: [
         { type: "hero", content: {
-          variant: "split", customHtml: "",
+          variant: "classic", customHtml: "",
           badge: "LEARN · PERFORM · SHINE", titleTop: "Discover the Talent", titleHighlight: "You Were Born With",
           subtitle: "", description: `${biz} offers expert-led classes in martial arts, music, dance and art for ages 4 to 60 — with small batches, flexible timings, graded certificates and real stage experience. Your first class is free.`, image: "",
           primaryBtn: { label: "Book Free Trial", href: "/join" }, secondaryBtn: { label: "Explore Classes", href: "/classes" },
-          features: [ { icon: "award", title: "Certified Trainers", text: "" }, { icon: "users", title: "Ages 4 to 60", text: "" }, { icon: "calendar", title: "Weekday & Weekend Batches", text: "" }, { icon: "badge-check", title: "Graded Certificates", text: "" } ],
+          features: [ { icon: "award", title: "Certified Trainers", text: "" }, { icon: "users", title: "Ages 4 to 60", text: "" }, { icon: "calendar", title: "Weekday & Weekend Batches", text: "" }, { icon: "check", title: "Graded Certificates", text: "" } ],
         } },
-        { type: "features", style: { background: "light" }, content: { items: [
-          { icon: "award", title: "Certified Trainers", text: "Black belts, Trinity-graded musicians and trained choreographers who love to teach." },
+        { type: "serviceCategories", style: { layout: "tiles" }, content: { eyebrow: "OUR CLASSES", title: "Find Your", titleHighlight: "Passion", categories: ["Martial Arts", "Music", "Dance", "Art & Craft"] } },
+        { type: "stats", style: { layout: "band", background: "primary" }, content: { items: [ { value: "2,000+", label: "Students Trained", icon: "users" }, { value: "20+", label: "Certified Trainers", icon: "award" }, { value: "150+", label: "Medals & Awards", icon: "star" }, { value: "10+", label: "Years of Excellence", icon: "trending" } ] } },
+        { type: "features", content: { items: [
+          { icon: "award", title: "Certified Trainers", text: "Black belts, grade-certified musicians and trained choreographers who love to teach." },
           { icon: "users", title: "Small Batches", text: "10–12 students per batch so every learner gets hands-on correction and attention." },
-          { icon: "badge-check", title: "Recognised Certifications", text: "Belt gradings, Trinity / Rockschool and classical dance exams to mark real progress." },
+          { icon: "check", title: "Recognised Certifications", text: "Belt gradings, graded music exams and classical dance exams to mark real progress." },
           { icon: "star", title: "Stage & Competition Time", text: "Annual shows, recitals and tournaments that build real-world confidence." },
         ] } },
-        { type: "about", content: { eyebrow: "ABOUT US", title: "Where Passion", titleHighlight: "Meets Skill", body: [`${biz} is a place to learn, grow and have fun. Whether your child wants to earn a black belt or you've always wanted to play the guitar, we'll help you get there step by step.`, "Our structured curriculum, friendly trainers and safe, air-conditioned studios make every class something to look forward to."], image: "", points: ["Structured, level-wise curriculum", "Air-conditioned studios", "Flexible weekday & weekend slots", "Monthly progress feedback", "Make-up classes for missed sessions", "Sibling & family discounts"], buttonLabel: "About Us", buttonHref: "/about" } },
-        { type: "serviceCategories", content: { eyebrow: "OUR CLASSES", title: "Find Your", titleHighlight: "Passion", categories: ["Martial Arts", "Music", "Dance", "Art & Craft"] } },
-        { type: "stats", content: { items: [ { value: "2,000+", label: "Students Trained", icon: "users" }, { value: "20+", label: "Certified Trainers", icon: "award" }, { value: "150+", label: "Medals & Awards", icon: "star" }, { value: "10+", label: "Years of Excellence", icon: "trending" } ] } },
-        { type: "team", content: { eyebrow: "OUR TRAINERS", title: "Learn From", titleHighlight: "Experts", members: [
+        { type: "gallery", style: { layout: "masonry", background: "light" }, content: { eyebrow: "ON THE MAT, ON THE STAGE", title: "Life at the", titleHighlight: "Academy" } },
+        { type: "testimonials", style: { layout: "dark" }, content: { eyebrow: "TESTIMONIALS", title: "What Parents &", titleHighlight: "Students Say", items: [
+          { name: "Meenal Joshi", role: "Mother of Aryan, 9 · Karate", text: "Aryan earned his yellow belt in four months and is so much more focused at school now. Sensei is strict but incredibly encouraging.", rating: 5 },
+          { name: "Karthik Subramanian", role: "Adult Student · Guitar", text: "I picked up the guitar at 34 and was playing full songs within three months. The weekend batch fits perfectly around my job.", rating: 5 },
+          { name: "Ritika Bansal", role: "Mother of Saanvi, 12 · Dance", text: "The annual show was a professional production! Saanvi has gained so much confidence on stage. Highly recommended.", rating: 5 },
+          { name: "Nikhil Arora", role: "Student, 16 · Keyboard", text: "Cleared my Grade 5 keyboard exam with distinction. The trainers explain theory in a way that actually makes sense.", rating: 5 },
+        ] } },
+        { type: "about", style: { layout: "centered" }, content: { eyebrow: "ABOUT US", title: "Where Passion", titleHighlight: "Meets Skill", body: [`${biz} is a place to learn, grow and have fun. Whether your child wants to earn a black belt or you've always wanted to play the guitar, we'll help you get there step by step.`, "Our structured curriculum, friendly trainers and safe, air-conditioned studios make every class something to look forward to."], image: "", points: ["Structured, level-wise curriculum", "Air-conditioned studios", "Flexible weekday & weekend slots", "Monthly progress feedback", "Make-up classes for missed sessions", "Sibling & family discounts"], buttonLabel: "About Us", buttonHref: "/about" } },
+        { type: "team", style: { background: "light" }, content: { eyebrow: "OUR TRAINERS", title: "Learn From", titleHighlight: "Experts", members: [
           { name: "Sensei Rajesh Thakur", role: "Karate Head Coach", image: "", note: "3rd Dan Black Belt · National Referee" },
-          { name: "Mr. Aakash D'Souza", role: "Guitar & Keyboard", image: "", note: "Trinity Grade 8 · 12 yrs" },
+          { name: "Mr. Aakash D'Souza", role: "Guitar & Keyboard", image: "", note: "Grade 8 certified · 12 yrs" },
           { name: "Ms. Tanvi Kapoor", role: "Dance Choreographer", image: "", note: "Hip-Hop & Bollywood" },
           { name: "Ms. Priyanka Bose", role: "Art Teacher", image: "", note: "BFA, Fine Arts" },
         ] } },
-        { type: "steps", style: { background: "light" }, content: { eyebrow: "GET STARTED", title: "Start in", titleHighlight: "4 Easy Steps", items: [
+        { type: "pricingPlans", content: { eyebrow: "MEMBERSHIP", title: "Simple", titleHighlight: "Plans", plans: [
+          { name: "Monthly", price: "₹1,300", period: "per month", features: ["8 classes a month", "Any one course", "Make-up class allowed", "Monthly progress note"], featured: false, buttonLabel: "Book Free Trial", buttonHref: "/join" },
+          { name: "Quarterly", price: "₹3,500", period: "3 months", features: ["Everything in Monthly", "Free grading / exam prep", "Save ₹400", "Annual show participation"], featured: true, buttonLabel: "Book Free Trial", buttonHref: "/join" },
+          { name: "Annual", price: "₹12,500", period: "12 months", features: ["Everything in Quarterly", "Free academy T-shirt & kit", "2 free workshops", "Sibling gets 10% off"], featured: false, buttonLabel: "Book Free Trial", buttonHref: "/join" },
+        ] } },
+        { type: "countdown", content: { eyebrow: "ANNUAL SHOW 2027", title: "Curtain Rises", titleHighlight: "Soon", subtitle: "300+ students on stage — karate demos, live band, dance and an art exhibition. Join before January to get a slot in the show.", targetDate: "2027-02-14T17:00:00", buttonLabel: "Join & Perform", buttonHref: "/join" } },
+        { type: "steps", style: { layout: "cards", background: "light" }, content: { eyebrow: "GET STARTED", title: "Start in", titleHighlight: "4 Easy Steps", items: [
           { title: "Book a Free Trial", text: "Pick any class and a slot that suits you", icon: "edit" },
           { title: "Meet Your Trainer", text: "Get a quick level check and guidance", icon: "users" },
           { title: "Choose Your Batch", text: "Weekday, evening or weekend timings", icon: "calendar" },
@@ -79,21 +94,16 @@ export const skill: TemplateDef = {
           { day: "Saturday", hours: "8:00 AM – 8:00 PM" },
           { day: "Sunday", hours: "9:00 AM – 1:00 PM (workshops & shows)" },
         ] } },
-        { type: "testimonials", content: { eyebrow: "TESTIMONIALS", title: "What Parents &", titleHighlight: "Students Say", items: [
-          { name: "Meenal Joshi", role: "Mother of Aryan, 9 · Karate", text: "Aryan earned his yellow belt in four months and is so much more focused at school now. Sensei is strict but incredibly encouraging.", rating: 5 },
-          { name: "Karthik Subramanian", role: "Adult Student · Guitar", text: "I picked up the guitar at 34 and was playing full songs within three months. The weekend batch fits perfectly around my job.", rating: 5 },
-          { name: "Ritika Bansal", role: "Mother of Saanvi, 12 · Dance", text: "The annual show was a professional production! Saanvi has gained so much confidence on stage. Highly recommended.", rating: 5 },
-          { name: "Nikhil Arora", role: "Student, 16 · Keyboard", text: "Cleared my Trinity Grade 5 with distinction. The trainers explain theory in a way that actually makes sense.", rating: 5 },
-        ] } },
         { type: "faq", style: { background: "light" }, content: { eyebrow: "FAQ", title: "Questions People", titleHighlight: "Ask Us", items: [
           { q: "Is the trial class really free?", a: "Yes. Your first class in any course is completely free, with no obligation to join." },
           { q: "What age can my child start?", a: "Art and dance start from age 4, martial arts from 5 and music instruments from 6. Adults of any age are welcome." },
           { q: "I'm a complete beginner. Is that okay?", a: "Absolutely. Most of our students start from zero. Batches are grouped by level so you learn comfortably." },
-          { q: "Do you offer certifications?", a: "Yes. We conduct belt gradings for martial arts and prepare students for Trinity, Rockschool and classical dance exams." },
+          { q: "Do you offer certifications?", a: "Yes. We conduct belt gradings for martial arts and prepare students for graded music and classical dance exams." },
+          { q: "Do I need my own instrument?", a: "Not for the first month — practice guitars and keyboards are available in class. We'll help you buy the right one within budget later." },
           { q: "What if I miss a class?", a: "You can attend a make-up class in another batch of the same level within the same month." },
           { q: "Are there discounts?", a: "We offer sibling and family discounts and a lower rate on quarterly and annual plans." },
         ] } },
-        { type: "cta", content: { title: "Ready to discover your talent?", highlight: "Book a Free Trial Class", phones: ["9000000000"], buttonLabel: "Book Free Trial", buttonHref: "/join" } },
+        { type: "cta", style: { layout: "split" }, content: { title: "Ready to discover your talent?", highlight: "Book a Free Trial Class", phones: ["9000000000"], buttonLabel: "Book Free Trial", buttonHref: "/join" } },
       ],
     },
     { slug: "about", title: "About", isSystem: true, order: 1, sections: [
@@ -103,6 +113,11 @@ export const skill: TemplateDef = {
     ] },
     { slug: "classes", title: "Classes", isSystem: true, order: 2, sections: [
       { type: "serviceCategories", content: { eyebrow: "", title: "Our", titleHighlight: "Classes", categories: ["Martial Arts", "Music", "Dance", "Art & Craft"] } },
+      { type: "faq", style: { layout: "split" }, content: { eyebrow: "CLASS FAQ", title: "Choosing the", titleHighlight: "Right Class", intro: "Unsure where to start? The free trial includes a 10-minute level check with the trainer.", items: [
+        { q: "Can my child try two different classes?", a: "Yes. Book a free trial in each, then decide. Many children take one sport and one art." },
+        { q: "How long to get a karate black belt?", a: "With regular attendance, about 4–5 years, with a grading every 4–6 months." },
+        { q: "Are there adult-only batches?", a: "Yes. Early morning and late evening batches for guitar, vocals, Zumba and self-defence are adults only." },
+      ] } },
       { type: "cta", content: { title: "Not sure which class?", highlight: "Book a Free Trial", phones: ["9000000000"], buttonLabel: "Book Now", buttonHref: "/join" } },
     ] },
     { slug: "trainers", title: "Trainers", isSystem: true, order: 3, sections: [
@@ -114,6 +129,11 @@ export const skill: TemplateDef = {
         { name: "Ms. Priyanka Bose", role: "Art Teacher", image: "", note: "Fine Arts" },
         { name: "Mr. Sahil Khanna", role: "Taekwondo Coach", image: "", note: "Certified · State Medallist" },
       ] } },
+      { type: "testimonials", style: { layout: "minimal", background: "light" }, content: { eyebrow: "", title: "Why Students Love Their", titleHighlight: "Trainers", items: [
+        { name: "Ishaan Malhotra", role: "Student, 11 · Taekwondo", text: "Sahil sir makes warm-ups feel like a game. I won bronze at my first district tournament!", rating: 5 },
+        { name: "Deepa Narayanan", role: "Adult Student · Vocals", text: "Radhika ma'am fixed my breathing in two classes. I finally sang at my cousin's sangeet without shaking.", rating: 5 },
+      ] } },
+      { type: "cta", style: { layout: "minimal" }, content: { title: "Meet them in person", highlight: "Book a Free Trial", phones: ["9000000000"], buttonLabel: "Book Now", buttonHref: "/join" } },
     ] },
     { slug: "fees", title: "Fees", isSystem: true, order: 4, sections: [
       { type: "priceList", content: { eyebrow: "", title: "Class", titleHighlight: "Fees", note: "Monthly fees. Sibling and annual discounts available.", groups: [

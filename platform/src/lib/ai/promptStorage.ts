@@ -1,5 +1,7 @@
 /** Client storage for AI prompt → preview → subscribe. Uses localStorage so a new tab can open /ai-preview. */
 
+import { useSyncExternalStore } from "react";
+
 export const AI_PROMPT_KEY = "ss_ai_prompt";
 export const AI_BLUEPRINT_KEY = "ss_ai_blueprint";
 
@@ -44,6 +46,30 @@ export function readAiDraft(): { prompt: string; blueprint: string } | null {
   } catch {
     return null;
   }
+}
+
+function subscribeStorage(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+/**
+ * Reactive read of one draft key (AI_PROMPT_KEY / AI_BLUEPRINT_KEY). Returns `null` during SSR and
+ * hydration so server and client markup match, then the stored string ("" when absent).
+ * Updates when another tab writes the key.
+ */
+export function useAiDraftItem(key: string): string | null {
+  return useSyncExternalStore(
+    subscribeStorage,
+    () => {
+      try {
+        return store()?.getItem(key) ?? "";
+      } catch {
+        return "";
+      }
+    },
+    () => null,
+  );
 }
 
 export function clearAiDraft() {

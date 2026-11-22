@@ -4,7 +4,7 @@
 // customizes it from their admin panel. This is the recreation of the
 // "Standard Services" concept as data (theme + pages + sections + catalogue).
 // ─────────────────────────────────────────────────────────────────────────────
-import type { ThemeConfig, HeaderConfig, FooterConfig, SeoConfig } from "./config";
+import type { ThemeConfig, HeaderConfig, FooterConfig, SeoConfig, SectionContentMap } from "./config";
 import type { PageSeed } from "./templates/types";
 
 export const defaultTheme: ThemeConfig = {
@@ -234,47 +234,14 @@ export function defaultPages(biz: string): PageSeed[] {
           },
         },
         {
-          type: "features",
-          content: {
-            items: [
-              { icon: "user-check", title: "Background-Verified", text: "Every technician is ID-checked, trained and reviewed by real customers." },
-              { icon: "tag", title: "Transparent Rates", text: "You approve the quote first. No hidden charges, no upselling." },
-              { icon: "clock", title: "On Time, Every Time", text: "Punctual arrivals with a 2-hour slot you choose." },
-              { icon: "shield", title: "Work Guaranteed", text: "Something not right? We come back and fix it free for 30 days." },
-            ],
-          },
-          style: { cardShadow: "md" },
-        },
-        {
-          type: "about",
-          content: {
-            eyebrow: "ABOUT US",
-            title: "The Only Number You Need",
-            titleHighlight: "For Your Home",
-            body: [
-              `${biz} started with a simple idea: homeowners shouldn't need five different contacts to keep one house running. Today our in-house team handles electrical, plumbing, carpentry and painting — all under one roof.`,
-              "We turn up on time, explain the problem in plain words, quote honestly and leave your home cleaner than we found it.",
-            ],
-            image: "",
-            points: [
-              "Trained, uniformed and verified professionals",
-              "Genuine materials with bills",
-              "Fixed quotes before work starts",
-              "Clean-up included on every job",
-              "30-day service warranty",
-            ],
-            buttonLabel: "Know More About Us",
-            buttonHref: "/about",
-          },
+          type: "logos",
+          content: { title: "Serving homes & gated communities across", items: ["Tolichowki", "Shaikpet", "Manikonda", "Alkapur", "Narsingi", "Gachibowli", "Kokapet", "Puppalaguda"] },
+          style: { spacingTop: "sm", spacingBottom: "sm" },
         },
         {
           type: "serviceCategories",
-          content: {
-            eyebrow: "OUR SERVICES",
-            title: "Everything Your Home Needs,",
-            titleHighlight: "Handled",
-            categories: CATEGORIES,
-          },
+          content: { eyebrow: "WHAT WE FIX", title: "Four Trades,", titleHighlight: "One Phone Call", categories: CATEGORIES },
+          style: { layout: "tiles" },
         },
         {
           type: "stats",
@@ -283,12 +250,62 @@ export function defaultPages(biz: string): PageSeed[] {
               { value: "5,000+", label: "Jobs Completed", icon: "home" },
               { value: "4.8★", label: "Average Rating", icon: "star" },
               { value: "25+", label: "In-House Experts", icon: "wrench" },
-              { value: "8+", label: "Years in Hyderabad", icon: "award" },
+              { value: "90 min", label: "Avg. Emergency Response", icon: "zap" },
+            ],
+          },
+          style: { layout: "band" },
+        },
+        {
+          type: "about",
+          content: {
+            eyebrow: "WHY HOMEOWNERS CALL US",
+            title: "The Only Number You Need",
+            titleHighlight: "For Your Home",
+            body: [
+              `${biz} started with a simple idea: homeowners shouldn't need five different contacts to keep one house running. Today our in-house team handles electrical, plumbing, carpentry and painting — all under one roof.`,
+              "We turn up on time, explain the problem in plain words, quote honestly and leave your home cleaner than we found it. No sub-contractors, no daily-wage strangers — only our own trained, uniformed staff.",
+            ],
+            image: "",
+            points: [
+              "Trained, uniformed and verified professionals",
+              "Genuine ISI-marked materials with bills",
+              "Fixed quotes before work starts",
+              "Shoe covers, dust sheets & clean-up on every job",
+              "30-day service warranty",
+            ],
+            buttonLabel: "Know More About Us",
+            buttonHref: "/about",
+          },
+          style: { layout: "reverse" },
+        },
+        { ...steps, style: { layout: "timeline", background: "light" } },
+        {
+          type: "priceList",
+          content: {
+            eyebrow: "RATE CARD",
+            title: "Popular Jobs,",
+            titleHighlight: "Clear Prices",
+            note: "Labour charges only. Materials at MRP with bills. Visiting charge ₹99 — waived if you go ahead with the job.",
+            groups: [
+              { category: "Electrical", items: [
+                { name: "Ceiling fan installation", price: "₹199", note: "per fan" },
+                { name: "MCB / switchboard repair", price: "₹149", note: "" },
+                { name: "Split AC service", price: "₹549", note: "jet-pump wash" },
+              ] },
+              { category: "Plumbing", items: [
+                { name: "Tap / mixer replacement", price: "₹199", note: "" },
+                { name: "Blocked drain clearing", price: "₹349", note: "" },
+                { name: "Water tank cleaning", price: "₹799", note: "up to 1000 L" },
+              ] },
+              { category: "Carpentry & Painting", items: [
+                { name: "Door lock / hinge repair", price: "₹249", note: "" },
+                { name: "Single-room repaint", price: "₹6,499", note: "up to 120 sq ft floor" },
+                { name: "Bathroom seepage treatment", price: "₹2,999", note: "onwards" },
+              ] },
             ],
           },
         },
-        steps,
-        plans,
+        { ...plans, style: { background: "dark" } },
         {
           type: "testimonials",
           content: {
@@ -296,11 +313,22 @@ export function defaultPages(biz: string): PageSeed[] {
             title: "Homeowners Who",
             titleHighlight: "Trust Us",
             items: [
-              { name: "Ramesh Reddy", role: "Manikonda", text: "Complete rewiring of our 3BHK done in two days. The team was punctual, neat and the final bill matched the quote exactly.", rating: 5 },
-              { name: "Ayesha Siddiqui", role: "Tolichowki", text: "Had a bathroom leak nobody could trace. They found it in 20 minutes without breaking tiles. Very professional.", rating: 5 },
-              { name: "Suresh Kumar", role: "Gachibowli", text: "Got our modular kitchen and wardrobes done here. Finish quality is excellent and they delivered a week early.", rating: 5 },
-              { name: "Priya Nair", role: "Narsingi", text: "We're on the Family AMC plan — AC servicing, tank cleaning, everything happens on schedule. Zero follow-ups needed.", rating: 5 },
+              { name: "Ramesh Reddy", role: "3 BHK · Manikonda", text: "Complete rewiring of our 3BHK done in two days. The team was punctual, neat and the final bill matched the quote exactly — not a rupee more.", rating: 5 },
+              { name: "Ayesha Siddiqui", role: "Tolichowki", text: "Had a bathroom leak nobody could trace. They found it in 20 minutes with a moisture meter, without breaking a single tile.", rating: 5 },
+              { name: "Suresh Kumar", role: "Gachibowli", text: "Got our wardrobes and TV unit done here. Finish quality is excellent and they delivered a week early.", rating: 5 },
+              { name: "Priya Nair", role: "Family AMC member · Narsingi", text: "AC servicing, tank cleaning, everything happens on schedule. Zero follow-ups needed from my side.", rating: 5 },
             ],
+          },
+          style: { layout: "featured" },
+        },
+        {
+          type: "imageBanner",
+          content: {
+            title: "Power cut? Pipe burst? Short circuit?",
+            subtitle: "Emergency electricians and plumbers reach most localities we serve within 90 minutes — 7 AM to 11 PM, all 7 days.",
+            buttonLabel: "Call for an Emergency Visit",
+            buttonHref: "/contact",
+            image: "",
           },
         },
         {
@@ -309,17 +337,33 @@ export function defaultPages(biz: string): PageSeed[] {
             eyebrow: "FAQ",
             title: "Questions,",
             titleHighlight: "Answered",
+            intro: "Still unsure? Call or WhatsApp us — a real person answers, usually within 30 minutes.",
             items: [
               { q: "How quickly can a technician reach me?", a: "For most areas we serve, same-day visits are available when you book before 2 PM. Emergency electrical and plumbing calls are prioritised." },
-              { q: "Is there a visiting or inspection charge?", a: "A small inspection charge applies only if you decide not to go ahead with the work. AMC members never pay visiting charges." },
+              { q: "Is there a visiting or inspection charge?", a: "A ₹99 inspection charge applies only if you decide not to go ahead with the work. AMC members never pay visiting charges." },
               { q: "Do you provide the materials?", a: "Yes. We supply genuine, branded materials with bills, or we can work with materials you have already bought — your choice." },
               { q: "What does the 30-day warranty cover?", a: "If the same issue comes back within 30 days of our service, we fix it again at no labour cost." },
-              { q: "Which areas do you serve?", a: "Tolichowki, Shaikpet, Manikonda, Alkapur, Narsingi, Gachibowli and nearby localities across Hyderabad." },
+              { q: "Do you work in gated communities and offices?", a: "Yes. Our technicians carry ID cards and follow society entry rules. We also take up small offices, clinics and shops." },
               { q: "How can I pay?", a: "UPI, cards, net banking or cash — pay after the job is done and you are satisfied." },
+            ],
+          } as SectionContentMap["faq"],
+          style: { layout: "split", background: "light" },
+        },
+        {
+          type: "openingHours",
+          content: {
+            eyebrow: "WHEN WE WORK",
+            title: "Service",
+            titleHighlight: "Hours",
+            note: "Book on WhatsApp any time — we confirm your slot first thing in the morning.",
+            days: [
+              { day: "Monday – Saturday", hours: "7:00 AM – 9:00 PM" },
+              { day: "Sunday", hours: "8:00 AM – 6:00 PM" },
+              { day: "Emergency electrical & plumbing", hours: "7:00 AM – 11:00 PM, all days" },
             ],
           },
         },
-        cta,
+        { ...cta, style: { layout: "split" } },
       ],
     },
     {
@@ -366,6 +410,21 @@ export function defaultPages(biz: string): PageSeed[] {
             ],
           },
         },
+        {
+          type: "team",
+          content: {
+            eyebrow: "THE CREW",
+            title: "Faces You'll See",
+            titleHighlight: "At Your Door",
+            members: [
+              { name: "Venkatesh Rao", role: "Senior Electrician", image: "", note: "Licensed wireman · 14 yrs" },
+              { name: "Mohammed Saleem", role: "Lead Plumber", image: "", note: "Leak detection specialist" },
+              { name: "Ravi Teja", role: "Master Carpenter", image: "", note: "Wardrobes & modular units" },
+              { name: "Lakshmi Prasad", role: "Customer Desk", image: "", note: "Bookings & AMC support" },
+            ],
+          },
+          style: { layout: "list", background: "light" },
+        },
         cta,
       ],
     },
@@ -380,6 +439,21 @@ export function defaultPages(biz: string): PageSeed[] {
           content: { eyebrow: "", title: "Our", titleHighlight: "Services", categories: CATEGORIES },
         },
         steps,
+        {
+          type: "faq",
+          content: {
+            eyebrow: "SERVICE FAQ",
+            title: "Before We",
+            titleHighlight: "Visit",
+            intro: "A few things customers usually ask before booking their first job with us.",
+            items: [
+              { q: "Can one technician handle multiple jobs in one visit?", a: "Yes. Tell us everything while booking — we send a multi-skilled technician or a two-person team so it's done in one visit." },
+              { q: "Do you work on rented flats?", a: "Of course. We can share the bill directly with your landlord or society if needed." },
+              { q: "Do you do full renovations?", a: "Yes — rewiring, re-plumbing, repainting and carpentry for single rooms or entire homes, with a fixed project quote." },
+            ],
+          } as SectionContentMap["faq"],
+          style: { layout: "split", background: "light" },
+        },
         cta,
       ],
     },

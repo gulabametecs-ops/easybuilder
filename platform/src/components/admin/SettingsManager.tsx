@@ -79,7 +79,7 @@ export function SettingsManager(props: {
   prefs: AdminPrefs;
   payments: TenantPayments;
   hasRazorpaySecret: boolean;
-  donations: { id: string; name: string; amount: number; status: string; createdAt: string }[];
+  donations: { id: string; name: string; amount: number; status: string; cause?: string; createdAt: string }[];
   leads: LeadRow[];
   appointments: ApptRow[];
   cancelRequested: boolean;
@@ -96,6 +96,7 @@ export function SettingsManager(props: {
   return (
     <AdminWorkspace
       title="Settings"
+        subtitle="Account, domain, payments, alerts, security and team."
       titleIcon={<Settings className="w-4 h-4 text-lime-600 shrink-0" />}
       tabs={[...TABS]}
       tab={tab}
@@ -238,7 +239,7 @@ function PaymentsForm({
 }: {
   payments: TenantPayments;
   hasSecret: boolean;
-  donations: { id: string; name: string; amount: number; status: string; createdAt: string }[];
+  donations: { id: string; name: string; amount: number; status: string; cause?: string; createdAt: string }[];
 }) {
   const [state, action, pending] = useActionState(saveTenantPayments, init);
   return (
@@ -293,7 +294,7 @@ function PaymentsForm({
           <ul className="text-xs space-y-1">
             {donations.map((d) => (
               <li key={d.id} className="flex justify-between border-b border-slate-100 dark:border-slate-800 py-1.5">
-                <span>{d.name || "Supporter"} · {d.status}</span>
+                <span>{d.name || "Supporter"}{d.cause ? ` → ${d.cause}` : ""} · {d.status}</span>
                 <span>₹{(d.amount / 100).toLocaleString("en-IN")}</span>
               </li>
             ))}

@@ -17,9 +17,9 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { prompt?: string; blueprint?: unknown };
+  let body: { prompt?: string; blueprint?: unknown; page?: string };
   try {
-    body = (await request.json()) as { prompt?: string; blueprint?: unknown };
+    body = (await request.json()) as { prompt?: string; blueprint?: unknown; page?: string };
   } catch {
     return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400 });
   }
@@ -34,7 +34,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: "Describe the change you want." }, { status: 400 });
   }
 
-  const result = await refinePublicBlueprint(blueprint, prompt);
+  const page = typeof body.page === "string" ? body.page.slice(0, 80) : undefined;
+  const result = await refinePublicBlueprint(blueprint, prompt, page);
   if (!result.ok) {
     return NextResponse.json({ success: false, error: result.error }, { status: 502 });
   }

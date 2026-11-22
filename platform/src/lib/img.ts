@@ -32,7 +32,7 @@ export function placeholderImage(w: number, h: number): string {
 }
 
 export function isPlaceholderSrc(src?: string | null): boolean {
-  return !!src && (src.startsWith("data:image/svg+xml") || src.includes("Upload in Admin"));
+  return !!src && (src.startsWith("data:image/svg+xml;charset=utf-8,") || src.includes("Upload in Admin"));
 }
 
 /** Fallback used wherever a tenant section has no uploaded photo. */
@@ -41,7 +41,38 @@ export function img(_seed: string, w = 800, h = 600): string {
 }
 
 // Order matters — first match wins, so specific sectors come before generic words.
-const STOCK: [RegExp, string][] = [
+export const STOCK: [RegExp, string][] = [
+  [/pg|hostel|co-?living/i, "1555854877-bab0e564b8d5"],
+  [/developer/i, "1460317442991-0ec209397118"],
+  [/real estate|realty|property|broker/i, "1600596542815-ffad4c1539a9"],
+  [/\bsinks?\b/i,"1556909114-f6e7ad7d3136"],
+  [/electrical|lighting/i, "1621905252507-b35492cc74b4"],
+  [/women|empower/i, "1532629345422-7515f3d16bb6"],
+  [/child/i, "1497486751825-1233686d5d80"],
+  [/environment|green ngo|climate/i, "1466692476868-aef1dfb1e735"],
+  [/food bank|roti|hunger/i, "1593113598332-cd288d649433"],
+  [/yoga|meditation/i, "1544367567-0f2fcb009e0b"],
+  [/salon|spa\b|beauty/i, "1560066984-138dadb4c035"],
+  [/caf[eé]|bakery|coffee/i, "1509440159596-0249088772ff"],
+  [/catering|cloud kitchen/i, "1555244162-803834f70033"],
+  [/resort/i, "1566073771259-6a8506099945"],
+  [/wedding/i, "1519741497674-611481863552"],
+  [/photo/i, "1516035069371-29a1b244cc32"],
+  [/banquet|venue/i, "1519167758481-83f550bb49b3"],
+  [/construction|builder/i, "1504307651254-35680f356dfd"],
+  [/export|import/i, "1494412574643-ff11b0a5c1c3"],
+  [/jewel/i, "1515562141207-7a88fb7ce338"],
+  [/diagnostic|lab\b|patholog/i, "1579154204601-01588f351e67"],
+  [/physio|rehab/i, "1571019613454-1cb2f99b2d8b"],
+  [/nutrition|dietitian|diet/i, "1512621776951-a57141f2eefd"],
+  [/animal|shelter|pet\b/i, "1548199973-03cce0bbc87b"],
+  [/senior|old age|elder/i, "1581579438747-1dc8d17bbce4"],
+  [/housing|society|rwa|resident/i, "1545324418-cc1a3fa10c00"],
+  [/language|ielts|english/i, "1456513080510-7bf3a84b82f8"],
+  [/driving/i, "1449965408869-eaa3f722e40d"],
+  [/computer|\bit\b institute|coding/i, "1517694712202-14dd9538aa97"],
+  [/car service|detailing|mechanic/i, "1487754180451-c456f719a1fc"],
+  [/packers|movers|relocation/i, "1600518464441-9154a4dea21b"],
   [/gym|fitness|workout/i, "1534438327276-14e5300c3a48"],
   [/plantation|sapling|rural village|grassroots|foundation/i, "1542601906990-b4d3fb778b09"],
   [/ngo|charity|non-profit|community/i, "1488521787991-ed7bbaae773c"],

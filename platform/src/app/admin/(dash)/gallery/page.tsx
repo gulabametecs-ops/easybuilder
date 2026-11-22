@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { GalleryManager } from "@/components/admin/GalleryManager";
 import { getDemoSessionId } from "@/lib/actions/guard";
 import { demoVisibleWhere } from "@/lib/demoSession";
+import { planFor } from "@/lib/usage";
 
 export const metadata = { title: "Gallery" };
 
@@ -16,10 +17,11 @@ export default async function GalleryPage() {
     orderBy: [{ category: "asc" }, { order: "asc" }],
   });
   const categories = Array.from(new Set(items.map((i) => i.category)));
+  const { limits } = await planFor(authed.tenant);
 
   return (
     <div className="admin-full-bleed flex flex-col flex-1 min-h-0">
-      <GalleryManager items={items} categories={categories} />
+      <GalleryManager items={items} categories={categories} limit={limits?.gallery ?? 0} />
     </div>
   );
 }

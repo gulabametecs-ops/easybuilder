@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Loader2, Send, Wand2 } from "lucide-react";
+import { Sparkles, Send, Wand2 } from "lucide-react";
 import { modifyWebsiteFromPrompt } from "@/lib/actions/aiBuilder";
 import type { WebsiteBlueprint } from "@/lib/ai/blueprintSchema";
+import { BrandSpinner } from "@/components/BrandLogo";
 
 const SUGGESTIONS = [
   "Make the hero section darker",
@@ -87,7 +88,7 @@ export function AIBuilderPanel({ pageId, onApplied, compact }: Props) {
         onClick={() => run(prompt)}
         className="inline-flex items-center justify-center gap-2 rounded-lg bg-lime-500 text-slate-950 text-sm font-semibold px-3 py-2 hover:bg-lime-400 disabled:opacity-50 shrink-0"
       >
-        {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        {pending ? <BrandSpinner className="w-4 h-4" /> : <Send className="w-4 h-4" />}
         {pending ? "Applying…" : "Apply change"}
       </button>
 
@@ -195,7 +196,7 @@ export function AIWebsiteGenerator({
             onClick={() => apply("create_pages")}
             className="inline-flex items-center gap-2 rounded-lg bg-lime-500 text-slate-950 font-semibold px-4 py-2.5 text-sm hover:bg-lime-400 disabled:opacity-50"
           >
-            {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {pending ? <BrandSpinner className="w-4 h-4" /> : null}
             Create pages
           </button>
           <button
@@ -233,7 +234,7 @@ export function AIWebsiteGenerator({
         onClick={plan}
         className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-lime-500 text-slate-950 font-semibold py-3 hover:bg-lime-400 disabled:opacity-50"
       >
-        {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+        {pending ? <BrandSpinner className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
         {pending ? "Planning…" : "Generate preview"}
       </button>
     </div>

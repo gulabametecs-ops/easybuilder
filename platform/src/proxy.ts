@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { parseHost, TENANT_HEADER, TENANT_KIND_HEADER } from "@/lib/domains";
+import { normalizeRefCode, REF_COOKIE, REF_COOKIE_DAYS } from "@/lib/referral";
 
 const DEMO_COOKIE = "demo_session";
 const DESIGN_COOKIE = "site_design";
+// Same attrs as lib/demoSession IFRAME_COOKIE (not imported: that module pulls in the DB).
+const IFRAME_COOKIE = { httpOnly: true, sameSite: "none" as const, secure: true, partitioned: true, path: "/" };
 
 // Multi-tenant router (Next.js 16 "proxy", formerly middleware).
 //
@@ -18,7 +21,13 @@ export function proxy(request: NextRequest) {
   const path = url.pathname;
 
   if (info.kind === "marketing") {
-    return NextResponse.next();
+    // Referral link (?ref=CODE): remember it for 30 days, last click wins. Validated again at checkout.
+    const ref = normalizeRefCode(url.searchParams.get("ref"));
+    const res = NextResponse.next();
+    if (ref && !path.startsWith("/api/")) {
+      res.cookies.set(REF_COOKIE, ref, { httpOnly: true, sameSite: "lax", secure: url.protocol === "https:", path: "/", maxAge: 60 * 60 * 24 * REF_COOKIE_DAYS });
+    }
+    return res;
   }
 
   // Tenant request — forward the tenant identity via headers.
@@ -35,13 +44,7 @@ export function proxy(request: NextRequest) {
     clean.searchParams.delete("dt");
     const res = NextResponse.redirect(clean);
     if (!hasCookie) {
-      res.cookies.set(DEMO_COOKIE, dt, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 60 * 10,
-      });
+      res.cookies.set(DEMO_COOKIE, dt, { ...IFRAME_COOKIE, maxAge: 60 * 10 });
     }
     return res;
   }
@@ -53,13 +56,7 @@ export function proxy(request: NextRequest) {
     const clean = url.clone();
     clean.searchParams.delete("design");
     const res = NextResponse.redirect(clean);
-    res.cookies.set(DESIGN_COOKIE, /^[a-z]{1,20}$/.test(design) ? design : "", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 2,
-    });
+    res.cookies.set(DESIGN_COOKIE, /^[a-z]{1,20}$/.test(design) ? design : "", { ...IFRAME_COOKIE, maxAge: 60 * 60 * 2 });
     return res;
   }
 
@@ -74,7 +71,9 @@ export function proxy(request: NextRequest) {
     path === "/admin" ||
     path.startsWith("/admin/") ||
     path.startsWith("/api/") ||
-    path.startsWith("/site")
+    // exact segment only — a tenant page slug like "site-visit" must still be rewritten
+    path === "/site" ||
+    path.startsWith("/site/")
   ) {
     return NextResponse.next({ request: { headers } });
   }

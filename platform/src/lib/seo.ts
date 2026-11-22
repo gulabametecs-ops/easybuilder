@@ -1,5 +1,16 @@
 import type { Metadata } from "next";
 import type { TenantConfig } from "./tenant";
+import { siteIntegrations, type SiteIntegrations } from "./integrations";
+
+// Search-engine / social ownership <meta> tags (Integrations, SEO fallback).
+function verificationMeta(v: SiteIntegrations["verification"]): Metadata["verification"] {
+  const other: Record<string, string> = {};
+  if (v.bing) other["msvalidate.01"] = v.bing;
+  if (v.pinterest) other["p:domain_verify"] = v.pinterest;
+  if (v.facebook) other["facebook-domain-verification"] = v.facebook;
+  if (!v.google && !Object.keys(other).length) return undefined;
+  return { google: v.google || undefined, other: Object.keys(other).length ? other : undefined };
+}
 
 // Builds the base URL from the incoming request host.
 export function baseUrlFromHost(host: string | null | undefined): string {
@@ -39,12 +50,7 @@ export function buildSiteMetadata(config: TenantConfig, bizName: string, baseUrl
       description: seo.description,
       images: seo.ogImage ? [seo.ogImage] : undefined,
     },
-    verification: (seo.googleVerification || seo.bingVerification)
-      ? {
-          google: seo.googleVerification || undefined,
-          other: seo.bingVerification ? { "msvalidate.01": seo.bingVerification } : undefined,
-        }
-      : undefined,
+    verification: verificationMeta(siteIntegrations(config.integrations ?? {}, seo).verification),
   };
 }
 
@@ -56,14 +62,14 @@ export function localBusinessJsonLd(config: TenantConfig, bizName: string, baseU
   const fc = config.footer.contact;
   const social = { ...config.footer.social, ...config.header.topbar.social } as Record<string, string | undefined>;
   const sameAs = [social.facebook, social.instagram].filter(Boolean);
-  const phone = tb.phones?.[0] || fc.phones?.[0];
-  const address = tb.address || fc.address;
+  const phone = seo.lbPhone || tb.phones?.[0] || fc.phones?.[0];
+  const address = seo.lbAddress || tb.address || fc.address;
   const email = tb.email || fc.email;
 
   const data: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": seo.businessType || "LocalBusiness",
-    name: bizName,
+    name: seo.lbName || bizName,
     url: baseUrl,
   };
   const image = seo.ogImage || seo.favicon;
@@ -74,6 +80,9 @@ export function localBusinessJsonLd(config: TenantConfig, bizName: string, baseU
   if (seo.priceRange) data.priceRange = seo.priceRange;
   if (seo.geoLat && seo.geoLng) data.geo = { "@type": "GeoCoordinates", latitude: seo.geoLat, longitude: seo.geoLng };
   if (sameAs.length) data.sameAs = sameAs;
+  const hours = (seo.openingHours || "").split("\n").map((l) => l.trim()).filter(Boolean);
+  if (hours.length) data.openingHours = hours;
+  if (seo.mapUrl) data.hasMap = seo.mapUrl;
   if (seo.ratingValue && seo.ratingCount) data.aggregateRating = { "@type": "AggregateRating", ratingValue: seo.ratingValue, reviewCount: seo.ratingCount };
   return data;
 }

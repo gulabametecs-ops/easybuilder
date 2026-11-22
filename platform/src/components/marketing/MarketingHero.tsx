@@ -1,792 +1,258 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import {
-  ArrowRight, Phone, Star, Wrench, Droplets, Paintbrush,
-  MapPin, Mail, Camera, MessageSquare, Clock, Palette, Inbox,
-  FileStack, Images, CalendarClock, Search, LayoutDashboard,
-  Megaphone, ScrollText, Rocket, Receipt, Settings, Check, Smartphone, Sparkles,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { stockImg } from "@/lib/img";
-import { DESIGNS } from "@/lib/designs";
-import { VERTICALS } from "@/lib/verticals";
+import { useEffect, useReducer, useState } from "react";
+import { ArrowRight, Sparkles, Check, MessageCircle, TrendingUp, Search } from "lucide-react";
+import { DemoConceptPreview } from "./DemoConceptPreview";
+import type { DemoDesign, DemoSector } from "./DemosExplorer";
 
-export function MarketingHero({ startPrice }: { startPrice: string }) {
+export type HeroShowcase = {
+  word: string; // "gym"
+  article: "a" | "an";
+  city: string; // default city shown in the sentence
+  brand: string; // preview business name suffix: "<city> <brand>"
+  sector: DemoSector;
+  design: DemoDesign;
+};
+
+const TRUST = ["No coding", "Admin panel included", "Live in 5 minutes"];
+const TYPE_MS = 70;
+const HOLD_TICKS = 46; // ~3.2s on a finished word before the next one
+const BARS = [38, 52, 44, 70, 58, 86, 100];
+
+type Typing = { i: number; n: number; hold: number };
+
+/**
+ * Mad-lib hero: "I run a [gym ▾] in [Jaipur]." Pick a business, type a city, and the
+ * collage on the right becomes that business: website, Google result, phone enquiry
+ * form, WhatsApp lead, admin stats — all in the business's own colours.
+ */
+export function MarketingHero({ startPrice, showcase }: { startPrice: string; showcase: HeroShowcase[] }) {
+  const lens = showcase.map((s) => s.word.length);
+  const [t, dispatch] = useReducer(
+    (s: Typing, a: { type: "tick" } | { type: "pick"; i: number }): Typing => {
+      if (a.type === "pick") return { i: a.i, n: lens[a.i], hold: 0 };
+      if (s.n < lens[s.i]) return { ...s, n: s.n + 1 };
+      if (s.hold < HOLD_TICKS) return { ...s, hold: s.hold + 1 };
+      return { i: (s.i + 1) % lens.length, n: 0, hold: 0 };
+    },
+    { i: 0, n: lens[0], hold: 0 }, // SSR renders the full first word
+  );
+  const [auto, setAuto] = useState(true);
+  const [city, setCity] = useState<string | null>(null); // null → the showcase's own city
+
+  useEffect(() => {
+    if (!auto || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => dispatch({ type: "tick" }), TYPE_MS);
+    return () => window.clearInterval(id);
+  }, [auto]);
+
+  const cur = showcase[t.i];
+  const typing = t.n < cur.word.length;
+  const cityName = (city ?? cur.city).trim() || "Your city";
+  const name = `${cityName} ${cur.brand}`;
+  const host = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.sitepixl.com`;
+  const sector = { ...cur.sector, name };
+  const accent = cur.design.colors.primary;
+  const stop = () => setAuto(false);
+
   return (
-    <section className="relative isolate overflow-hidden bg-[var(--mkt-bg)]">
-      <div className="absolute inset-0 pointer-events-none mkt-hero-wash" aria-hidden />
+    <section className="mkt-hero-dark relative isolate overflow-hidden text-[var(--mkt-text)]">
+      <div className="mkt-hero-grid pointer-events-none absolute inset-0 -z-10" aria-hidden />
+      {/* Ambient colour follows the business on show */}
+      <div
+        className="pointer-events-none absolute -top-48 right-[-10%] -z-10 h-[620px] w-[620px] rounded-full opacity-30 blur-[120px] transition-[background-color] duration-1000"
+        style={{ backgroundColor: accent }}
+        aria-hidden
+      />
+      <div className="pointer-events-none absolute -left-40 top-24 -z-10 h-[460px] w-[460px] rounded-full bg-[var(--mkt-brand)] opacity-[0.13] blur-[120px]" aria-hidden />
+      <div className="pointer-events-none absolute bottom-0 left-1/3 -z-10 h-[300px] w-[500px] rounded-full bg-[var(--mkt-brand-2)] opacity-10 blur-[120px]" aria-hidden />
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 lg:pt-24 pb-16 sm:pb-20">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] gap-12 xl:gap-14 items-center">
-          <div className="text-center lg:text-left max-w-xl mx-auto lg:mx-0">
-            <p className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1 text-xs font-semibold text-[var(--mkt-text-secondary)] motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--mkt-accent-2)]" />
-              {LIVE_COUNT}+ industries · site + admin in one
-            </p>
+      <div className="mx-auto grid max-w-[1320px] items-center gap-12 px-4 pb-16 pt-9 sm:px-6 sm:pt-12 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.12fr)] xl:gap-12 xl:pb-20 xl:pt-12">
+        {/* Copy */}
+        <div className="mx-auto w-full min-w-0 max-w-2xl text-center xl:mx-0 xl:max-w-none xl:text-left">
+          <p className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)]/80 py-1 pl-1 pr-3 text-xs font-medium text-[var(--mkt-text-secondary)] shadow-sm backdrop-blur">
+            <span className="mkt-brand-grad rounded-full px-2 py-0.5 text-[11px] font-semibold">Try it</span>
+            Pick your business below, type your city
+          </p>
 
-            <h1 className="font-display mt-6 text-[clamp(2.4rem,5.2vw,3.85rem)] leading-[1.08] text-[var(--mkt-text)] motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
-              <span className="block">A website for your</span>
-              <span className="block italic text-[var(--mkt-accent-text)]">
-                <RotatingSector />
+          <h1 className="font-display mt-6 text-[clamp(2rem,5.6vw,3.1rem)] xl:text-[clamp(2.9rem,3.6vw,3.75rem)] font-bold leading-[1.1] tracking-[-0.04em]">
+            I run {cur.article}{" "}
+            {/* Business word: switched by the "Try:" chips below (no dropdown). */}
+            <span className="relative inline-flex items-baseline whitespace-nowrap">
+              <span className="mkt-gradient-text relative">
+                {cur.word.slice(0, t.n)}
+                {auto && typing && <span className="ml-0.5 inline-block h-[0.8em] w-[3px] translate-y-[0.08em] animate-pulse bg-[var(--mkt-accent-2)] align-baseline" />}
               </span>
-              <span className="block">ready in minutes.</span>
-            </h1>
+              {!typing && (
+                <svg key={t.i} viewBox="0 0 300 20" preserveAspectRatio="none" className="pointer-events-none absolute -bottom-[0.12em] left-0 h-[0.26em] w-full" aria-hidden>
+                  <path d="M3 15 C 70 5, 190 3, 297 11" fill="none" stroke={accent} strokeWidth="7" strokeLinecap="round" className="mkt-draw" />
+                </svg>
+              )}
+            </span>
+            <br />
+            in{" "}
+            {/* The invisible mirror sizes the input to its text exactly. */}
+            <label className="relative inline-block border-b-[3px] border-dashed border-[var(--mkt-border-strong)] pb-0.5 transition focus-within:border-[var(--mkt-accent-2)]">
+              <span className="sr-only">Your city</span>
+              <span aria-hidden className="invisible whitespace-pre">{(city ?? cur.city) || "City"}</span>
+              <input
+                value={city ?? cur.city}
+                onChange={(e) => setCity(e.target.value.slice(0, 18))}
+                onFocus={(e) => {
+                  stop();
+                  e.target.select();
+                }}
+                placeholder="City"
+                spellCheck={false}
+                className="absolute inset-0 w-full bg-transparent p-0 text-[var(--mkt-text)] outline-none placeholder:text-[var(--mkt-text-muted)]"
+              />
+            </label>
+            .
+          </h1>
 
-            <p className="mt-5 text-base sm:text-lg leading-relaxed text-[var(--mkt-text-secondary)] max-w-lg mx-auto lg:mx-0 motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
-              Pick a sector, choose a look, go live. Pages, leads, bookings and SEO ship with the site — no designer, no code.
-            </p>
-
-            <div className="mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-3 motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
-              <Link
-                href="/subscribe"
-                className="group inline-flex items-center gap-2 rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)] font-semibold px-6 py-3.5 text-sm hover:bg-[var(--mkt-accent-hover)] transition"
+          <div className="-mx-4 mt-5 flex items-center gap-2 overflow-x-auto px-4 pb-1 [mask-image:linear-gradient(90deg,#000_82%,transparent)] [scrollbar-width:none] sm:mx-0 sm:[mask-image:none] sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0 xl:justify-start">
+            <span className="shrink-0 text-xs font-medium text-[var(--mkt-text-muted)]">Try:</span>
+            {showcase.slice(0, 6).map((s, n) => (
+              <button
+                key={s.sector.id}
+                type="button"
+                onClick={() => {
+                  stop();
+                  dispatch({ type: "pick", i: n });
+                }}
+                aria-pressed={n === t.i}
+                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold capitalize transition ${
+                  n === t.i
+                    ? "border-transparent text-white shadow-sm"
+                    : "border-[var(--mkt-border)] bg-[var(--mkt-surface)]/80 text-[var(--mkt-text-secondary)] hover:border-[var(--mkt-border-strong)]"
+                }`}
+                style={n === t.i ? { backgroundColor: accent } : undefined}
               >
-                Start from {startPrice}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
-              </Link>
-              <Link
-                href="/ai-builder"
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] text-[var(--mkt-text)] font-semibold px-5 py-3.5 text-sm hover:bg-[var(--mkt-bg-alt)] transition"
-              >
-                <Sparkles className="h-4 w-4" />
-                Build with AI
-              </Link>
-              <Link
-                href="/demos"
-                className="inline-flex items-center gap-2 rounded-full px-4 py-3.5 text-sm font-semibold text-[var(--mkt-text-secondary)] hover:text-[var(--mkt-text)]"
-              >
-                Live demos
-              </Link>
-            </div>
-
-            <dl className="mt-10 grid grid-cols-3 gap-6 text-left max-w-md mx-auto lg:mx-0 motion-safe:animate-[site-fade-up_0.5s_ease-out_both]">
-              {[
-                { v: `${LIVE_COUNT}+`, l: "industries" },
-                { v: `${DESIGNS.length}`, l: "designs each" },
-                { v: "5 min", l: "to go live" },
-              ].map((s) => (
-                <div key={s.l}>
-                  <dt className="sr-only">{s.l}</dt>
-                  <dd className="text-xl font-bold tracking-tight text-[var(--mkt-text)]">{s.v}</dd>
-                  <dd className="mt-0.5 text-[12px] text-[var(--mkt-text-muted)]">{s.l}</dd>
-                </div>
-              ))}
-            </dl>
+                {s.word}
+              </button>
+            ))}
           </div>
 
-          {/* Right — desktop-only desktop browser build */}
+          <p className="mx-auto mt-5 max-w-lg text-pretty text-[15px] leading-relaxed text-[var(--mkt-text-muted)] sm:text-base xl:mx-0">
+            Get a ready-made website for your {cur.word} — with enquiries on WhatsApp, online bookings, Google-ready SEO and your own admin panel.
+          </p>
+
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3 xl:justify-start">
+            <Link
+              href={`/subscribe?vertical=${cur.sector.id}&design=${cur.design.id}`}
+              className="group inline-flex items-center gap-2 rounded-full bg-[var(--mkt-accent)] px-5 py-3 text-sm font-semibold text-[var(--mkt-accent-on)] shadow-[0_10px_30px_-10px_rgba(47,91,255,0.6)] transition hover:bg-[var(--mkt-accent-hover)]"
+            >
+              Get this website · from {startPrice}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
+            </Link>
+            <Link
+              href={`/demos?vertical=${cur.sector.id}`}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] px-5 py-3 text-sm font-semibold text-[var(--mkt-text)] shadow-sm transition hover:border-[var(--mkt-accent-2)]/50"
+            >
+              Open the live demo
+            </Link>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-[var(--mkt-text-muted)] xl:justify-start">
+            {TRUST.map((x) => (
+              <span key={x} className="inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5 text-[var(--mkt-accent-2)]" strokeWidth={2.5} />
+                {x}
+              </span>
+            ))}
+            <Link href="/ai-builder" className="inline-flex items-center gap-1.5 font-semibold text-[var(--mkt-accent-text)] hover:underline">
+              <Sparkles className="h-3.5 w-3.5" /> or describe it to AI
+            </Link>
+          </div>
+        </div>
+
+        {/* Collage: everything the business gets, in its own colours */}
+        <div className="relative mx-auto w-full min-w-0 max-w-3xl pb-6 pt-6 sm:pb-12 xl:h-[560px] xl:max-w-none xl:p-0">
+          {/* soft brand glow behind the frame */}
           <div
-            className={`hidden lg:block relative w-full max-w-[560px] xl:max-w-[600px] ml-auto transition duration-700 delay-150 motion-safe:animate-[site-fade-up_0.5s_ease-out_both]`}
-          >
-            <DesktopBuildAnimation />
+            aria-hidden
+            className="pointer-events-none absolute inset-x-6 top-16 bottom-10 -z-10 rounded-[40px] opacity-60 blur-3xl transition-[background] duration-700"
+            style={{ background: `radial-gradient(60% 60% at 50% 45%, ${accent}55, transparent 70%)` }}
+          />
+          <div className="relative xl:absolute xl:left-4 xl:right-6 xl:top-12 xl:rotate-[-1.5deg]">
+            <div className="rounded-[22px] bg-gradient-to-b from-[var(--mkt-border-strong)] to-[var(--mkt-border)] p-px shadow-[0_40px_100px_-30px_rgba(10,13,20,0.35)]">
+              <div className="rounded-[21px] bg-[var(--mkt-surface)] p-1.5 sm:p-2">
+                <DemoConceptPreview key={cur.sector.id} sector={sector} design={cur.design} bare />
+              </div>
+            </div>
+          </div>
+
+          {/* WhatsApp lead */}
+          <div key={`wa-${t.i}`} className="mkt-pop absolute left-2 top-0 flex w-56 items-center gap-2.5 rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)]/95 p-2.5 shadow-xl backdrop-blur sm:-left-3 sm:w-64 sm:gap-3 sm:p-3 xl:left-0 xl:top-0" style={{ animationDelay: "0.15s" }}>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#25d366] text-white sm:h-9 sm:w-9">
+              <MessageCircle className="h-4.5 w-4.5" fill="currentColor" strokeWidth={0} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[#128c7e]">WhatsApp · now</p>
+              <p className="truncate text-[13px] font-semibold text-[var(--mkt-text)]">New enquiry from {cityName}</p>
+            </div>
+          </div>
+
+          {/* Admin stats */}
+          <div key={`st-${t.i}`} className="mkt-pop absolute -right-3 -top-2 hidden w-52 rounded-2xl md:block xl:right-0 xl:top-0 border border-[var(--mkt-border)] bg-[var(--mkt-surface)]/95 p-3.5 shadow-xl backdrop-blur" style={{ animationDelay: "0.3s" }}>
+            <p className="flex items-center justify-between text-[11px] font-medium text-[var(--mkt-text-muted)]">
+              Your admin · this week <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+            </p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-[var(--mkt-text)]">
+              24 <span className="text-sm font-semibold text-[var(--mkt-text-muted)]">enquiries</span>
+            </p>
+            <div className="mt-2.5 flex h-10 items-end gap-1.5">
+              {BARS.map((h, k) => (
+                <span key={k} className="flex-1 rounded-sm transition-[background-color] duration-700" style={{ height: `${h}%`, backgroundColor: accent, opacity: 0.35 + k * 0.1 }} />
+              ))}
+            </div>
+          </div>
+
+          {/* Google result */}
+          <div key={`g-${t.i}`} className="mkt-pop absolute -left-3 bottom-0 hidden w-[19rem] rounded-2xl border border-black/5 bg-white p-4 text-left shadow-2xl sm:block xl:-left-8 xl:bottom-4" style={{ animationDelay: "0.45s" }}>
+            <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
+              <Search className="h-3 w-3" /> {cur.word} in {cityName}
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white transition-[background-color] duration-700" style={{ backgroundColor: accent }}>
+                {name.slice(0, 2).toUpperCase()}
+              </span>
+              <div className="min-w-0 leading-tight">
+                <p className="truncate text-[12px] font-medium text-slate-800">{name}</p>
+                <p className="truncate text-[10.5px] text-slate-500">https://{host}</p>
+              </div>
+            </div>
+            <p className="mt-1.5 truncate text-[15px] font-medium text-[#1a0dab]">
+              {name} — Best {cur.word} in {cityName}
+            </p>
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+              <span className="font-semibold text-slate-700">4.9</span>
+              <span className="tracking-[-0.05em] text-[#f5a623]">★★★★★</span>
+              <span>· 128 reviews · Open now</span>
+            </p>
+            <p className="mt-0.5 line-clamp-2 text-[12px] leading-snug text-slate-600">{cur.sector.tagline}</p>
+          </div>
+
+          {/* Phone: enquiry form */}
+          <div key={`ph-${t.i}`} className="mkt-pop absolute -bottom-2 -right-3 hidden w-40 rounded-[30px] border-[6px] border-[#0a0d14] bg-white shadow-2xl sm:block md:w-44 xl:-bottom-2 xl:right-0" style={{ animationDelay: "0.6s" }}>
+            <div className="mx-auto mt-1.5 h-1.5 w-12 rounded-full bg-[#0a0d14]" />
+            <div className="mx-2 mt-2 flex items-center gap-1.5 rounded-xl px-2 py-1.5 text-white transition-[background-color] duration-700" style={{ backgroundColor: accent }}>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-white/25 text-[8px] font-bold">{name.slice(0, 2).toUpperCase()}</span>
+              <span className="truncate text-[10px] font-semibold">{name}</span>
+            </div>
+            <div className="space-y-1.5 px-3 pb-4 pt-3">
+              <p className="text-[12px] font-bold text-slate-900">Book a free visit</p>
+              <span className="block rounded-md border border-slate-200 px-2 py-1.5 text-[9.5px] text-slate-400">Your name</span>
+              <span className="block rounded-md border border-slate-200 px-2 py-1.5 text-[9.5px] text-slate-400">Phone number</span>
+              <span className="block rounded-md py-1.5 text-center text-[10px] font-semibold text-white transition-[background-color] duration-700" style={{ backgroundColor: accent }}>
+                Send enquiry
+              </span>
+              <p className="pt-0.5 text-center text-[8.5px] text-slate-400">Lands in your admin + WhatsApp</p>
+            </div>
           </div>
         </div>
       </div>
     </section>
-  );
-}
-
-const LIVE_COUNT = VERTICALS.filter((v) => v.status === "live").length;
-
-// Real sectors from the catalog — the headline cycles through them.
-const SECTOR_WORDS = ["school", "clinic", "gym", "restaurant", "coaching", "NGO", "pharmacy", "preschool", "events"];
-
-function RotatingSector() {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setInterval(() => setI((n) => (n + 1) % SECTOR_WORDS.length), 2200);
-    return () => window.clearInterval(id);
-  }, []);
-  // Every word sits in the same grid cell, so the slot is always as wide as the
-  // longest one — the headline never reflows or changes its number of lines.
-  return (
-    <span className="inline-grid whitespace-nowrap align-bottom justify-items-center lg:justify-items-start">
-      {SECTOR_WORDS.map((w, n) => (
-        <span
-          key={n === i ? `on-${w}` : w}
-          aria-hidden={n !== i}
-          className={`[grid-area:1/1] text-[var(--mkt-accent-text)] ${
-            n === i ? "mkt-word-in" : "invisible"
-          }`}
-        >
-          {w}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-const PHASES = [
-  "blank", "shell", "sidebar", "canvas", "hero", "services", "gallery", "reviews", "cta", "live", "reset",
-] as const;
-type Phase = (typeof PHASES)[number];
-
-const TEMPLATES = [
-  {
-    name: "Bright Homes",
-    sector: "Home services",
-    domain: "brighthomes.site",
-    heroTitle: "Crafted care for every home.",
-    heroSub: "Licensed pros. Book online in under a minute.",
-    cta: "Get a free quote",
-    accent: "lime" as const,
-    heroImg: stockImg("homeservice electrician", 640, 360),
-    services: [
-      { icon: Wrench, label: "Electrical", desc: "Wiring & installs", tone: "from-amber-400 to-orange-500" },
-      { icon: Droplets, label: "Plumbing", desc: "Same-day fixes", tone: "from-sky-400 to-blue-500" },
-      { icon: Paintbrush, label: "Painting", desc: "Premium finish", tone: "from-emerald-400 to-lime-500" },
-    ],
-    gallery: [
-      { src: stockImg("electrician wiring", 280, 180), caption: "Kitchen rewire" },
-      { src: stockImg("plumbing plumber", 180, 180), caption: "Leak fix" },
-      { src: stockImg("painting paint", 180, 180), caption: "Fresh walls" },
-      { src: stockImg("interior furniture", 180, 180), caption: "Fit-out" },
-    ],
-    review: {
-      name: "Rahul M.",
-      role: "Homeowner · Delhi",
-      text: "Booked in 2 minutes. Team arrived the same day.",
-      avatar: stockImg("portrait professional", 64, 64),
-    },
-    lead: { name: "Aisha Khan", note: "Quote · Painting" },
-  },
-  {
-    name: "CarePlus Clinic",
-    sector: "Healthcare",
-    domain: "careplus.clinic",
-    heroTitle: "Care that feels personal.",
-    heroSub: "Consult specialists — open slots today.",
-    cta: "Book a visit",
-    accent: "teal" as const,
-    heroImg: stockImg("doctor hospital", 640, 360),
-    services: [
-      { icon: Phone, label: "General", desc: "Checkups", tone: "from-teal-400 to-emerald-500" },
-      { icon: Star, label: "Dental", desc: "Smile care", tone: "from-cyan-400 to-sky-500" },
-      { icon: Camera, label: "Skin", desc: "Dermatology", tone: "from-rose-400 to-orange-400" },
-    ],
-    gallery: [
-      { src: stockImg("hospital doctor", 280, 180), caption: "Consultation" },
-      { src: stockImg("dentist", 180, 180), caption: "Dental" },
-      { src: stockImg("skin therapy", 180, 180), caption: "Skin care" },
-      { src: stockImg("eyecare", 180, 180), caption: "Eye check" },
-    ],
-    review: {
-      name: "Dr. Anita",
-      role: "Patient · Mumbai",
-      text: "Easy booking. Reminder came before my slot.",
-      avatar: stockImg("doctor professional", 64, 64),
-    },
-    lead: { name: "Vikram S.", note: "Appointment · Dental" },
-  },
-];
-
-const BUILDER_SECTIONS = [
-  { id: "hero", label: "Hero", phase: "hero" as Phase },
-  { id: "services", label: "Services", phase: "services" as Phase },
-  { id: "gallery", label: "Gallery", phase: "gallery" as Phase },
-  { id: "reviews", label: "Reviews", phase: "reviews" as Phase },
-  { id: "cta", label: "CTA", phase: "cta" as Phase },
-];
-
-const ADMIN_NAV: { label: string; items: { icon: LucideIcon; label: string; badge?: number }[] }[] = [
-  {
-    label: "Overview",
-    items: [
-      { icon: LayoutDashboard, label: "Dashboard" },
-      { icon: Inbox, label: "Leads", badge: 3 },
-      { icon: CalendarClock, label: "Appointments", badge: 1 },
-    ],
-  },
-  {
-    label: "Website",
-    items: [
-      { icon: Palette, label: "Appearance" },
-      { icon: FileStack, label: "Pages & Sections" },
-      { icon: Wrench, label: "Services" },
-      { icon: Images, label: "Gallery" },
-      { icon: Megaphone, label: "Notices" },
-      { icon: ScrollText, label: "Results" },
-    ],
-  },
-  {
-    label: "Grow",
-    items: [
-      { icon: Search, label: "SEO" },
-      { icon: Rocket, label: "Marketing" },
-    ],
-  },
-  {
-    label: "Account",
-    items: [
-      { icon: Receipt, label: "Billing" },
-      { icon: Settings, label: "Settings" },
-    ],
-  },
-];
-
-function atLeast(phase: Phase, name: Phase) {
-  return PHASES.indexOf(phase) >= PHASES.indexOf(name);
-}
-
-function DesktopBuildAnimation() {
-  const [phaseIdx, setPhaseIdx] = useState(0);
-  const [cycle, setCycle] = useState(0);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = useRef<Partial<Record<string, HTMLDivElement>>>({});
-  const phase = PHASES[phaseIdx];
-  const tpl = TEMPLATES[cycle % TEMPLATES.length];
-  const lime = tpl.accent === "lime";
-
-  useEffect(() => {
-    // Preload every template image so the template switch never pops in half-loaded.
-    for (const t of TEMPLATES) {
-      for (const src of [t.heroImg, t.review.avatar, ...t.gallery.map((g) => g.src)]) new Image().src = src;
-    }
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const id = requestAnimationFrame(() => setPhaseIdx(PHASES.indexOf("live")));
-      return () => cancelAnimationFrame(id);
-    }
-    const delays = [500, 700, 800, 700, 1200, 1100, 1100, 1000, 1000, 2800, 900];
-    let i = 0;
-    let timer: ReturnType<typeof setTimeout>;
-    let alive = true;
-    const tick = () => {
-      timer = setTimeout(() => {
-        if (!alive) return;
-        i += 1;
-        if (i >= PHASES.length) {
-          // Shell + sidebar stay up — go straight to building the next site.
-          i = PHASES.indexOf("canvas");
-          setCycle((c) => c + 1);
-        }
-        setPhaseIdx(i);
-        tick();
-      }, delays[i] ?? 700);
-    };
-    tick();
-    return () => { alive = false; clearTimeout(timer); };
-  }, []);
-
-  const show = (name: Phase) => atLeast(phase, name) && phase !== "reset";
-  // After the first loop the browser shell + sidebar stay mounted; only the site content swaps.
-  const chrome = (name: Phase) => cycle > 0 || show(name);
-  const building = phase !== "live" && phase !== "blank" && phase !== "reset" && phase !== "shell" && phase !== "sidebar" && phase !== "canvas";
-  const activeSection = BUILDER_SECTIONS.find((s) => s.phase === phase)?.id;
-
-  const buildSteps = PHASES.length - 3;
-  const buildProgress = Math.min(100, Math.round((Math.max(0, phaseIdx - 1) / buildSteps) * 100));
-
-  useEffect(() => {
-    if (!activeSection || !canvasRef.current) return;
-    const el = sectionRefs.current[activeSection];
-    if (!el) return;
-    const parent = canvasRef.current;
-    const top = el.offsetTop - parent.offsetTop - 8;
-    parent.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
-  }, [activeSection, phaseIdx]);
-
-  const isNavActive = (label: string) => {
-    if (label === "Pages & Sections" && building) return true;
-    if (label === "Leads" && phase === "live") return true;
-    return false;
-  };
-
-  const design = DESIGNS[cycle % DESIGNS.length];
-
-  // Subtle 3D tilt that follows the pointer (CSS vars, no re-render).
-  const tiltRef = useRef<HTMLDivElement>(null);
-  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const el = tiltRef.current;
-    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const r = el.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5;
-    const y = (e.clientY - r.top) / r.height - 0.5;
-    el.style.setProperty("--ry", `${(x * 7).toFixed(2)}deg`);
-    el.style.setProperty("--rx", `${(-y * 6).toFixed(2)}deg`);
-  };
-  const onLeave = () => {
-    tiltRef.current?.style.setProperty("--ry", "-4deg");
-    tiltRef.current?.style.setProperty("--rx", "2deg");
-  };
-
-  return (
-    <div className="relative w-full [perspective:1600px]" onPointerMove={onMove} onPointerLeave={onLeave}>
-      <div className="mkt-builder-ambient" aria-hidden />
-      <div className="absolute -inset-10 -z-10 rounded-full bg-[var(--mkt-accent-soft)] blur-3xl mkt-glow-pulse" aria-hidden />
-
-      {/* Floating chips — real product features, synced to the build loop */}
-      <div className="absolute -left-16 bottom-8 z-40 mkt-float" aria-hidden>
-        <div className="flex items-center gap-2 rounded-xl border border-[var(--mkt-border)] bg-white dark:bg-slate-900 px-3 py-2 shadow-xl backdrop-blur">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]">
-            <Palette className="h-3.5 w-3.5" />
-          </span>
-          <span>
-            <span className="block text-[10px] font-medium text-[var(--mkt-text-muted)]">Design style</span>
-            <span key={design.id} className="mkt-word-in block text-xs font-bold text-[var(--mkt-text)]">{design.name}</span>
-          </span>
-        </div>
-      </div>
-      <div className="absolute -right-6 -top-5 z-40 mkt-float [animation-delay:-3s]" aria-hidden>
-        <div
-          className={`flex items-center gap-2 rounded-full border border-[var(--mkt-border)] bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-[var(--mkt-text)] shadow-xl backdrop-blur transition-all duration-500 ${
-            phase === "live" ? "opacity-100 scale-100" : "opacity-0 scale-90"
-          }`}
-        >
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)]">
-            <Check className="h-2.5 w-2.5" strokeWidth={3} />
-          </span>
-          Published · {tpl.domain}
-        </div>
-      </div>
-      <div className="absolute -right-8 bottom-24 z-40 mkt-float [animation-delay:-1.5s]" aria-hidden>
-        <div className="flex items-center gap-1.5 rounded-full border border-[var(--mkt-border)] bg-white dark:bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-[var(--mkt-text-secondary)] shadow-lg backdrop-blur">
-          <Smartphone className="h-3.5 w-3.5 text-[var(--mkt-accent)]" /> Mobile-ready
-        </div>
-      </div>
-
-      <div
-        ref={tiltRef}
-        className="relative transition-transform duration-300 ease-out [transform-style:preserve-3d] [transform:rotateX(var(--rx,2deg))_rotateY(var(--ry,-4deg))]"
-      >
-
-      <div
-        className={`relative mkt-builder-frame transition-[opacity,transform,filter] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          chrome("shell") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-        }`}
-      >
-        <div className="mkt-builder-edge" aria-hidden />
-
-        <div className="relative mkt-glass-builder rounded-[0.94rem] overflow-hidden">
-          {/* Desktop browser chrome */}
-          <div className="relative z-[1] flex items-center gap-2 h-9 px-3 border-b border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/[0.03] backdrop-blur-sm">
-            <div className="flex gap-1.5 shrink-0">
-              <i className="w-2 h-2 rounded-full bg-[#ff5f57]" />
-              <i className="w-2 h-2 rounded-full bg-[#febc2e]" />
-              <i className="w-2 h-2 rounded-full bg-[#28c840]" />
-            </div>
-            <div className="flex-1 flex justify-center min-w-0 px-2">
-              <div className="h-[22px] w-full max-w-[280px] rounded-md bg-white/70 dark:bg-white/5 ring-1 ring-slate-200/60 dark:ring-white/10 flex items-center justify-center gap-1.5 px-2">
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${phase === "live" ? "bg-[var(--mkt-accent)]" : "bg-amber-400 animate-pulse"}`} />
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                  {show("canvas") ? `https://${tpl.domain}` : "standardsaas.app/builder"}
-                </span>
-              </div>
-            </div>
-            <span className={`text-[9px] font-bold uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded ${
-              phase === "live"
-                ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]"
-                : "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-            }`}>
-              {phase === "live" ? "Live" : `${buildProgress}%`}
-            </span>
-          </div>
-
-          <div
-            className={`relative z-[1] h-0.5 bg-slate-200/50 dark:bg-white/5 transition-opacity duration-500 ${
-              phase !== "live" && phase !== "blank" && phase !== "reset" ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <div
-              className="h-full origin-left bg-gradient-to-r from-[var(--mkt-accent)] to-[var(--mkt-accent-2)] transition-transform duration-700 ease-out"
-              style={{ transform: `scaleX(${buildProgress / 100})` }}
-            />
-          </div>
-
-          <div className="relative z-[1] grid grid-cols-[148px_1fr] min-h-[400px] xl:min-h-[420px] items-stretch">
-            {/* Full admin sidebar — matches real panel */}
-            <MagicIn show={chrome("sidebar")} from="left" delay={0} className="h-full min-h-0">
-              <aside className="h-full min-h-[400px] xl:min-h-[420px] border-r border-white/30 dark:border-white/10 bg-white/40 dark:bg-black/30 backdrop-blur-sm flex flex-col">
-                <div className="px-2 pt-2 pb-1.5 border-b border-slate-200/40 dark:border-white/8">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`w-5 h-5 rounded-md shrink-0 ${lime ? "bg-[var(--mkt-accent)]" : "bg-teal-400"}`} />
-                    <div className="min-w-0">
-                      <p className="text-[9px] font-bold text-slate-900 dark:text-white truncate leading-none">{tpl.name}</p>
-                      <p className="text-[6px] text-slate-400 mt-0.5 uppercase tracking-wider">Admin panel</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-1.5 py-1.5 space-y-2 min-h-0">
-                  {ADMIN_NAV.map((group, gi) => (
-                    <div key={group.label}>
-                      <p className="text-[6px] font-bold uppercase tracking-[0.14em] text-slate-400 px-1 mb-0.5">
-                        {group.label}
-                      </p>
-                      <div className="space-y-0.5">
-                        {group.items.map((item, ii) => {
-                          const Icon = item.icon;
-                          const active = isNavActive(item.label);
-                          const delay = gi * 80 + ii * 35;
-                          return (
-                            <div
-                              key={item.label}
-                              className={`flex items-center justify-between gap-1 rounded px-1.5 py-[3px] text-[7.5px] font-semibold leading-tight ${
-                                active
-                                  ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]"
-                                  : "text-slate-600 dark:text-slate-400"
-                              }`}
-                              style={{
-                                opacity: chrome("sidebar") ? 1 : 0,
-                                transform: chrome("sidebar") ? "translateX(0)" : "translateX(-5px)",
-                                transition: `opacity 0.45s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.45s cubic-bezier(0.16,1,0.3,1) ${delay}ms, background-color 0.4s ease, color 0.4s ease`,
-                              }}
-                            >
-                              <span className="flex items-center gap-1 min-w-0">
-                                <Icon className="w-2.5 h-2.5 shrink-0" strokeWidth={2.25} />
-                                <span className="truncate">{item.label}</span>
-                              </span>
-                              {item.badge != null && item.badge > 0 && (
-                                <span className="shrink-0 min-w-[14px] h-[14px] px-0.5 rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)] text-[6px] font-bold flex items-center justify-center">
-                                  {item.badge}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="shrink-0 px-1.5 py-1.5 border-t border-slate-200/50 dark:border-white/8 bg-white/30 dark:bg-black/20">
-                  <p className="text-[6px] font-bold uppercase tracking-[0.14em] text-slate-400 px-1 mb-0.5">Page sections</p>
-                  {BUILDER_SECTIONS.map((s) => {
-                    const done = atLeast(phase, s.phase) && phase !== "reset";
-                    const current = activeSection === s.id;
-                    return (
-                      <div
-                        key={s.id}
-                        className={`flex items-center justify-between rounded px-1.5 py-[3px] text-[7.5px] font-medium mb-0.5 last:mb-0 transition-colors duration-300 ${
-                          current
-                            ? "bg-white/90 dark:bg-white/10 text-slate-900 dark:text-white ring-1 ring-[var(--mkt-accent)]/55"
-                            : done
-                              ? "text-slate-600 dark:text-slate-300"
-                              : "text-slate-400 dark:text-slate-600"
-                        }`}
-                      >
-                        <span>{s.label}</span>
-                        <span className={`w-1.5 h-1.5 rounded-full bg-[var(--mkt-accent)] shrink-0 transition-[opacity,transform] duration-300 ${done ? "opacity-100 scale-100" : "opacity-0 scale-50"}`} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </aside>
-            </MagicIn>
-
-            {/* Premium website canvas */}
-            <div className="relative bg-slate-200/25 dark:bg-black/20 overflow-hidden min-h-[400px] xl:min-h-[420px]">
-              <div
-                className={`absolute inset-0 transition-opacity duration-500 ${
-                  show("canvas") && !show("hero") ? "opacity-100" : "opacity-0"
-                }`}
-              >
-                <div className="absolute inset-2.5 rounded-lg border border-dashed border-slate-300/70 dark:border-white/10 bg-[linear-gradient(to_right,rgba(148,163,184,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.1)_1px,transparent_1px)] bg-[size:14px_14px] flex items-center justify-center">
-                  <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">Assembling premium site…</p>
-                </div>
-              </div>
-
-              <div className={`relative h-full min-h-[400px] xl:min-h-[420px] ${show("canvas") ? "opacity-100" : "opacity-0"} transition-opacity duration-700`}>
-                <div className="absolute inset-2 rounded-lg overflow-hidden mkt-site-premium ring-1 ring-slate-200/70 dark:ring-white/10 shadow-[0_8px_30px_-12px_rgba(15,23,42,0.35)] flex flex-col">
-                  {/* Promo strip */}
-                  <MagicIn show={show("hero")} from="top" delay={0}>
-                    <div className={`h-[18px] flex items-center justify-center gap-1.5 text-[7px] font-semibold tracking-wide ${
-                      lime ? "bg-slate-950 text-[var(--mkt-accent-text)]" : "bg-slate-950 text-teal-300"
-                    }`}>
-                      <Clock className="w-2.5 h-2.5" />
-                      Same-day service · Book in 60 seconds · Licensed & insured
-                    </div>
-                  </MagicIn>
-
-                  {/* Nav */}
-                  <MagicIn show={show("hero")} from="top" delay={40}>
-                    <div className="flex items-center justify-between px-3 h-10 border-b border-slate-100 dark:border-white/8 bg-white/95 dark:bg-[#0d1210]/95 backdrop-blur-sm">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className={`w-5 h-5 rounded-md shrink-0 shadow-sm ${lime ? "bg-[var(--mkt-accent)]" : "bg-teal-400"}`} />
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-slate-900 dark:text-white leading-none truncate">{tpl.name}</p>
-                          <p className="text-[7px] text-slate-400 mt-0.5 uppercase tracking-[0.12em]">{tpl.sector}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3.5 text-[9px] font-semibold text-slate-400">
-                        <span className="text-slate-800 dark:text-white">Home</span>
-                        <span>Services</span>
-                        <span>Gallery</span>
-                        <span>Reviews</span>
-                        <span>Contact</span>
-                      </div>
-                      <div className={`h-6 px-2.5 rounded-md text-[8px] font-bold flex items-center text-slate-950 shrink-0 shadow-sm ${lime ? "bg-[var(--mkt-accent)]" : "bg-teal-400"}`}>
-                        {tpl.cta}
-                      </div>
-                    </div>
-                  </MagicIn>
-
-                  <div className="flex-1 relative min-h-0">
-                    <div
-                      className={`absolute right-2 top-2 z-20 flex items-center gap-1 rounded-full bg-slate-950/90 text-[var(--mkt-accent-text)] text-[7px] font-bold px-2 py-0.5 shadow-lg pointer-events-none transition-[opacity,transform] duration-300 ${
-                        building && activeSection ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"
-                      }`}
-                    >
-                      <span className="w-1 h-1 rounded-full bg-[var(--mkt-accent)] animate-pulse" />
-                      Adding {BUILDER_SECTIONS.find((s) => s.id === activeSection)?.label ?? "section"}
-                    </div>
-                    <div ref={canvasRef} className="h-full overflow-y-auto overflow-x-hidden scroll-smooth mkt-preview-scroll">
-
-                    {/* Hero */}
-                    <MagicIn show={show("hero")} from="left" delay={50}>
-                      <div
-                        ref={(el) => { if (el) sectionRefs.current.hero = el; }}
-                        className={`relative grid grid-cols-[1.15fr_0.95fr] transition-shadow duration-500 ${
-                          activeSection === "hero" && building ? "mkt-section-active" : ""
-                        }`}
-                      >
-                        <div className={`px-3.5 py-3.5 flex flex-col justify-center ${
-                          lime
-                            ? "bg-gradient-to-br from-[#ecfccb] via-[#bef264] to-[#4ade80]"
-                            : "bg-gradient-to-br from-[#ccfbf1] via-[#5eead4] to-[#a3e635]"
-                        }`}>
-                          <div className="inline-flex items-center gap-1 w-fit rounded-full bg-slate-950/10 px-1.5 py-0.5 mb-1">
-                            <Star className="w-2 h-2 text-slate-900 fill-slate-900" />
-                            <span className="text-[7px] font-bold text-slate-900/80">4.9 · 2,400+ jobs</span>
-                          </div>
-                          <p className="text-[14px] font-bold text-slate-950 tracking-tight leading-[1.15]">{tpl.heroTitle}</p>
-                          <p className="mt-1 text-[9px] text-slate-900/65 leading-snug max-w-[13rem]">{tpl.heroSub}</p>
-                          <div className="mt-2.5 flex gap-1.5">
-                            <div className="h-6 px-2.5 rounded-md bg-slate-950 text-white text-[8px] font-bold flex items-center shadow-sm">{tpl.cta}</div>
-                            <div className="h-6 px-2.5 rounded-md bg-white/70 text-slate-900 text-[8px] font-bold flex items-center backdrop-blur-sm">
-                              <Phone className="w-2.5 h-2.5 mr-1" /> Call now
-                            </div>
-                          </div>
-                        </div>
-                        <div className="relative m-2 rounded-lg overflow-hidden ring-1 ring-black/10 shadow-md">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={tpl.heroImg} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
-                          <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-end justify-between">
-                            <div className="rounded bg-white/90 backdrop-blur-sm px-1.5 py-0.5 text-[7px] font-bold text-slate-800">Verified pros</div>
-                            <div className="rounded bg-slate-950/80 px-1.5 py-0.5 text-[7px] font-bold text-white">4.9 ★</div>
-                          </div>
-                        </div>
-                      </div>
-                    </MagicIn>
-
-                    {/* Trust strip */}
-                    <MagicIn show={show("services")} from="top" delay={10}>
-                      <div className="grid grid-cols-3 gap-px bg-slate-100 dark:bg-white/5 border-y border-slate-100 dark:border-white/5">
-                        {[
-                          { v: "2.4k+", l: "Jobs done" },
-                          { v: "45 min", l: "Avg reply" },
-                          { v: "100%", l: "Insured" },
-                        ].map((s) => (
-                          <div key={s.l} className="bg-white dark:bg-[#0d1210] px-2 py-1.5 text-center">
-                            <p className="text-[10px] font-bold text-slate-900 dark:text-white leading-none">{s.v}</p>
-                            <p className="text-[7px] text-slate-400 mt-0.5">{s.l}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </MagicIn>
-
-                    {/* Services */}
-                    <MagicIn show={show("services")} from="right" delay={40}>
-                      <div
-                        ref={(el) => { if (el) sectionRefs.current.services = el; }}
-                        className={`px-2.5 py-2 transition-shadow duration-500 ${activeSection === "services" && building ? "mkt-section-active" : ""}`}
-                      >
-                        <div className="flex items-center justify-between mb-1.5 px-0.5">
-                          <p className="text-[9px] font-bold text-slate-800 dark:text-slate-100">Our services</p>
-                          <p className="text-[7px] font-semibold text-slate-400">All managed in admin</p>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {tpl.services.map((s, i) => {
-                            const Icon = s.icon;
-                            return (
-                              <div
-                                key={s.label}
-                                className="rounded-lg bg-slate-50 dark:bg-white/[0.04] p-2 ring-1 ring-slate-200/70 dark:ring-white/10"
-                                style={{
-                                  transition: `transform 0.6s cubic-bezier(0.16,1,0.3,1) ${70 + i * 70}ms, opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${70 + i * 70}ms`,
-                                  transform: show("services") ? "translateY(0)" : "translateY(10px)",
-                                  opacity: show("services") ? 1 : 0,
-                                }}
-                              >
-                                <div className={`w-5 h-5 rounded-md bg-gradient-to-br ${s.tone} flex items-center justify-center mb-1.5 shadow-sm`}>
-                                  <Icon className="w-2.5 h-2.5 text-white" />
-                                </div>
-                                <p className="text-[9px] font-bold text-slate-800 dark:text-white leading-none">{s.label}</p>
-                                <p className="text-[7px] text-slate-500 dark:text-slate-400 mt-0.5">{s.desc}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </MagicIn>
-
-                    {/* Gallery */}
-                    <MagicIn show={show("gallery")} from="left" delay={25}>
-                      <div
-                        ref={(el) => { if (el) sectionRefs.current.gallery = el; }}
-                        className={`px-2.5 pb-1.5 transition-shadow duration-500 ${activeSection === "gallery" && building ? "mkt-section-active" : ""}`}
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-[9px] font-bold text-slate-800 dark:text-slate-100">Featured work</p>
-                          <p className={`text-[8px] font-semibold ${lime ? "text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" : "text-teal-600 dark:text-teal-400"}`}>View gallery</p>
-                        </div>
-                        <div className="grid grid-cols-4 gap-1">
-                          {tpl.gallery.map((g, i) => (
-                            <div
-                              key={g.caption}
-                              className={`relative rounded-md overflow-hidden ring-1 ring-black/5 shadow-sm ${i === 0 ? "col-span-2 aspect-[2.1/1]" : "aspect-square"}`}
-                              style={{
-                                transition: `transform 0.6s cubic-bezier(0.16,1,0.3,1) ${i * 60}ms, opacity 0.6s cubic-bezier(0.16,1,0.3,1) ${i * 60}ms`,
-                                transform: show("gallery") ? "scale(1)" : "scale(0.9)",
-                                opacity: show("gallery") ? 1 : 0,
-                              }}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={g.src} alt={g.caption} className="absolute inset-0 w-full h-full object-cover" />
-                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/75 to-transparent px-1.5 py-1">
-                                <p className="text-[7px] font-semibold text-white truncate">{g.caption}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </MagicIn>
-
-                    {/* Review + CTA */}
-                    <div className="grid grid-cols-2 gap-1.5 px-2.5 pb-1.5">
-                      <MagicIn show={show("reviews")} from="right" delay={20}>
-                        <div
-                          ref={(el) => { if (el) sectionRefs.current.reviews = el; }}
-                          className={`rounded-lg bg-slate-950 p-2.5 flex gap-2 items-start h-full shadow-sm transition-shadow duration-500 ${
-                            activeSection === "reviews" && building ? "mkt-section-active" : ""
-                          }`}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={tpl.review.avatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 ring-2 ring-[var(--mkt-accent)]/50" />
-                          <div className="min-w-0">
-                            <div className="flex gap-0.5 mb-1">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star key={i} className="w-2 h-2 text-[var(--mkt-accent-text)] fill-[var(--mkt-accent)]" />
-                              ))}
-                            </div>
-                            <p className="text-[8px] text-white/90 italic leading-snug">“{tpl.review.text}”</p>
-                            <p className="text-[7px] text-white/40 mt-1">{tpl.review.name} · {tpl.review.role}</p>
-                          </div>
-                        </div>
-                      </MagicIn>
-
-                      <MagicIn show={show("cta")} from="left" delay={20}>
-                        <div
-                          ref={(el) => { if (el) sectionRefs.current.cta = el; }}
-                          className={`rounded-lg px-2.5 py-2.5 flex flex-col justify-center h-full shadow-sm ${
-                            lime ? "bg-[var(--mkt-accent)]" : "bg-teal-400"
-                          } transition-shadow duration-500 ${activeSection === "cta" && building ? "mkt-section-active" : ""}`}
-                        >
-                          <p className="text-[10px] font-bold text-slate-950 leading-tight">Ready when you are</p>
-                          <p className="text-[7px] text-slate-800/70 mt-0.5">Free quote · Instant reply · Admin inbox</p>
-                          <div className="mt-2 h-5 w-fit px-2 rounded-md bg-slate-950 text-white text-[7px] font-bold flex items-center">{tpl.cta}</div>
-                        </div>
-                      </MagicIn>
-                    </div>
-
-                    {/* Footer */}
-                    <MagicIn show={show("cta")} from="bottom" delay={40}>
-                      <div className="border-t border-white/5 px-2.5 py-1.5 flex items-center justify-between gap-2 bg-slate-950">
-                        <div className="flex items-center gap-x-3 text-[7px] text-white/50">
-                          <span className="inline-flex items-center gap-0.5"><Phone className="w-2 h-2" /> +91 98765 43210</span>
-                          <span className="inline-flex items-center gap-0.5"><Mail className="w-2 h-2" /> hello@{tpl.domain}</span>
-                          <span className="inline-flex items-center gap-0.5"><MapPin className="w-2 h-2" /> Delhi NCR</span>
-                        </div>
-                        <p className="text-[7px] text-white/30">© {tpl.name}</p>
-                      </div>
-                    </MagicIn>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={`absolute right-3 top-10 z-30 w-36 rounded-lg mkt-glass-toast p-2 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  phase === "live" ? "opacity-100 translate-x-0 scale-100" : "opacity-0 translate-x-4 scale-90"
-                }`}
-              >
-                <div className="flex items-center gap-1 mb-0.5">
-                  <MessageSquare className="w-2.5 h-2.5 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
-                  <p className="text-[8px] font-bold text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]">New lead</p>
-                </div>
-                <p className="text-[9px] font-semibold text-slate-800 dark:text-white">{tpl.lead.name}</p>
-                <p className="text-[7px] text-slate-500 dark:text-slate-400">{tpl.lead.note} · Just now</p>
-              </div>
-
-              <BuildCursor phase={phase} />
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
-    </div>
-  );
-}
-
-function MagicIn({
-  show, from, delay = 0, className = "", children,
-}: {
-  show: boolean;
-  from: "left" | "right" | "top" | "bottom";
-  delay?: number;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  const hidden =
-    from === "left" ? "translateX(-12px)"
-      : from === "right" ? "translateX(12px)"
-        : from === "top" ? "translateY(-6px)"
-          : "translateY(8px)";
-
-  return (
-    <div
-      className={className}
-      style={{
-        transition: `transform 0.8s cubic-bezier(0.22,1,0.36,1) ${delay}ms, opacity 0.6s ease-out ${delay}ms`,
-        transform: show ? "translate(0,0)" : hidden,
-        opacity: show ? 1 : 0,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function BuildCursor({ phase }: { phase: Phase }) {
-  const map: Record<Phase, { x: string; y: string; click?: boolean }> = {
-    blank: { x: "50%", y: "45%" },
-    shell: { x: "40%", y: "10%" },
-    sidebar: { x: "10%", y: "32%", click: true },
-    canvas: { x: "55%", y: "40%" },
-    hero: { x: "35%", y: "28%", click: true },
-    services: { x: "70%", y: "48%", click: true },
-    gallery: { x: "45%", y: "62%", click: true },
-    reviews: { x: "38%", y: "78%", click: true },
-    cta: { x: "78%", y: "78%", click: true },
-    live: { x: "88%", y: "22%" },
-    reset: { x: "50%", y: "50%" },
-  };
-  const p = map[phase];
-  // Full-size layer translated by % of itself == % of the canvas, so the move stays on the GPU.
-  return (
-    <div
-      className="absolute inset-0 z-40 pointer-events-none transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
-      style={{ transform: `translate(${p.x}, ${p.y})` }}
-    >
-      <div className="relative w-fit drop-shadow-md">
-        <svg key={phase} width="14" height="14" viewBox="0 0 24 24" className={p.click ? "mkt-click" : ""}>
-          <path d="M5 3l14 8.5-6.2 1.4L10 21 5 3z" className="fill-slate-900 dark:fill-white" />
-        </svg>
-        {p.click && <span key={`r-${phase}`} className="absolute -left-0.5 -top-0.5 w-3 h-3 rounded-full border border-[var(--mkt-accent)]/70 mkt-ripple" />}
-      </div>
-    </div>
   );
 }

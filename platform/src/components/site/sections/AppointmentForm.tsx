@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { submitAppointment, type FormState } from "@/lib/actions/site";
 import { Icon } from "../Icon";
+import { PrivacyConsent } from "../PrivacyConsent";
 
 const initial: FormState = { ok: false, message: "" };
 
@@ -51,6 +52,7 @@ export function AppointmentForm({ serviceOptions }: { serviceOptions: string[] }
         {pending ? "Booking..." : "Book Appointment"}
         {!pending && <Icon name="arrow" className="w-4 h-4" />}
       </button>
+      <PrivacyConsent />
     </form>
   );
 }

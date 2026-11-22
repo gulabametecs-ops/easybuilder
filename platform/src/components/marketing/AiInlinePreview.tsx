@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Monitor, Smartphone } from "lucide-react";
 import type { WebsiteBlueprint } from "@/lib/ai/blueprintSchema";
 import { blueprintStats } from "@/lib/ai/blueprintPreview";
@@ -14,8 +15,8 @@ export function AiInlinePreview({ blueprint, initialSlug }: { blueprint: Website
   const activePage = stats.pages[pageIdx] ?? stats.pages[0];
 
   return (
-    <div className="flex flex-col h-full min-h-[520px] bg-slate-200/80 dark:bg-slate-900">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-[var(--mkt-border)] bg-[var(--mkt-surface)]">
+    <div className="flex h-full min-h-0 flex-col bg-slate-200/80 dark:bg-slate-900">
+      <div className="flex shrink-0 items-center gap-2 px-3 py-2 border-b border-[var(--mkt-border)] bg-[var(--mkt-surface)]">
         <div className="flex rounded-lg border border-[var(--mkt-border)] p-0.5">
           <button
             type="button"
@@ -49,21 +50,54 @@ export function AiInlinePreview({ blueprint, initialSlug }: { blueprint: Website
           ))}
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-3 flex justify-center">
-        <div className={`bg-white overflow-hidden shadow-lg ${device === "mobile" ? "w-[390px] rounded-xl" : "w-full rounded-lg [zoom:0.8]"}`}>
-          {activePage && (
-            <AiBlueprintLivePreview
-              blueprint={blueprint}
-              compact={device === "mobile"}
-              pageSlug={activePage.slug}
-              onNavigate={(slug) => {
-                const i = stats.pages.findIndex((p) => p.slug === slug);
-                if (i >= 0) setPageIdx(i);
-              }}
-            />
-          )}
-        </div>
+      <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto overscroll-contain p-3">
+        {activePage &&
+          (() => {
+            const site = (
+              <AiBlueprintLivePreview
+                blueprint={blueprint}
+                compact={device === "mobile"}
+                pageSlug={activePage.slug}
+                onNavigate={(slug) => {
+                  const i = stats.pages.findIndex((p) => p.slug === slug);
+                  if (i >= 0) setPageIdx(i);
+                }}
+              />
+            );
+            return device === "mobile" ? (
+              // A real 390px viewport, so the site's sm:/lg: breakpoints switch to mobile.
+              <div className="h-fit rounded-[2.2rem] bg-[#0b0b12] p-2.5 shadow-2xl ring-1 ring-black/10">
+                <FrameViewport title="Phone preview" className="block h-[760px] max-h-[calc(100vh/var(--mkt-zoom,1)-14rem)] w-[375px] rounded-[1.7rem] border-0 bg-white">
+                  {site}
+                </FrameViewport>
+              </div>
+            ) : (
+              <div className="w-full overflow-hidden rounded-lg bg-white shadow-lg [zoom:0.8]">{site}</div>
+            );
+          })()}
       </div>
     </div>
+  );
+}
+
+/** Renders children inside an iframe (own viewport), copying the page's styles in. */
+function FrameViewport({ children, title, className }: { children: ReactNode; title: string; className?: string }) {
+  const [mount, setMount] = useState<HTMLElement | null>(null);
+
+  // ponytail: styles copied once on load; a dev hot-reload of CSS needs a device toggle to refresh
+  const onLoad = (e: React.SyntheticEvent<HTMLIFrameElement>) => {
+    const doc = e.currentTarget.contentDocument;
+    if (!doc) return;
+    document.querySelectorAll('link[rel="stylesheet"], style').forEach((n) => doc.head.appendChild(n.cloneNode(true)));
+    doc.documentElement.className = document.documentElement.className.replace(/dark/, "");
+    doc.body.className = document.body.className;
+    doc.body.style.margin = "0";
+    setMount(doc.body);
+  };
+
+  return (
+    <iframe title={title} className={className} onLoad={onLoad} srcDoc="<!doctype html><html><head></head><body></body></html>">
+      {mount && createPortal(children, mount)}
+    </iframe>
   );
 }

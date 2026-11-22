@@ -37,7 +37,12 @@ Rules:
 - "Add a <something> section": add that section to an EXISTING page (the Home page unless the user names a page) and return that page. Only create a new page when the user explicitly says "page".
 - New page: add it to "pages" with a new unique lowercase slug.
 - Never return pages you did not change. Keep text fields under 120 characters.
-- sectionType must be from the available section types (e.g. faq, testimonials, pricingPlans, gallery, contactForm).`;
+- sectionType must be from the available section types (e.g. faq, testimonials, pricingPlans, priceList, gallery, contactForm).
+- Menu / price list / rate card → sectionType "priceList" with content EXACTLY like:
+  {"title":"Our","titleHighlight":"Menu","note":"","groups":[{"category":"Starters","items":[{"name":"Paneer Tikka","price":"₹280","note":"6 pcs"}]}]}
+- FAQ content: {"title":"Frequently Asked","titleHighlight":"Questions","items":[{"q":"…","a":"…"}]}
+- When the user asks for N items, return exactly N realistic items with prices in ₹, grouped into sensible categories.
+- Words like "it / this / usme / isme / ispe" refer to the page given as "Current page".`;
 
 /** Merge a patch into the current blueprint; pages match by canonical slug. */
 /** Relative luminance 0 (black) – 1 (white) of a #rrggbb colour. */
@@ -82,11 +87,17 @@ function safeDesign(current: WebsiteBlueprint["design"], next: WebsiteBlueprint[
   return merged;
 }
 
-/** Only the pages the request is likely about go to the model in full; the rest as a summary. */
-function relevantPages(bp: WebsiteBlueprint, text: string): Page[] {
+/**
+ * Only the pages the request is likely about go to the model in full; the rest as a summary.
+ * `current` = the page the visitor is looking at / last changed, so "add 10 items to it" works.
+ */
+function relevantPages(bp: WebsiteBlueprint, text: string, current?: string): Page[] {
   const lower = text.toLowerCase();
   const named = bp.pages.filter((p) => lower.includes(p.name.toLowerCase()) || (p.slug && lower.includes(p.slug.toLowerCase())));
   if (named.length) return named;
+  const cur = current ? bp.pages.find((p) => canonicalPageSlug(p.slug || p.name, p.name) === canonicalPageSlug(current)) : undefined;
+  const pointsAtIt = /\b(it|this|that|here|usme|isme|ispe|uspe|isko|usko|iske|uske|yaha|yahan|is page|this page)\b/.test(lower);
+  if (cur && pointsAtIt && canonicalPageSlug(cur.slug || cur.name, cur.name) !== "home") return [cur];
   // Style-only requests need no page bodies at all.
   if (/\b(colou?r|theme|font|dark|light|style|palette)\b/.test(lower) && !/\b(section|page|add|remove|text|headline|title)\b/.test(lower)) return [];
   return bp.pages.filter((p) => canonicalPageSlug(p.slug || p.name, p.name) === "home");
@@ -96,11 +107,12 @@ function relevantPages(bp: WebsiteBlueprint, text: string): Page[] {
 export async function refinePublicBlueprint(
   blueprint: WebsiteBlueprint,
   changePrompt: string,
+  currentPage?: string,
 ): Promise<PublicModifyResult> {
   const text = changePrompt.trim().slice(0, MAX_PROMPT);
   if (text.length < 3) return { ok: false, error: "Describe what you want to change." };
 
-  const focus = relevantPages(blueprint, text);
+  const focus = relevantPages(blueprint, text, currentPage);
 
   try {
     const patch = await callGroqJson<BlueprintPatch>([
@@ -112,7 +124,7 @@ export async function refinePublicBlueprint(
 Site: ${blueprint.website.name} (${blueprint.website.type ?? "business"})
 Structure: ${compactBlueprintSummary(blueprint)}
 Current design: ${JSON.stringify(blueprint.design ?? {})}
-${focus.length ? `Pages you may need to edit (full JSON):\n${JSON.stringify(focus)}` : "No page content needed for this request."}
+${currentPage ? `Current page: ${currentPage}\n` : ""}${focus.length ? `Pages you may need to edit (full JSON):\n${JSON.stringify(focus)}` : "No page content needed for this request."}
 
 User requested change:
 ${text}
@@ -128,7 +140,12 @@ ${PATCH_INSTRUCTION}`,
     }
     return { ok: true, blueprint: enrichBlueprint(merged, text) };
   } catch (e) {
-    const msg = e instanceof GroqError ? friendlyGroqError(e) : "Update failed. Please try again.";
+    const msg =
+      e instanceof GroqError && /valid website plan/.test(e.message)
+        ? "That change was too big for one step — try naming the page, e.g. “add 10 items to the Menu price list”."
+        : e instanceof GroqError
+          ? friendlyGroqError(e)
+          : "Update failed. Please try again.";
     return { ok: false, error: msg };
   }
 }

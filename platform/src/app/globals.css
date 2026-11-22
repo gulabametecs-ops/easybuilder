@@ -43,15 +43,48 @@
   color: #f1f5f9;
   background-color: #1e293b;
 }
-.dark .admin-shell .bg-lime-50 { background-color: rgb(54 83 20 / 0.35); }
+.dark .admin-shell .bg-lime-50 { background-color: rgb(37 99 255 / 0.14); }
 .dark .admin-shell .bg-green-50 { background-color: rgb(6 78 59 / 0.35); }
 .dark .admin-shell .bg-amber-50 { background-color: rgb(120 53 15 / 0.35); }
 .dark .admin-shell .bg-rose-50 { background-color: rgb(136 19 55 / 0.35); }
-.dark .admin-shell .text-lime-700 { color: #bef264; }
+.dark .admin-shell .text-lime-700 { color: #a5b8ff; }
 .dark .admin-shell .text-green-700 { color: #6ee7b7; }
 .dark .admin-shell .text-amber-700 { color: #fcd34d; }
 .dark .admin-shell .text-rose-700 { color: #fda4af; }
-.dark .admin-shell .border-lime-200 { border-color: rgb(163 230 53 / 0.25); }
+.dark .admin-shell .border-lime-200 { border-color: rgb(37 99 255 / 0.3); }
+
+/* Client admin brand theme (SitePixl blue -> violet). The admin was built on the
+   `lime-*` utilities; remapping that palette here re-skins every admin page at once.
+   ponytail: palette remap instead of rewriting ~1k class names across 55 files. */
+.admin-brand {
+  --color-lime-50: #eef3ff;
+  --color-lime-100: #dfe7ff;
+  --color-lime-200: #c4d3ff;
+  --color-lime-300: #9cb3ff;
+  --color-lime-400: #6a8cff;
+  --color-lime-500: #2563ff;
+  --color-lime-600: #1d4fe6;
+  --color-lime-700: #1a40bd;
+  --color-lime-800: #1b3793;
+  --color-lime-900: #1c3274;
+  --color-lime-950: #141f45;
+  --admin-brand: #2563ff;
+  --admin-brand-2: #7c3aed;
+}
+.dark .admin-brand {
+  /* deep-navy surfaces for the client admin's dark mode */
+  --color-slate-950: #0b1020;
+  --color-slate-900: #111831;
+  --color-slate-800: #1a2340;
+  --color-lime-300: #b4c5ff;
+  --color-lime-400: #8ba5ff;
+  --color-lime-600: #5277ff;
+}
+.dark .admin-brand .admin-shell .bg-white { background-color: #111831; }
+.dark .admin-brand .admin-shell .bg-slate-50,
+.dark .admin-brand .admin-shell .bg-slate-100 { background-color: #1a2340; }
+.admin-grad { background-image: linear-gradient(110deg, var(--admin-brand), var(--admin-brand-2)); color: #fff; }
+.admin-grad-text { background-image: linear-gradient(110deg, var(--admin-brand), var(--admin-brand-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* Per-tenant theme variables are set inline on the .site-root wrapper
    (see src/app/_site/layout.tsx). Sensible fallbacks live here. */
@@ -153,6 +186,17 @@ body {
   --site-shadow-sm: 0 1px 0 rgb(255 255 255 / 0.04) inset;
   --site-shadow-lg: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 24px 48px -20px rgb(0 0 0 / 0.5);
   color: var(--c-text);
+}
+
+/* Brand-coloured words on dark / brand backgrounds (heading highlights, eyebrows): a dark
+   brand colour (forest green, navy…) or the same colour as the band vanishes there, so use a
+   light tint of it. Only headings and text lines — buttons keep their own colours. */
+:is(.site-on-dark, .site-root [data-bg="dark"]) :is(h1, h2, h3, h4) .text-primary,
+:is(.site-on-dark, .site-root [data-bg="dark"]) :is(h1, h2, h3, h4).text-primary,
+:is(.site-on-dark, .site-root [data-bg="dark"]) p.text-primary,
+:is(.site-on-dark, .site-root [data-bg="dark"]) span.text-primary[class*="tracking"],
+:is(.site-on-dark, .site-root [data-bg="dark"]) .site-eyebrow {
+  color: color-mix(in srgb, var(--c-primary) 30%, #fff);
 }
 
 /* Section style backgrounds (light/dark/primary, set by SectionRenderer as data-bg)
@@ -280,7 +324,8 @@ body {
 
 /* Glassy sticky header */
 .site-glass {
-  background: color-mix(in srgb, #fff 78%, transparent);
+  /* near-solid: a see-through header over a dark hero turned grey with grey links */
+  background: color-mix(in srgb, #fff 94%, transparent);
   -webkit-backdrop-filter: saturate(1.6) blur(14px);
   backdrop-filter: saturate(1.6) blur(14px);
 }
@@ -471,46 +516,52 @@ body {
 .mkt-root {
   font-family: var(--font-mkt-body), ui-sans-serif, system-ui, sans-serif;
 
-  /* Light — ivory paper, charcoal ink, terracotta highlight. */
-  --mkt-bg: #f4f0e8;
-  --mkt-bg-alt: #ebe5d9;
-  --mkt-surface: #fffdf8;
-  --mkt-surface-muted: #f7f2e8;
-  --mkt-border: #e4dccf;
-  --mkt-border-strong: #d2c8b8;
-  --mkt-text: #161410;
-  --mkt-text-secondary: #4a453c;
-  --mkt-text-muted: #7a7368;
-  --mkt-accent: #1c1915;
-  --mkt-accent-hover: #3a342c;
-  --mkt-accent-2: #c45c26;
-  --mkt-accent-on: #f4f0e8;
-  --mkt-accent-text: #9a3b12;
-  --mkt-accent-soft: #f3e0d2;
-  --mkt-header-bg: rgba(244, 240, 232, 0.86);
-  --mkt-card-shadow: 0 1px 2px rgba(22, 20, 16, 0.05), 0 18px 40px -28px rgba(22, 20, 16, 0.28);
-  --mkt-ink: #161410;
+  /* Light — paper white, deep ink, cobalt highlight. */
+  --mkt-bg: #ffffff;
+  --mkt-bg-alt: #f6f7fb;
+  --mkt-surface: #ffffff;
+  --mkt-surface-muted: #f7f8fb;
+  --mkt-border: #e6e8ef;
+  --mkt-border-strong: #d3d7e2;
+  --mkt-text: #0a0d14;
+  --mkt-text-secondary: #3a4152;
+  --mkt-text-muted: #687085;
+  --mkt-accent: #0a0d14;
+  --mkt-accent-hover: #232838;
+  --mkt-accent-2: #2f5bff;
+  --mkt-accent-on: #ffffff;
+  --mkt-accent-text: #2448e0;
+  --mkt-accent-soft: #eef2ff;
+  --mkt-header-bg: rgba(255, 255, 255, 0.82);
+  --mkt-card-shadow: 0 1px 2px rgba(10, 13, 20, 0.04), 0 12px 32px -18px rgba(10, 13, 20, 0.16);
+  --mkt-ink: #0a0d14;
+  --mkt-brand: #2f5bff;
+  --mkt-brand-2: #7c3aed; /* violet — the logo runs blue → violet */
+  --mkt-grid-line: rgba(10, 13, 20, 0.05);
 }
 
 .dark .mkt-root {
-  --mkt-bg: #12110f;
-  --mkt-bg-alt: #1a1815;
-  --mkt-surface: #1e1c18;
-  --mkt-surface-muted: #171512;
+  --mkt-bg: #070910;
+  --mkt-bg-alt: #0b0e17;
+  --mkt-surface: #10131d;
+  --mkt-surface-muted: #0d1019;
   --mkt-border: rgba(255, 255, 255, 0.08);
   --mkt-border-strong: rgba(255, 255, 255, 0.14);
-  --mkt-text: #f4f0e8;
-  --mkt-text-secondary: #d4cec4;
-  --mkt-text-muted: #9c958a;
-  --mkt-accent: #f4f0e8;
-  --mkt-accent-hover: #e4dccf;
-  --mkt-accent-2: #e08a58;
-  --mkt-accent-on: #161410;
-  --mkt-accent-text: #e08a58;
-  --mkt-accent-soft: rgba(196, 92, 38, 0.16);
-  --mkt-header-bg: rgba(18, 17, 15, 0.88);
-  --mkt-card-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
-  --mkt-ink: #0c0b0a;
+  --mkt-text: #f4f6fb;
+  --mkt-text-secondary: #c7ccd9;
+  --mkt-text-muted: #8a91a5;
+  --mkt-accent: #f4f6fb;
+  --mkt-accent-hover: #d9deea;
+  --mkt-accent-2: #5b7cff;
+  --mkt-accent-on: #0a0d14;
+  --mkt-accent-text: #8ea6ff;
+  --mkt-accent-soft: rgba(47, 91, 255, 0.16);
+  --mkt-header-bg: rgba(7, 9, 16, 0.8);
+  --mkt-card-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  --mkt-ink: #05070c;
+  --mkt-brand: #5b7cff;
+  --mkt-brand-2: #a78bfa;
+  --mkt-grid-line: rgba(255, 255, 255, 0.045);
 }
 
 /* Keep autofill from flashing wrong on marketing forms */
@@ -529,21 +580,21 @@ body {
 }
 .mkt-root .font-display,
 .font-display {
-  font-family: var(--font-mkt-display), ui-serif, Georgia, serif;
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-family: var(--font-mkt-display), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.035em;
 }
 
 /* Hero ambient wash + soft orbs */
 .mkt-hero-wash {
   background:
-    radial-gradient(ellipse 70% 50% at 85% 0%, rgba(196, 92, 38, 0.1), transparent 55%),
-    linear-gradient(180deg, #ebe5d9 0%, #f4f0e8 68%);
+    radial-gradient(ellipse 60% 55% at 50% -10%, rgba(47, 91, 255, 0.1), transparent 60%),
+    linear-gradient(180deg, #f6f6fa 0%, #ffffff 70%);
 }
 .dark .mkt-hero-wash {
   background:
-    radial-gradient(ellipse 70% 50% at 85% 0%, rgba(224, 138, 88, 0.08), transparent 55%),
-    linear-gradient(180deg, #1a1815 0%, #12110f 70%);
+    radial-gradient(ellipse 60% 55% at 50% -10%, rgba(91, 124, 255, 0.14), transparent 60%),
+    linear-gradient(180deg, #0d0d15 0%, #07070c 70%);
 }
 
 .mkt-hero-orb {
@@ -740,7 +791,7 @@ body {
   width: 1.35rem;
   height: 1.35rem;
   border-radius: 0.4rem;
-  background: #c45c26;
+  background: #2f5bff;
   animation: mkt-logo-pop 4s ease-in-out infinite;
 }
 
@@ -758,7 +809,7 @@ body {
   width: 4.5rem;
   height: 1.5rem;
   border-radius: 0.45rem;
-  background: #c45c26;
+  background: #2f5bff;
   animation: mkt-pill-flash 3.2s ease-in-out infinite;
 }
 .dark .mkt-build-pill {
@@ -835,7 +886,7 @@ body {
 }
 .mkt-sec-d > span:last-child {
   border-radius: 0.55rem;
-  background: #c45c26;
+  background: #2f5bff;
 }
 .dark .mkt-sec-d > span:first-child {
   background: rgba(255, 255, 255, 0.1);
@@ -848,7 +899,7 @@ body {
 }
 .mkt-float-1 {
   width: 4.5rem; height: 2.4rem; left: 8%; top: 58%;
-  background: #c45c26;
+  background: #2f5bff;
   animation: mkt-float-in-1 5s ease-in-out infinite;
 }
 .mkt-float-2 {
@@ -885,14 +936,14 @@ body {
   86% { transform: scale(1); }
 }
 @keyframes mkt-pill-flash {
-  0%, 60%, 100% { background: #c45c26; transform: scaleX(1); }
+  0%, 60%, 100% { background: #2f5bff; transform: scaleX(1); }
   70% { background: #0f172a; transform: scaleX(1.08); }
-  80% { background: #c45c26; transform: scaleX(1); }
+  80% { background: #2f5bff; transform: scaleX(1); }
 }
 @keyframes mkt-pill-flash-dark {
-  0%, 60%, 100% { background: #c45c26; transform: scaleX(1); }
+  0%, 60%, 100% { background: #2f5bff; transform: scaleX(1); }
   70% { background: #f8fafc; transform: scaleX(1.08); }
-  80% { background: #c45c26; transform: scaleX(1); }
+  80% { background: #2f5bff; transform: scaleX(1); }
 }
 @keyframes mkt-sec-a {
   0%, 100% { height: 5.5rem; opacity: 1; transform: translateY(0); }
@@ -1063,6 +1114,31 @@ body::-webkit-scrollbar,
   from { opacity: 0; transform: translateY(0.35em); filter: blur(4px); }
   to { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
+/* Premium dark hero */
+.mkt-hero-dark { background: var(--mkt-bg); }
+.mkt-hero-grid {
+  background-image:
+    linear-gradient(var(--mkt-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--mkt-grid-line) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 30%, transparent 75%);
+}
+.mkt-hero-glow {
+  background:
+    radial-gradient(ellipse 45% 55% at 50% -5%, rgba(47, 91, 255, 0.16), transparent 70%),
+    radial-gradient(ellipse 30% 35% at 80% 8%, rgba(8, 145, 178, 0.12), transparent 70%),
+    radial-gradient(ellipse 30% 35% at 20% 10%, rgba(99, 102, 241, 0.08), transparent 70%);
+}
+.mkt-hero-frame-glow {
+  background: radial-gradient(ellipse 60% 50% at 50% 60%, rgba(47, 91, 255, 0.22), transparent 70%);
+  filter: blur(40px);
+}
+.mkt-gradient-text {
+  background: linear-gradient(100deg, var(--mkt-brand) 0%, var(--mkt-brand-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 .mkt-word-in { animation: mkt-word-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
 @keyframes mkt-float {
   0%, 100% { transform: translateY(0); }
@@ -1083,7 +1159,7 @@ body::-webkit-scrollbar,
   background-image: none;
 }
 .dark .mkt-sec-glow {
-  background-image: radial-gradient(60% 45% at 50% 0%, rgba(224, 138, 88, 0.08), transparent 70%);
+  background-image: radial-gradient(60% 45% at 50% 0%, rgba(47, 91, 255, 0.09), transparent 70%);
 }
 .mkt-marquee-mask {
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
@@ -1098,3 +1174,211 @@ body::-webkit-scrollbar,
 @media (prefers-reduced-motion: reduce) {
   .mkt-marquee { animation: none; flex-wrap: wrap; justify-content: center; width: auto; }
 }
+
+/* AI builder: preview canvas dots + brand kit on the dark composer */
+.mkt-canvas {
+  background-color: var(--mkt-surface-muted);
+  background-image: radial-gradient(var(--mkt-border-strong) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+/* Brand gradient (buttons, badges, step numbers) — change the theme via --mkt-brand / --mkt-brand-2 */
+.mkt-brand-grad { background-image: linear-gradient(100deg, var(--mkt-brand), var(--mkt-brand-2)); color: #fff; }
+.mkt-beam { background: linear-gradient(90deg, transparent, var(--mkt-brand) 50%, transparent); }
+
+/* Hero: hand-drawn underline that draws itself */
+@keyframes mkt-draw { from { stroke-dashoffset: 420; } to { stroke-dashoffset: 0; } }
+.mkt-draw { stroke-dasharray: 420; animation: mkt-draw 0.9s cubic-bezier(0.65, 0, 0.35, 1) both; }
+@keyframes mkt-pop { from { opacity: 0; transform: translateY(14px) scale(0.96); } to { opacity: 1; transform: none; } }
+.mkt-pop { animation: mkt-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) { .mkt-draw, .mkt-pop { animation: none; } }
+
+/* Marketing site renders at 90% on desktop (same look as browser zoom 90%).
+   Viewport-height units are compensated so full-height areas still fill the screen. */
+@media (min-width: 1024px) {
+  .mkt-root { --mkt-zoom: 0.9; zoom: var(--mkt-zoom); min-height: calc(100vh / var(--mkt-zoom)); }
+}
+
+/* ─── SitePixl logo animation: build → pixels → click → colour ───────────────
+   Layers: grey ghost · colour body (clip-revealed) · scan line · 4 live pixels · cursor · flash.
+   Logo (header etc.) plays the sequence ONCE on page load, then rests:
+     0.2s  colour fills the grey blueprint bottom→top behind a glowing scan line
+     1.1s  pixels snap into place one by one
+     1.5s  cursor glides into the window, 2.1s clicks → light burst + colour wave + coloured sheen
+     then: pixels breathe, sheen every few seconds, an occasional click.
+   Loader (.spx-loader) loops the whole sequence every 4.4s.
+   Spinner (.spx-spinner): the mark turns like a coin. */
+.spx-mark { perspective: 600px; transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+.spx-logo:hover .spx-mark { transform: translateY(-1px) scale(1.04); }
+
+.spx-ghost { filter: grayscale(1) brightness(1.25); opacity: 0; }
+.spx-scan {
+  top: 100%;
+  background: linear-gradient(90deg, transparent, #7dd3fc 20%, #ffffff 50%, #c4b5fd 80%, transparent);
+  box-shadow: 0 0 10px 2px rgba(56, 189, 248, 0.7);
+  opacity: 0;
+}
+.spx-flash {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(56, 189, 248, 0.55) 30%, rgba(124, 58, 237, 0.25) 55%, transparent 70%);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.2);
+  mix-blend-mode: screen;
+}
+.spx-pix {
+  transform-origin: center;
+  animation: spx-breathe 3.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.35s);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.spx-logo:hover .spx-pix { animation: none; transform: translate(calc(var(--bx) * 0.22), calc(var(--by) * 0.22)); }
+.spx-sheen {
+  background: linear-gradient(110deg, transparent 38%, rgba(125, 211, 252, 0.75) 46%, rgba(255, 255, 255, 0.85) 50%, rgba(196, 181, 253, 0.75) 54%, transparent 62%) no-repeat;
+  background-size: 260% 100%;
+  background-position: 160% 0;
+  animation: spx-sheen 7s ease-in-out 3s infinite;
+}
+.spx-logo:hover .spx-sheen { animation: spx-sheen-once 0.9s ease-out; }
+.spx-cursor-arrow { transform-origin: 0 0; animation: spx-click 7s ease-in-out 4s infinite; }
+.spx-ripple {
+  left: 0; top: 0; height: 80%; aspect-ratio: 1;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  opacity: 0; transform: translate(-50%, -50%) scale(0);
+  animation: spx-ripple 7s ease-out 4s infinite;
+}
+.spx-logo:hover .spx-cursor-arrow { animation: spx-click-once 0.45s ease-in-out; }
+.spx-logo:hover .spx-ripple { animation: spx-ripple-once 0.7s ease-out 0.15s; }
+
+@keyframes spx-ghost { 0% { opacity: 0; } 15% { opacity: 0.4; } 70% { opacity: 0.4; } 100% { opacity: 0; } }
+@keyframes spx-build { from { clip-path: inset(100% 0 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes spx-scan { 0% { top: 97%; opacity: 1; } 90% { top: 0%; opacity: 1; } 100% { top: 0%; opacity: 0; } }
+@keyframes spx-colorwave {
+  0%, 100% { filter: none; }
+  35% { filter: hue-rotate(40deg) saturate(1.5) brightness(1.15); }
+  65% { filter: hue-rotate(-25deg) saturate(1.3) brightness(1.08); }
+}
+@keyframes spx-flash {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+@keyframes spx-pix-snap {
+  from { opacity: 0; transform: translateY(-120%) scale(0.3) rotate(-45deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes spx-breathe { 0%, 100% { transform: none; opacity: 1; } 50% { transform: scale(0.82); opacity: 0.75; } }
+@keyframes spx-sheen { 0%, 78% { background-position: 160% 0; } 100% { background-position: -60% 0; } }
+@keyframes spx-sheen-once { from { background-position: 160% 0; } to { background-position: -60% 0; } }
+@keyframes spx-glide { from { opacity: 0; transform: translate(130%, 100%); } to { opacity: 1; transform: none; } }
+@keyframes spx-click-once { 0%, 100% { transform: none; } 40% { transform: translate(4%, 3%) scale(0.82); } }
+@keyframes spx-click { 0%, 84%, 100% { transform: none; } 88% { transform: translate(4%, 3%); } 91% { transform: translate(4%, 3%) scale(0.86); } 95% { transform: none; } }
+@keyframes spx-ripple-once { 0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.2); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); } }
+@keyframes spx-ripple { 0%, 90% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); } 91% { opacity: 0.9; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
+
+/* ─── Loader: the same story on a 4.4s loop ─── */
+.spx-loader-screen { animation: spx-fade 0.3s ease-out 0.1s both; }
+.spx-loader .spx-mark { animation: spx-float 4.4s ease-in-out infinite; }
+.spx-loader .spx-ghost { animation: spx-l-ghost 4.4s ease-out infinite; }
+.spx-loader .spx-build { animation: spx-l-build 4.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.spx-loader .spx-scan { animation: spx-l-scan 4.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.spx-loader .spx-pix {
+  transition: none;
+  animation: spx-l-pix 4.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  animation-delay: calc(var(--i) * 0.09s);
+}
+.spx-loader .spx-cursor { animation: spx-l-cursor 4.4s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.spx-loader .spx-cursor-arrow { animation: spx-l-click 4.4s ease-in-out infinite; }
+.spx-loader .spx-ripple { animation: spx-l-ripple 4.4s ease-out infinite; }
+.spx-loader .spx-flash { animation: spx-l-flash 4.4s ease-out infinite; }
+.spx-loader .spx-body { animation: spx-l-color 4.4s ease-out infinite; }
+.spx-loader .spx-sheen { animation: spx-l-sheen 4.4s ease-out infinite; }
+@keyframes spx-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes spx-l-ghost { 0% { opacity: 0; } 5%, 30% { opacity: 0.4; } 40%, 100% { opacity: 0; } }
+@keyframes spx-l-build { 0%, 3% { clip-path: inset(100% 0 0 0); opacity: 1; } 26%, 88% { clip-path: inset(0 0 0 0); opacity: 1; } 97%, 100% { clip-path: inset(0 0 0 0); opacity: 0; } }
+@keyframes spx-l-scan { 0%, 3% { top: 97%; opacity: 1; } 25% { top: 0%; opacity: 1; } 28%, 100% { top: 0%; opacity: 0; } }
+@keyframes spx-l-pix {
+  0%, 26% { opacity: 0; transform: translateY(-120%) scale(0.3) rotate(-45deg); }
+  34%, 88% { opacity: 1; transform: none; }
+  97%, 100% { opacity: 0; transform: scale(0.4); }
+}
+@keyframes spx-l-cursor {
+  0%, 36% { opacity: 0; transform: translate(130%, 100%); }
+  46%, 88% { opacity: 1; transform: none; }
+  97%, 100% { opacity: 0; transform: none; }
+}
+@keyframes spx-l-click { 0%, 48%, 56%, 100% { transform: none; } 52% { transform: translate(4%, 3%) scale(0.82); } }
+@keyframes spx-l-ripple { 0%, 52% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); } 53% { opacity: 0.95; } 70%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); } }
+@keyframes spx-l-flash { 0%, 52% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); } 57% { opacity: 1; } 72%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
+@keyframes spx-l-color { 0%, 52%, 76%, 100% { filter: none; } 60% { filter: hue-rotate(40deg) saturate(1.5) brightness(1.15); } 68% { filter: hue-rotate(-25deg) saturate(1.3) brightness(1.08); } }
+@keyframes spx-l-sheen { 0%, 54% { background-position: 160% 0; } 74%, 100% { background-position: -60% 0; } }
+
+.spx-wipe { animation: spx-wipe 0.9s cubic-bezier(0.65, 0, 0.35, 1) 1.2s both; }
+.spx-progress { animation: spx-fade-up 0.5s ease-out 1.5s both; }
+.spx-progress > span { animation: spx-bar 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+@keyframes spx-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spx-wipe { from { clip-path: inset(0 100% 0 0); opacity: 0.4; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+@keyframes spx-fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes spx-bar { from { transform: translateX(-110%); } to { transform: translateX(320%); } }
+.spx-loader-glow { background: radial-gradient(circle, #2563ff 0%, #7c3aed 55%, transparent 72%); animation: spx-glow 4.4s ease-in-out infinite; }
+.spx-loader-ring {
+  background: conic-gradient(from 0deg, transparent 0 60%, #16b6ff 75%, #2563ff 87%, #7c3aed 97%, transparent 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  animation: spx-orbit 1.6s linear infinite;
+}
+.spx-loader-shadow { background: radial-gradient(ellipse, rgba(37, 99, 255, 0.3), transparent 70%); animation: spx-shadow 4.4s ease-in-out infinite; }
+@keyframes spx-orbit { to { transform: rotate(360deg); } }
+@keyframes spx-glow { 0%, 50%, 100% { opacity: 0.16; transform: scale(0.9); } 58% { opacity: 0.45; transform: scale(1.15); } }
+@keyframes spx-shadow { 0%, 100% { opacity: 1; transform: scaleX(1); } 50% { opacity: 0.55; transform: scaleX(0.8); } }
+
+/* Button spinner */
+.spx-spinner { perspective: 60px; }
+.spx-spinner .spx-mark { animation: spx-flip 1.2s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+@keyframes spx-flip { 0% { transform: rotateY(0deg); } 50% { transform: rotateY(180deg); opacity: 0.75; } 100% { transform: rotateY(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spx-mark, .spx-ghost, .spx-build, .spx-scan, .spx-body, .spx-flash, .spx-pix, .spx-sheen, .spx-cursor, .spx-cursor-arrow,
+  .spx-ripple, .spx-loader-screen, .spx-wipe, .spx-progress, .spx-progress > span, .spx-loader-glow, .spx-loader-ring,
+  .spx-loader-shadow, .spx-loader .spx-mark, .spx-loader .spx-ghost, .spx-loader .spx-build, .spx-loader .spx-scan,
+  .spx-loader .spx-pix, .spx-loader .spx-cursor, .spx-loader .spx-cursor-arrow, .spx-loader .spx-ripple,
+  .spx-loader .spx-flash, .spx-loader .spx-body, .spx-loader .spx-sheen, .spx-spinner .spx-mark { animation: none; transition: none; }
+  .spx-ghost, .spx-scan, .spx-flash { display: none; }
+}
+
+/* Page intro (components/PageIntro.tsx) — THE load animation (1.5s), then fade out:
+   0–0.35s pop in · 0.15–0.8s colour fills the blueprint behind a scan line · 0.75–1.05s pixels
+   snap in · 0.95s cursor glides in · 1.15s click → light burst + colour wave + sheen · 1.35s fade. */
+.spx-intro { transition: opacity 0.45s ease, visibility 0.45s, backdrop-filter 0.45s; }
+.spx-intro-out { opacity: 0; visibility: hidden; backdrop-filter: blur(0); }
+/* still loading after the 1.5s story → a slim progress bar fades in */
+.spx-intro-bar { opacity: 0; animation: spx-fade 0.3s ease-out 1.6s both; }
+.spx-intro-bar > span { animation: spx-bar 1.2s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+.spx-intro-glow { background: radial-gradient(circle, #2563ff 0%, #7c3aed 55%, transparent 72%); opacity: 0.2; animation: spx-intro-glow 1.5s ease-out both; }
+@keyframes spx-intro-glow { 0% { opacity: 0; transform: scale(0.6); } 40% { opacity: 0.25; transform: scale(1); } 78% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 0.2; transform: scale(1); } }
+.spx-quick .spx-mark { animation: spx-intro-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes spx-intro-pop { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: none; } }
+.spx-quick .spx-ghost { animation: spx-ghost 0.9s ease-out 0.05s both; }
+.spx-quick .spx-build { animation: spx-build 0.65s cubic-bezier(0.65, 0, 0.35, 1) 0.15s both; }
+.spx-quick .spx-scan { animation: spx-scan 0.65s cubic-bezier(0.65, 0, 0.35, 1) 0.15s both; }
+.spx-quick .spx-pix { animation: spx-pix-snap 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(0.75s + var(--i) * 0.07s); }
+.spx-quick .spx-cursor { animation: spx-glide 0.3s cubic-bezier(0.22, 1, 0.36, 1) 0.9s both; }
+.spx-quick .spx-cursor-arrow { animation: spx-click-once 0.22s ease-in-out 1.15s both; }
+.spx-quick .spx-ripple { animation: spx-ripple-once 0.4s ease-out 1.2s both; }
+.spx-quick .spx-flash { animation: spx-flash 0.4s ease-out 1.2s both; }
+.spx-quick .spx-body { animation: spx-colorwave 0.4s ease-out 1.2s both; }
+.spx-quick .spx-sheen { animation: spx-sheen-once 0.4s ease-out 1.2s both; }
+@media (prefers-reduced-motion: reduce) { .spx-intro { display: none; } }
+
+/* AI build log (AiBuildAnimation) */
+.ai-log-line { animation: spx-fade-up 0.35s ease-out both; }
+.ai-caret { margin-left: 2px; animation: ai-blink 0.9s steps(1) infinite; }
+@keyframes ai-blink { 50% { opacity: 0; } }
+.ai-bar-shine { background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent); animation: ai-shine 1.4s linear infinite; }
+@keyframes ai-shine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.ai-ghost { animation: ai-ghost 1.6s ease-in-out infinite; }
+@keyframes ai-ghost { 50% { opacity: 0.45; } }
+.ai-update { animation: spx-fade 0.25s ease-out both; }
+/* preview remounts after an AI change: soft "refreshed" reveal */
+.ai-refreshed { animation: ai-refreshed 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes ai-refreshed { from { opacity: 0; filter: blur(6px); transform: scale(0.985); } to { opacity: 1; filter: none; transform: none; } }
+.ai-toast { animation: spx-fade-up 0.35s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .ai-log-line, .ai-caret, .ai-bar-shine, .ai-ghost, .ai-update, .ai-refreshed, .ai-toast { animation: none; } }

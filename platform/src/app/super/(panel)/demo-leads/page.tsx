@@ -1,75 +1,158 @@
+import Link from "next/link";
+import { Mail, MessageCircle, Phone } from "lucide-react";
 import { db } from "@/lib/db";
+import { sweepExpiredDemoSessions } from "@/lib/demoSession";
 import { verticalName } from "@/lib/verticals";
+import { FOLLOW_UP_STATUSES, splitLeadMessage } from "@/lib/leadStatus";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/admin/ui";
+import { LeadFollowUp } from "@/components/super/LeadFollowUp";
 
 export const metadata = { title: "Demo leads" };
 
-export default async function DemoLeadsPage() {
-  const sessions = await db.demoSession.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 200,
-    include: { platformLead: true },
-  });
+const fmt = (d: Date) => new Date(d).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" });
+const waLink = (phone: string) => {
+  const digits = phone.replace(/\D/g, "");
+  return `https://wa.me/${digits.length === 10 ? `91${digits}` : digits}`;
+};
+const TONE: Record<string, "slate" | "green" | "amber" | "blue" | "red"> = {
+  new: "amber",
+  verified: "blue",
+  contacted: "blue",
+  interested: "green",
+  converted: "green",
+  "not interested": "slate",
+};
 
-  const verified = sessions.filter((s) => s.status === "active" || s.verifiedAt).length;
+export default async function DemoLeadsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  // Viewing the list also wipes any abandoned sandboxes (their data + uploads). Leads are kept.
+  await sweepExpiredDemoSessions();
+  const sp = await searchParams;
+  const filter = FOLLOW_UP_STATUSES.find((s) => s === sp.status);
+
+  const [leads, counts] = await Promise.all([
+    db.platformLead.findMany({
+      where: { type: "demo", ...(filter ? { status: filter } : {}) },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+      include: { demoSessions: { orderBy: { createdAt: "asc" }, select: { vertical: true, pagesViewed: true } } },
+    }),
+    db.platformLead.groupBy({ by: ["status"], where: { type: "demo" }, _count: { _all: true } }),
+  ]);
+  const total = counts.reduce((n, c) => n + c._count._all, 0);
+  const countOf = (s: string) => counts.find((c) => c.status === s)?._count._all ?? 0;
 
   return (
     <>
       <PageHeader
         title="Demo leads"
-        subtitle={`${sessions.length} requests · ${verified} OTP verified · isolated 10-min sandboxes`}
+        subtitle={`${total} people asked for a demo · sandboxes and their uploads are deleted when the timer ends; the lead stays here for follow-up`}
       />
-      <Card>
-        {sessions.length === 0 ? (
-          <EmptyState title="No demo sessions yet" hint="Visitors unlock sector demos from the /demos page." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-slate-400 border-b border-slate-100">
-                <tr>
-                  <th className="p-4 font-medium">Visitor</th>
-                  <th className="p-4 font-medium">Sector</th>
-                  <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium">Pages viewed</th>
-                  <th className="p-4 font-medium">Started</th>
-                  <th className="p-4 font-medium">Expires</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {sessions.map((s) => {
-                  let pages: string[] = [];
-                  try { pages = JSON.parse(s.pagesViewed || "[]") as string[]; } catch { pages = []; }
-                  return (
-                    <tr key={s.id}>
-                      <td className="p-4">
-                        <p className="font-medium text-slate-900">{s.name}</p>
-                        <p className="text-slate-500">{s.phone}</p>
-                        <p className="text-slate-400 text-xs">{s.email}</p>
-                        {s.company && <p className="text-slate-400 text-xs">{s.company}</p>}
-                      </td>
-                      <td className="p-4 text-slate-700">{verticalName(s.vertical)}</td>
-                      <td className="p-4">
-                        <Badge tone={s.status === "active" ? "green" : s.status === "pending_otp" ? "amber" : "slate"}>
-                          {s.verifiedAt ? "verified" : s.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-slate-600 max-w-[200px]">
-                        {pages.length ? pages.join(", ") : "—"}
-                      </td>
-                      <td className="p-4 text-slate-400 whitespace-nowrap">
-                        {new Date(s.createdAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" })}
-                      </td>
-                      <td className="p-4 text-slate-400 whitespace-nowrap">
-                        {s.expiresAt ? new Date(s.expiresAt).toLocaleString("en-IN", { dateStyle: "short", timeStyle: "short" }) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[undefined, ...FOLLOW_UP_STATUSES].map((s) => {
+          const on = s === filter;
+          return (
+            <Link
+              key={s ?? "all"}
+              href={s ? `/super/demo-leads?status=${encodeURIComponent(s)}` : "/super/demo-leads"}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${on ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
+            >
+              {s ?? "All"} <span className="opacity-60">{s ? countOf(s) : total}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {leads.length === 0 ? (
+        <Card>
+          <EmptyState title={filter ? `No ${filter} leads` : "No demo requests yet"} hint="Visitors start sector demos from the /demos page." />
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {leads.map((l) => {
+            const { details, notes } = splitLeadMessage(l.message);
+            const sectors = [...new Set(l.demoSessions.map((s) => s.vertical))];
+            const pages = new Set<string>();
+            for (const s of l.demoSessions) {
+              try {
+                for (const p of JSON.parse(s.pagesViewed || "[]") as string[]) pages.add(p);
+              } catch {
+                /* ignore bad JSON */
+              }
+            }
+            return (
+              <Card key={l.id} className="p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-semibold text-slate-900">{l.name}</p>
+                      {l.company && <span className="text-sm text-slate-500">· {l.company}</span>}
+                      <Badge tone={TONE[l.status] ?? "slate"}>{l.status}</Badge>
+                      {l.verified && <Badge tone="green">OTP verified</Badge>}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {l.phone && (
+                        <>
+                          <a href={`tel:${l.phone.replace(/\s+/g, "")}`} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                            <Phone className="h-3.5 w-3.5" /> {l.phone}
+                          </a>
+                          <a href={waLink(l.phone)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+                            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                          </a>
+                        </>
+                      )}
+                      {l.email && (
+                        <a href={`mailto:${l.email}`} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                          <Mail className="h-3.5 w-3.5" /> {l.email}
+                        </a>
+                      )}
+                    </div>
+                    <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+                      <div className="flex gap-2">
+                        <dt className="text-slate-400">Sector{sectors.length > 1 ? "s tried" : ""}:</dt>
+                        <dd className="text-slate-700">{(sectors.length ? sectors : [l.vertical]).map(verticalName).join(", ")}</dd>
+                      </div>
+                      <div className="flex gap-2">
+                        <dt className="text-slate-400">Requested:</dt>
+                        <dd className="text-slate-700">{fmt(l.createdAt)}</dd>
+                      </div>
+                      {details.map((d) => {
+                        const [k, ...v] = d.split(":");
+                        return (
+                          <div key={d} className="flex gap-2">
+                            <dt className="text-slate-400">{k}:</dt>
+                            <dd className="text-slate-700">{v.join(":").trim()}</dd>
+                          </div>
+                        );
+                      })}
+                      {pages.size > 0 && (
+                        <div className="flex gap-2 sm:col-span-2">
+                          <dt className="text-slate-400">Viewed:</dt>
+                          <dd className="text-slate-700">{[...pages].join(", ")}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+
+                  <div className="w-full shrink-0 lg:w-96">
+                    <LeadFollowUp leadId={l.id} status={l.status} />
+                    {notes.length > 0 && (
+                      <ul className="mt-3 space-y-2">
+                        {notes.map((n, i) => (
+                          <li key={i} className="rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                            <p className="text-[11px] font-medium text-slate-400">{n.when}</p>
+                            <p className="whitespace-pre-wrap text-slate-700">{n.text}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </>
   );
 }

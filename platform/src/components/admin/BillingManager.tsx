@@ -1,15 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CreditCard, FileText, CheckCircle2, Sparkles } from "lucide-react";
+import { CreditCard, FileText, CheckCircle2, Sparkles, Gauge } from "lucide-react";
 import { renewSubscription, type RenewState, verifyPayment } from "@/lib/actions/checkout";
 import { formatINR } from "@/lib/plans";
 import { AdminWorkspace, fieldCls, labelCls } from "./AdminWorkspace";
 import { Badge } from "./ui";
 
 type TierOpt = { id: string; name: string; monthlyBase: number };
-type DurOpt = { id: string; label: string };
+type DurOpt = { id: string; label: string; discountPct: number };
 type OrderRow = {
   id: string;
   invoiceNo: string | null;
@@ -35,6 +35,7 @@ function loadRazorpay(): Promise<boolean> {
 }
 
 const TABS = [
+  { id: "plan", label: "My plan", hint: "Usage", icon: Gauge },
   { id: "renew", label: "Renew", hint: "Upgrade", icon: Sparkles },
   { id: "invoices", label: "Invoices", hint: "History", icon: FileText },
 ] as const;
@@ -45,14 +46,19 @@ export function BillingManager({
   currentPlan,
   canRenew,
   orders,
+  prices,
+  overview,
 }: {
   tiers: TierOpt[];
   durations: DurOpt[];
   currentPlan: string;
   canRenew: boolean;
   orders: OrderRow[];
+  prices: Record<string, number>; // `${tierId}-${durationId}` → paise (same resolver as checkout)
+  overview: ReactNode;
 }) {
-  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>(canRenew ? "renew" : "invoices");
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("plan");
+  const [durId, setDurId] = useState("1y");
   const [tier, setTier] = useState(currentPlan || tiers[1]?.id || tiers[0]?.id || "");
   const [state, action, pending] = useActionState(renewSubscription, init);
 
@@ -88,11 +94,14 @@ export function BillingManager({
   return (
     <AdminWorkspace
       title="Billing"
+      subtitle="Your plan, renewals and invoices."
       titleIcon={<CreditCard className="w-4 h-4 text-lime-600 shrink-0" />}
-      tabs={canRenew ? [...TABS] : TABS.filter((t) => t.id === "invoices")}
+      tabs={canRenew ? [...TABS] : TABS.filter((t) => t.id !== "renew")}
       tab={tab}
       onTabChange={(id) => setTab(id as typeof tab)}
     >
+      {tab === "plan" && overview}
+
       {tab === "renew" && canRenew && (
         <form action={action} className="space-y-4 max-w-2xl">
           <input type="hidden" name="tier" value={tier} />
@@ -117,7 +126,7 @@ export function BillingManager({
                           {t.name}
                           {current && <span className="text-[9px] font-bold uppercase tracking-wide text-lime-700 bg-lime-100 px-1.5 py-0.5 rounded-full">Current</span>}
                         </p>
-                        <p className="text-xs text-slate-500 mt-0.5">{formatINR(t.monthlyBase)} / month</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{formatINR(prices[`${t.id}-${durId}`] ?? 0)} total · base {formatINR(t.monthlyBase)} / month</p>
                       </div>
                       {on && <CheckCircle2 className="w-4 h-4 text-lime-600 shrink-0" />}
                     </div>
@@ -130,8 +139,8 @@ export function BillingManager({
           <div className="grid sm:grid-cols-2 gap-3">
             <label className="block">
               <span className={labelCls}>Duration</span>
-              <select name="duration" defaultValue="1y" className={fieldCls}>
-                {durations.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+              <select name="duration" value={durId} onChange={(e) => setDurId(e.target.value)} className={fieldCls}>
+                {durations.map((d) => <option key={d.id} value={d.id}>{d.label}{d.discountPct ? ` (save ${d.discountPct}%)` : ""}</option>)}
               </select>
             </label>
             <label className="block">
@@ -142,7 +151,8 @@ export function BillingManager({
 
           {selected && (
             <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/40 px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300">
-              Renewing <b className="text-slate-900 dark:text-white">{selected.name}</b> at {formatINR(selected.monthlyBase)}/mo base — pay securely with Razorpay.
+              {selected.id === currentPlan ? "Renewing" : "Switching to"} <b className="text-slate-900 dark:text-white">{selected.name}</b> for{" "}
+              <b className="text-slate-900 dark:text-white">{formatINR(prices[`${selected.id}-${durId}`] ?? 0)}</b> (incl. GST, before any coupon) — pay securely with Razorpay.
             </div>
           )}
 

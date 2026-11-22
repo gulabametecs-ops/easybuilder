@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, CalendarCheck, Check, Copy, CreditCard } from "lucide-react";
 import { Icon } from "../Icon";
 import { IMAGE_SLOTS } from "@/lib/img";
 import { ImageSlot } from "../ImageSlot";
@@ -9,7 +10,8 @@ import type { SectionContentMap } from "@/lib/config";
 import { safeHref } from "@/lib/sanitizeHtml";
 import { headingStylesFrom, textStyleProps, cardStyleCss, readContentStyles, readItemStyle, type FieldStyle } from "@/lib/fieldStyle";
 import { DonateBox } from "../DonateBox";
-import type { PublicPayments } from "@/lib/payments";
+import { qrImageForData, upiPayLink, type PublicPayments } from "@/lib/payments";
+import type { SiteIntegrations } from "@/lib/integrations";
 
 const WRAP = "mx-auto px-4 sm:px-6";
 const PANEL = "rounded-[calc(var(--site-radius)*1.6)] bg-[var(--site-surface)] ring-1 ring-[var(--site-line)] shadow-[var(--site-shadow-sm)]";
@@ -426,6 +428,85 @@ export function DonatePayBlock({
           suggested={suggested}
           label="Donate now"
         />
+      </div>
+    </section>
+  );
+}
+
+// ─── Pay online (payment links + UPI from Admin → Integrations) ─────────────
+export function PayOnlineBlock({
+  c,
+  integrations,
+  payments,
+  orgName,
+}: {
+  c: SectionContentMap["payOnline"];
+  integrations?: Pick<SiteIntegrations, "payLinks" | "booking" | "review">;
+  payments?: PublicPayments;
+  orgName?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const links = integrations?.payLinks ?? [];
+  const booking = integrations?.booking?.display === "section" ? integrations.booking : null;
+  const review = integrations?.review;
+  const upi = payments?.upiId || "";
+  const qr = payments?.upiQrImage || (upi ? qrImageForData(upiPayLink(upi, orgName || "Pay")) : "");
+  const empty = !links.length && !upi && !qr && !booking;
+  return (
+    <section className="site-sec py-16 sm:py-24">
+      <div className={`${WRAP} max-w-4xl`}>
+        <Heading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} content={c} />
+        {c.subtitle && <p className="text-center site-muted -mt-8 mb-10">{c.subtitle}</p>}
+        {empty ? (
+          <p className="text-center site-muted">{c.emptyText}</p>
+        ) : (
+          <div className={`grid gap-6 ${upi || qr ? "md:grid-cols-[1fr_auto]" : ""}`}>
+            <div className="flex flex-col gap-3">
+              {links.map((l) => (
+                <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer"
+                  className={`${PANEL} group flex items-center gap-4 px-5 py-4 hover:-translate-y-0.5 transition-transform`}>
+                  <span className="w-11 h-11 shrink-0 rounded-xl grid place-items-center text-white" style={{ background: l.color }}>
+                    <CreditCard className="w-5 h-5" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-semibold">{l.label}</span>
+                    <span className="block text-xs site-muted">Secure checkout on {l.name}</span>
+                  </span>
+                  <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
+                </a>
+              ))}
+              {booking && (
+                <a href={booking.url} target="_blank" rel="noopener noreferrer"
+                  className="site-btn inline-flex items-center justify-center gap-2 rounded-full bg-primary text-white px-6 py-3 font-semibold">
+                  <CalendarCheck className="w-5 h-5" /> {booking.label}
+                </a>
+              )}
+              {review && (
+                <a href={review.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary font-semibold hover:underline text-center">
+                  ★ Review us on Google{review.ratingText ? ` · ${review.ratingText}` : ""}
+                </a>
+              )}
+            </div>
+            {(upi || qr) && (
+              <div className={`${PANEL} p-5 text-center md:w-64`}>
+                <p className="font-semibold mb-3">Pay by UPI</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {qr && <img src={qr} alt="UPI QR code" className="w-48 h-48 mx-auto rounded-lg bg-white p-2 object-contain" />}
+                {upi && (
+                  <button type="button"
+                    onClick={async () => {
+                      try { await navigator.clipboard.writeText(upi); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* clipboard blocked */ }
+                    }}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-full ring-1 ring-inset ring-[var(--site-line)] px-4 py-2 text-sm font-mono hover:text-primary">
+                    <span className="truncate">{upi}</span>
+                    {copied ? <Check className="w-4 h-4 shrink-0 text-primary" /> : <Copy className="w-4 h-4 shrink-0 text-primary" />}
+                  </button>
+                )}
+                {upi && <p className="text-[11px] site-muted mt-2">{copied ? "UPI ID copied" : "Tap to copy UPI ID"}</p>}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

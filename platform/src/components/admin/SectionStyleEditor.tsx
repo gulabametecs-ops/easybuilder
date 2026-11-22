@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlignLeft, AlignCenter, AlignRight, RotateCcw, Check } from "lucide-react";
 import { updateSectionStyle } from "@/lib/actions/content";
-import type { SectionStyle, ThemeConfig } from "@/lib/config";
+import type { SectionStyle, SectionType, ThemeConfig } from "@/lib/config";
+import { SECTION_LAYOUTS } from "@/lib/sectionDefaults";
 
 const SPACING = [
   { v: "default", label: "Normal" },
@@ -25,11 +26,13 @@ const chip = (active: boolean) =>
 
 export function SectionStyleEditor({
   id,
+  type,
   style,
   siteColors,
   onSaved,
 }: {
   id: string;
+  type?: string;
   style: string;
   siteColors?: SiteColors;
   onSaved?: (style: string) => void;
@@ -85,6 +88,7 @@ export function SectionStyleEditor({
     { v: "dark", label: "Dark", color: colors.dark },
   ];
 
+  const layouts = type ? SECTION_LAYOUTS[type as SectionType] : undefined;
   const hasCardCustom = !!(st.cardBg || st.cardText || st.cardBorderColor || st.cardBorderWidth != null || st.cardRadius || st.cardShadow || st.cardSize);
 
   return (
@@ -92,6 +96,14 @@ export function SectionStyleEditor({
       {/* Layout — most used */}
       <section className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-3">
         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Layout</p>
+
+        {layouts && (
+          <Field label="Section layout">
+            <select className={inputCls} value={st.layout && layouts.includes(st.layout) ? st.layout : layouts[0]} onChange={(e) => set({ layout: e.target.value === layouts[0] ? undefined : e.target.value })}>
+              {layouts.map((l) => <option key={l} value={l}>{l[0].toUpperCase() + l.slice(1)}</option>)}
+            </select>
+          </Field>
+        )}
 
         <Field label="Text & cards alignment">
           <div className="flex gap-2">

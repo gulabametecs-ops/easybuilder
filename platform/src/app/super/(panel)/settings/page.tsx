@@ -1,8 +1,10 @@
 import { db } from "@/lib/db";
 import { getPlatformConfig } from "@/lib/platformConfig";
-import { resolveTiers } from "@/lib/plans";
+import { resolveTiers, resolveDurations } from "@/lib/plans";
+import { resolveReferralSettings } from "@/lib/referral";
 import { PageHeader } from "@/components/admin/ui";
 import { SuperSettings } from "@/components/super/SuperSettings";
+import { parseMap } from "@/lib/ai/providers";
 
 export const metadata = { title: "Settings" };
 
@@ -37,11 +39,16 @@ export default async function SuperSettingsPage() {
           demoDurationMinutes: cfg.demoDurationMinutes,
           hasWhatsAppToken: Boolean(cfg.demoWhatsAppToken),
           demoWhatsAppPhoneId: cfg.demoWhatsAppPhoneId,
-          hasGroqKey: Boolean(cfg.groqApiKey),
-          groqModel: cfg.groqModel,
+          aiProvider: cfg.aiProvider,
+          // which providers have a saved key (never the keys themselves)
+          aiKeyed: Object.keys(parseMap(cfg.aiKeys)).concat(cfg.groqApiKey || process.env.GROQ_API_KEY ? ["groq"] : []),
+          aiModels: { ...(cfg.groqModel ? { groq: cfg.groqModel } : {}), ...parseMap(cfg.aiModels) },
+          aiBaseUrl: cfg.aiBaseUrl,
         }}
         admins={admins}
         tiers={tiers}
+        durations={resolveDurations(cfg.planOverrides)}
+        referral={resolveReferralSettings(cfg.referralSettings)}
       />
     </>
   );

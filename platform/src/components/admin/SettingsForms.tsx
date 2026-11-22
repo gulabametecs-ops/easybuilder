@@ -33,11 +33,15 @@ export function PasswordForm() {
     <form action={action} className="space-y-3 max-w-md">
       <label className="block">
         <span className={labelCls}>Current password</span>
-        <input name="current" type="password" required className={fieldCls} />
+        <input name="current" type="password" required autoComplete="current-password" className={fieldCls} />
       </label>
       <label className="block">
         <span className={labelCls}>New password</span>
-        <input name="next" type="password" required className={fieldCls} />
+        <input name="next" type="password" required minLength={6} autoComplete="new-password" className={fieldCls} />
+      </label>
+      <label className="block">
+        <span className={labelCls}>Confirm new password</span>
+        <input name="confirm" type="password" required minLength={6} autoComplete="new-password" className={fieldCls} />
       </label>
       <Msg state={state} />
       <button disabled={pending} className="w-full rounded-xl bg-slate-900 text-white text-sm font-bold py-2.5 hover:bg-slate-800 disabled:opacity-60">

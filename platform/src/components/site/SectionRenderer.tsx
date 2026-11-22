@@ -24,8 +24,13 @@ import {
 } from "./sections/blocks";
 import { QuoteFormBlock, ContactFormBlock, AppointmentFormBlock, VolunteerFormBlock } from "./sections/FormSections";
 import type { PublicEvent, PublicPerson } from "@/lib/tenant";
-import { PricingPlansBlock, OpeningHoursBlock, CountdownBlock, MapBlock, NoticeBoardBlock, ToppersBlock, DownloadsBlock, DonatePayBlock } from "./sections/newBlocks";
+import { PricingPlansBlock, OpeningHoursBlock, CountdownBlock, MapBlock, NoticeBoardBlock, ToppersBlock, DownloadsBlock, DonatePayBlock, PayOnlineBlock } from "./sections/newBlocks";
+import type { SiteIntegrations } from "@/lib/integrations";
 import type { PublicPayments } from "@/lib/payments";
+import type { PublicProperty } from "@/lib/property";
+import { PropertyListBlock } from "./sections/PropertyBlocks";
+import { CauseListBlock } from "./sections/CauseBlocks";
+import type { PublicCause } from "@/lib/cause";
 
 type ServiceRow = { id: string; category: string; title: string; description: string; image: string; slug?: string };
 type GalleryRow = { id: string; category: string; image: string; caption: string };
@@ -41,7 +46,10 @@ export type RenderContext = {
   notices: NoticeItem[];
   people?: PublicPerson[];
   events?: PublicEvent[];
+  properties?: PublicProperty[];
+  causes?: PublicCause[];
   payments?: PublicPayments;
+  integrations?: SiteIntegrations;
   orgName?: string;
 };
 
@@ -55,7 +63,8 @@ export function SectionRenderer({
   editMode?: boolean;
 }) {
   const style = parseJson<SectionStyle>(section.style, {});
-  const block = renderBlock(section, ctx);
+  const block = renderBlock(section, ctx, style.layout, editMode);
+  if (!block) return null; // e.g. an empty video on the public site — skip the frame wrapper too
   const frame = sectionFrameClasses(style);
   const frameStyle = sectionFrameStyle(style);
   const hasStyle = Object.keys(frameStyle).length > 0;
@@ -81,7 +90,7 @@ export function SectionRenderer({
   );
 }
 
-function renderBlock(section: { type: string; content: string }, ctx: RenderContext) {
+function renderBlock(section: { type: string; content: string }, ctx: RenderContext, layout?: string, editMode?: boolean) {
   const type = section.type as SectionType;
   switch (type) {
     case "banner":
@@ -89,37 +98,44 @@ function renderBlock(section: { type: string; content: string }, ctx: RenderCont
     case "hero":
       return <HeroBlock c={parseSectionContent("hero", section.content)} />;
     case "about":
-      return <AboutBlock c={parseSectionContent("about", section.content)} />;
+      return <AboutBlock c={parseSectionContent("about", section.content)} layout={layout} />;
     case "serviceCategories":
-      return <ServiceCategoriesBlock c={parseSectionContent("serviceCategories", section.content)} servicesByCategory={ctx.servicesByCategory} />;
+      return <ServiceCategoriesBlock c={parseSectionContent("serviceCategories", section.content)} servicesByCategory={ctx.servicesByCategory} layout={layout} />;
     case "stats":
-      return <StatsBlock c={parseSectionContent("stats", section.content)} />;
+      return <StatsBlock c={parseSectionContent("stats", section.content)} layout={layout} />;
     case "gallery":
-      return <GalleryBlock c={parseSectionContent("gallery", section.content)} galleryByCategory={ctx.galleryByCategory} />;
+      return <GalleryBlock c={parseSectionContent("gallery", section.content)} galleryByCategory={ctx.galleryByCategory} layout={layout} />;
     case "steps":
-      return <StepsBlock c={parseSectionContent("steps", section.content)} />;
+      return <StepsBlock c={parseSectionContent("steps", section.content)} layout={layout} />;
     case "cta":
-      return <CtaBlock c={parseSectionContent("cta", section.content)} />;
+      return <CtaBlock c={parseSectionContent("cta", section.content)} layout={layout} />;
     case "team":
-      return <TeamBlock c={parseSectionContent("team", section.content)} people={ctx.people} />;
+      return <TeamBlock c={parseSectionContent("team", section.content)} people={ctx.people} layout={layout} />;
     case "visionMission":
       return <VisionMissionBlock c={parseSectionContent("visionMission", section.content)} />;
     case "eventList":
       return <EventListBlock c={parseSectionContent("eventList", section.content)} events={ctx.events} />;
+    case "causeList":
+      return <CauseListBlock c={parseSectionContent("causeList", section.content)} causes={ctx.causes} />;
+    case "propertyList":
+      return <PropertyListBlock c={parseSectionContent("propertyList", section.content)} properties={ctx.properties} />;
     case "volunteerForm":
       return <VolunteerFormBlock c={parseSectionContent("volunteerForm", section.content)} />;
     case "priceList":
       return <PriceListBlock c={parseSectionContent("priceList", section.content)} />;
     case "testimonials":
-      return <TestimonialsBlock c={parseSectionContent("testimonials", section.content)} />;
+      return <TestimonialsBlock c={parseSectionContent("testimonials", section.content)} layout={layout} />;
     case "faq":
-      return <FaqBlock c={parseSectionContent("faq", section.content)} />;
+      return <FaqBlock c={parseSectionContent("faq", section.content)} layout={layout} />;
     case "logos":
       return <LogosBlock c={parseSectionContent("logos", section.content)} />;
     case "features":
-      return <FeaturesBlock c={parseSectionContent("features", section.content)} />;
-    case "video":
-      return <VideoBlock c={parseSectionContent("video", section.content)} />;
+      return <FeaturesBlock c={parseSectionContent("features", section.content)} layout={layout} />;
+    case "video": {
+      const c = parseSectionContent("video", section.content);
+      if (!c.url?.trim() && !editMode) return null;
+      return <VideoBlock c={c} editMode={editMode} />;
+    }
     case "imageBanner":
       return <ImageBannerBlock c={parseSectionContent("imageBanner", section.content)} />;
     case "contactInfo":
@@ -148,6 +164,8 @@ function renderBlock(section: { type: string; content: string }, ctx: RenderCont
       return <DownloadsBlock c={parseSectionContent("downloads", section.content)} />;
     case "donatePay":
       return <DonatePayBlock c={parseSectionContent("donatePay", section.content)} payments={ctx.payments} orgName={ctx.orgName} />;
+    case "payOnline":
+      return <PayOnlineBlock c={parseSectionContent("payOnline", section.content)} integrations={ctx.integrations} payments={ctx.payments} orgName={ctx.orgName} />;
     default:
       return null;
   }

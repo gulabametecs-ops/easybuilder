@@ -14,8 +14,8 @@ export const ngoFoundation: TemplateDef = {
       text: "#3d4a5c",
       heading: "#0c2748",
     },
-    font: "Plus Jakarta Sans",
-    radius: "0.875rem",
+    font: "Lexend",
+    radius: "1rem",
   },
   header: (biz) => ({
     design: "modern",
@@ -162,16 +162,12 @@ export const ngoFoundation: TemplateDef = {
             { titleTop: "Your time can", titleHighlight: "Change a Village", description: "Teach, volunteer at camps, help remotely, or give. Every role is built for field impact.", image: "", primaryBtn: { label: "Join as Volunteer", href: "/volunteer" }, secondaryBtn: { label: "Meet the Team", href: "/team" } },
           ],
         } },
-        { type: "about", content: {
-          eyebrow: "WHO WE ARE", title: "A Foundation Built for", titleHighlight: "Lasting Change",
-          body: [
-            `${biz} is a purpose-driven non-profit. Real progress starts when communities have health, safety, skills and financial confidence.`,
-            "Programs are designed with local leaders, delivered by trained teams, and reported back to every supporter.",
-          ],
-          image: "",
-          points: ["Health & hygiene camps", "Women & child welfare", "Environment care", "Youth skill development", "Social awareness", "Financial literacy"],
-          buttonLabel: "Read Our Story", buttonHref: "/about",
-        } },
+        { type: "stats", content: { items: [
+          { value: "3 Lakh+", label: "Lives We Aim to Reach", icon: "users" },
+          { value: "6", label: "Core Program Areas", icon: "grid" },
+          { value: "120+", label: "Community Drives", icon: "map-pin" },
+          { value: "85%", label: "Funds to Programs", icon: "heart" },
+        ] }, style: { layout: "minimal" } },
         { type: "visionMission", content: {
           eyebrow: "PURPOSE",
           visionTitle: "Vision",
@@ -184,23 +180,46 @@ export const ngoFoundation: TemplateDef = {
             { icon: "shield", title: "Integrity", text: "Receipts, audits and utilisation updates." },
             { icon: "handshake", title: "Collaboration", text: "We work with panchayats, schools and local groups." },
           ],
-        } },
-        { type: "imageBanner", content: { title: "Be a part of the change — join us today", subtitle: "Volunteer on the ground, contribute skills remotely, or support a program financially.", buttonLabel: "Become a Volunteer →", buttonHref: "/volunteer", image: "" } },
-        { type: "serviceCategories", content: { eyebrow: "OUR INITIATIVES", title: "Six Areas of", titleHighlight: "Sustainable Impact", categories: ["Our Initiatives"] } },
+        }, style: { background: "light" } },
+        { type: "serviceCategories", content: { eyebrow: "OUR INITIATIVES", title: "Six Areas of", titleHighlight: "Sustainable Impact", categories: ["Our Initiatives"] }, style: { layout: "tiles" } },
+        { type: "about", content: {
+          eyebrow: "WHO WE ARE", title: "A Foundation Built for", titleHighlight: "Lasting Change",
+          body: [
+            `${biz} is a purpose-driven non-profit. Real progress starts when communities have health, safety, skills and financial confidence.`,
+            "Programs are designed with local leaders, delivered by trained teams, and reported back to every supporter — with photos, attendance and a short utilisation note after every drive.",
+          ],
+          image: "",
+          points: ["Health & hygiene camps", "Women & child welfare", "Environment care", "Youth skill development", "Social awareness", "Financial literacy"],
+          buttonLabel: "Read Our Story", buttonHref: "/about",
+        }, style: { layout: "stacked" } },
+        { type: "countdown", content: { eyebrow: "NEXT ON THE GROUND", title: "Free Health &", titleHighlight: "Hygiene Camp", subtitle: "Doctor consultations, basic medicines and hygiene awareness for 200+ families at the Block Primary School.", targetDate: "2026-12-06T09:00:00", buttonLabel: "Volunteer at the Camp", buttonHref: "/volunteer" }, style: { background: "dark" } },
         { type: "eventList", content: { eyebrow: "ON THE GROUND", title: "Recent &", titleHighlight: "Upcoming Events", subtitle: "Camps, workshops and community drives — published from Admin → Events.", limit: 3, emptyText: "Events you publish in Admin → Events will appear here." } },
-        { type: "stats", content: { items: [
-          { value: "3 Lakh+", label: "Lives We Aim to Reach", icon: "users" },
-          { value: "6", label: "Core Program Areas", icon: "grid" },
-          { value: "120+", label: "Community Drives", icon: "map-pin" },
-          { value: "85%", label: "Funds to Programs", icon: "heart" },
-        ] }, style: { background: "dark" } },
+        { type: "features", content: { eyebrow: "HOW WE WORK", title: "From Village Meeting to", titleHighlight: "Measured Impact", items: [
+          { icon: "users", title: "Listen in the village", text: "Every program starts with a chaupal meeting and a household survey — not a brochure." },
+          { icon: "clipboard", title: "Plan with local leaders", text: "Sarpanch, ASHA workers, teachers and SHG leaders help shape the objectives." },
+          { icon: "handshake", title: "Deliver with trained teams", text: "Field coordinators and volunteers run camps, sessions and drives on a fixed calendar." },
+          { icon: "trending", title: "Report back to you", text: "Attendance, photos and a utilisation note are shared within 7 days of every event." },
+        ] }, style: { layout: "split", background: "light" } },
         { type: "team", content: { eyebrow: "LEADERSHIP", title: "People Behind", titleHighlight: "the Mission", members: [
           { name: "Founder Name", role: "Founder & Managing Director", image: "", note: "Rural development" },
           { name: "Director Name", role: "Director & Operations", image: "", note: "Healthcare & ops" },
           { name: "Programs Lead", role: "Programs Director", image: "", note: "Field programs" },
           { name: "Communications Lead", role: "Media & Outreach", image: "", note: "Campaigns" },
         ] } },
-        { type: "cta", content: { title: "Creating impact through purpose and action", highlight: "Support the Mission", phones: ["9000000000"], buttonLabel: "Donate Now", buttonHref: "/donate" } },
+        { type: "testimonials", content: { eyebrow: "FROM THE FIELD", title: "What Communities", titleHighlight: "Tell Us", items: [
+          { name: "Kamla Bai", role: "SHG leader, Block HQ village", text: "After the financial literacy session, 22 women in our group opened bank accounts and now save through UPI. Nobody has fallen for a fake loan call since.", rating: 5 },
+          { name: "Ramesh Yadav", role: "Head teacher, Govt. Primary School", text: "The hygiene camp reached every child in our school. Attendance improved because fewer children fell sick in the monsoon.", rating: 5 },
+          { name: "Anjali Thakur", role: "Volunteer, skill workshop", text: "I taught basic computers to 30 young people over six weekends. Four of them now work at the block office as data-entry operators.", rating: 5 },
+        ] }, style: { layout: "minimal" } },
+        { type: "imageBanner", content: { title: "Be a part of the change — join us today", subtitle: "Volunteer on the ground, contribute skills remotely, or support a program financially.", buttonLabel: "Become a Volunteer →", buttonHref: "/volunteer", image: "" } },
+        { type: "logos", content: { title: "Collaborating with", items: ["Block Development Office", "Village Panchayats", "Government Schools", "ASHA & Anganwadi Network", "Banking Correspondents", "CSR Partners"] } },
+        { type: "faq", content: { eyebrow: "GOOD TO KNOW", title: "Frequently", titleHighlight: "Asked", items: [
+          { q: "Where do you work?", a: "We run programs in rural and semi-urban blocks of our district, in partnership with panchayats, schools and self-help groups." },
+          { q: "Can my company fund a program under CSR?", a: "Yes. We can design a health, skills or financial-literacy project with clear objectives, a budget and quarterly reports suitable for CSR compliance." },
+          { q: "How do I volunteer?", a: "Fill the form on our Volunteer page with your city, skills and availability. We will call you with roles that match — on the ground or remote." },
+          { q: "Will I get an update on how my donation was used?", a: "Yes. Every supporter receives a receipt and, after the program, a short note with photos and attendance." },
+        ] } },
+        { type: "cta", content: { title: "Creating impact through purpose and action", highlight: "Support the Mission", phones: ["9000000000"], buttonLabel: "Donate Now", buttonHref: "/donate" }, style: { layout: "minimal" } },
       ],
     },
     { slug: "about", title: "About Us", isSystem: true, order: 1, sections: [
@@ -235,6 +254,12 @@ export const ngoFoundation: TemplateDef = {
           { icon: "handshake", title: "Collaboration", text: "Collective effort, lasting impact." },
         ],
       } },
+      { type: "downloads", content: { eyebrow: "COMPLIANCE", title: "Registrations &", titleHighlight: "Reports", items: [
+        { title: "Section 8 Incorporation Certificate", description: "Company registration with the Ministry of Corporate Affairs.", link: "", icon: "badge-check" },
+        { title: "12A & 80G Approval", description: "Income Tax registration for tax-exempt donations.", link: "", icon: "shield" },
+        { title: "CSR-1 Registration", description: "Eligibility for corporate CSR funding.", link: "", icon: "handshake" },
+        { title: "Annual Report 2025–26", description: "Programs, outcomes, photos and audited accounts.", link: "", icon: "book-open" },
+      ] } },
       { type: "cta", content: { title: "Be part of the change", highlight: "Join Our Mission", phones: ["9000000000"], buttonLabel: "Get Involved", buttonHref: "/volunteer" } },
     ] },
     { slug: "team", title: "Our Team", isSystem: true, order: 2, sections: [
@@ -244,6 +269,10 @@ export const ngoFoundation: TemplateDef = {
         { name: "Programs Lead", role: "Programs Director", image: "", note: "Rural programs" },
         { name: "IT Lead", role: "Technology Head", image: "", note: "Digital systems" },
       ] } },
+      { type: "testimonials", content: { eyebrow: "WORKING HERE", title: "What Our Team", titleHighlight: "Says", items: [
+        { name: "Field Coordinator", role: "3 years with the foundation", text: "I grew up in one of the villages we now work in. Running camps where my own neighbours come for check-ups is the proudest work I have done.", rating: 5 },
+        { name: "Volunteer Doctor", role: "Monthly health camps", text: "The logistics are always ready — patients registered, medicines sorted. I only have to focus on treating people.", rating: 5 },
+      ] }, style: { layout: "minimal", background: "light" } },
       { type: "cta", content: { title: "Want to work with us?", highlight: "Volunteer or Partner", phones: ["9000000000"], buttonLabel: "Join as Volunteer", buttonHref: "/volunteer" } },
     ] },
     { slug: "initiatives", title: "Our Initiatives", isSystem: true, order: 3, sections: [
@@ -252,7 +281,13 @@ export const ngoFoundation: TemplateDef = {
         { icon: "clipboard", title: "Structured", text: "Clear objectives, field teams and a report after every drive." },
         { icon: "trending", title: "Sustainable", text: "We train local volunteers so the work continues after we leave." },
       ] } },
-      { type: "serviceCategories", content: { eyebrow: "PROGRAMS", title: "Driving Sustainable", titleHighlight: "Social Impact", categories: ["Our Initiatives"] } },
+      { type: "serviceCategories", content: { eyebrow: "PROGRAMS", title: "Driving Sustainable", titleHighlight: "Social Impact", categories: ["Our Initiatives"] }, style: { layout: "list", background: "light" } },
+      { type: "steps", content: { eyebrow: "PROGRAM CYCLE", title: "How Every Initiative", titleHighlight: "Runs", items: [
+        { title: "Survey", text: "Household needs survey with ASHA and anganwadi workers", icon: "clipboard" },
+        { title: "Plan", text: "Objectives, budget and dates agreed with the panchayat", icon: "calendar" },
+        { title: "Deliver", text: "Camp, workshop or drive run by trained field teams", icon: "users" },
+        { title: "Report", text: "Attendance, photos and outcomes shared with supporters", icon: "trending" },
+      ] }, style: { layout: "cards" } },
       { type: "cta", content: { title: "Sponsor a camp or a classroom", highlight: "Give Today", phones: ["9000000000"], buttonLabel: "Donate Now", buttonHref: "/donate" } },
     ] },
     { slug: "events", title: "Events", isSystem: true, order: 4, sections: [
@@ -260,7 +295,7 @@ export const ngoFoundation: TemplateDef = {
       { type: "cta", content: { title: "Want to join the next drive?", highlight: "Volunteer With Us", phones: ["9000000000"], buttonLabel: "Get Involved", buttonHref: "/volunteer" } },
     ] },
     { slug: "gallery", title: "Gallery", isSystem: true, order: 5, sections: [
-      { type: "gallery", content: { eyebrow: "ON THE GROUND", title: "Moments From", titleHighlight: "Our Work" } },
+      { type: "gallery", content: { eyebrow: "ON THE GROUND", title: "Moments From", titleHighlight: "Our Work" }, style: { layout: "masonry" } },
       { type: "cta", content: { title: "See the work in person", highlight: "Come Volunteer", phones: ["9000000000"], buttonLabel: "Volunteer", buttonHref: "/volunteer" } },
     ] },
     { slug: "volunteer", title: "Volunteer", isSystem: true, order: 6, sections: [
@@ -270,6 +305,12 @@ export const ngoFoundation: TemplateDef = {
         { icon: "handshake", title: "CSR Partnership", text: "Co-create education, health and livelihood projects with reporting." },
         { icon: "gift", title: "Give in Kind", text: "Books, clothes, supplies and ration — tell us first so we can route them." },
       ] } },
+      { type: "steps", content: { eyebrow: "HOW IT WORKS", title: "Your Volunteer", titleHighlight: "Journey", items: [
+        { title: "Apply", text: "Share your city, skills and free days", icon: "edit" },
+        { title: "Orientation", text: "A 1-hour call or session on how we work in the field", icon: "headset" },
+        { title: "First Drive", text: "Join a camp or workshop alongside a field coordinator", icon: "users" },
+        { title: "Certificate", text: "Get a volunteering certificate after 20 hours", icon: "award" },
+      ] }, style: { layout: "timeline", background: "light" } },
       { type: "volunteerForm", content: { title: "Join as Volunteer", subtitle: "Share a few details. We will call you with roles that match your city and time.", interests: ["Education", "Healthcare", "Women Empowerment", "Child Welfare", "Environment", "Fundraising", "Field Work", "Financial Literacy"] } },
     ] },
     { slug: "donate", title: "Donate Now", isSystem: true, order: 7, sections: [

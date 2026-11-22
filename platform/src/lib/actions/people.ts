@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireTenantId, getDemoSessionId } from "./guard";
+import { releaseMediaIn } from "@/lib/usage";
+import { requireTenantId, getDemoSessionId, ownedWhere } from "./guard";
 
 function str(form: FormData, key: string) {
   return (form.get(key)?.toString() ?? "").trim();
@@ -24,7 +25,7 @@ export async function savePerson(formData: FormData) {
     published: formData.get("published") === "on",
   };
   if (id) {
-    await db.person.updateMany({ where: { id, tenantId }, data });
+    await db.person.updateMany({ where: await ownedWhere(id, tenantId), data });
   } else {
     const max = await db.person.aggregate({ where: { tenantId }, _max: { order: true } });
     await db.person.create({
@@ -38,7 +39,9 @@ export async function savePerson(formData: FormData) {
 
 export async function deletePerson(id: string) {
   const tenantId = await requireTenantId({ demoOk: true });
-  await db.person.deleteMany({ where: { id, tenantId } });
+  const person = await db.person.findFirst({ where: await ownedWhere(id, tenantId) });
+  await db.person.deleteMany({ where: await ownedWhere(id, tenantId) });
+  await releaseMediaIn(tenantId, person);
   revalidatePath("/admin/people");
   revalidatePath("/team");
   revalidatePath("/");

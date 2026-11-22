@@ -1,16 +1,17 @@
 "use client";
 
 import { useTransition } from "react";
-import { CalendarPlus, Power, Trash2, Ban, Infinity as InfinityIcon } from "lucide-react";
+import { CalendarPlus, Power, Trash2, Ban } from "lucide-react";
 import { extendSubscription, setTenantStatus, setTenantPlan, deleteTenant, cancelSubscription } from "@/lib/actions/superAdmin";
 import { TIERS } from "@/lib/plans";
 
-const EXTEND: { label: string; plan: "1" | "3" | "6" | "12" | "24" }[] = [
+const EXTEND: { label: string; plan: "1" | "3" | "6" | "12" | "24" | "36" }[] = [
   { label: "+1 Month", plan: "1" },
   { label: "+3 Months", plan: "3" },
   { label: "+6 Months", plan: "6" },
   { label: "+1 Year", plan: "12" },
   { label: "+2 Years", plan: "24" },
+  { label: "+3 Years", plan: "36" },
 ];
 
 export function ClientActions({ tenantId, status, plan }: { tenantId: string; status: string; plan: string }) {
@@ -29,9 +30,6 @@ export function ClientActions({ tenantId, status, plan }: { tenantId: string; st
               {e.label}
             </button>
           ))}
-          <button onClick={() => start(() => extendSubscription(tenantId, "lifetime"))} className="rounded-lg border border-lime-500 bg-lime-50 px-3 py-1.5 text-sm font-medium text-lime-700 hover:bg-lime-100 inline-flex items-center gap-1">
-            <InfinityIcon className="w-4 h-4" /> Lifetime
-          </button>
         </div>
       </div>
 

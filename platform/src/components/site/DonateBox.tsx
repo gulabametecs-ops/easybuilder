@@ -3,12 +3,9 @@
 import { useState } from "react";
 import { confirmSiteDonation, startSiteDonation } from "@/lib/actions/siteDonate";
 import { qrImageForData, upiPayLink, type PublicPayments } from "@/lib/payments";
+import { PrivacyConsent } from "./PrivacyConsent";
 
-declare global {
-  interface Window {
-    Razorpay?: new (opts: Record<string, unknown>) => { open: () => void };
-  }
-}
+// ponytail: Window.Razorpay is declared (any) in BillingManager/RenewPlanCard/SubscribeFlow
 
 function loadRazorpay(): Promise<void> {
   if (typeof window === "undefined") return Promise.resolve();
@@ -26,17 +23,27 @@ export function DonateBox({
   payments,
   orgName,
   eventId,
+  causeId,
   suggested = 500,
   label = "Donate",
+  presets = [500, 1000, 2500],
 }: {
   payments: PublicPayments;
   orgName: string;
   eventId?: string;
+  /** donation is tagged to this fundraising cause (lib/cause.ts) */
+  causeId?: string;
+  /** parent can change it later (e.g. a picked impact tier) — the amount follows */
   suggested?: number;
   label?: string;
+  presets?: number[];
 }) {
-  const presets = [500, 1000, 2500].filter((n) => n > 0);
   const [amount, setAmount] = useState(suggested > 0 ? suggested : 500);
+  const [prevSuggested, setPrevSuggested] = useState(suggested);
+  if (suggested !== prevSuggested) {
+    setPrevSuggested(suggested);
+    if (suggested > 0) setAmount(suggested);
+  }
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -51,7 +58,7 @@ export function DonateBox({
     setBusy(true);
     setMsg("");
     try {
-      const res = await startSiteDonation({ name, email, phone, amountInr: amount, eventId });
+      const res = await startSiteDonation({ name, email, phone, amountInr: amount, eventId, causeId });
       if (res.status === "error") {
         setMsg(res.message);
         return;
@@ -96,7 +103,7 @@ export function DonateBox({
       <h3 className="text-lg font-bold">{label}</h3>
       <p className="text-sm site-muted">Pay online, scan QR, or transfer to the bank account. Pick whatever is easiest.</p>
       <div className="flex flex-wrap gap-2">
-        {presets.map((n) => (
+        {presets.filter((n) => n > 0).map((n) => (
           <button
             key={n}
             type="button"
@@ -144,6 +151,7 @@ export function DonateBox({
         <p className="text-sm site-muted">The organisation can add UPI, QR or Razorpay from Admin → Settings → Payments.</p>
       )}
       {msg && <p className="text-sm font-medium text-primary">{msg}</p>}
+      <PrivacyConsent className="site-muted" />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireTenantId, getDemoWriteContext, persistDemoOverlay } from "./guard";
 import { patchSiteConfigOverlay } from "@/lib/demoOverlay";
@@ -17,6 +18,10 @@ import { safeHref } from "@/lib/sanitizeHtml";
 
 function s(formData: FormData, key: string): string {
   return (formData.get(key)?.toString() ?? "").trim();
+}
+/** Single-line display text: no markup characters, capped. */
+function plain(v: string, max: number): string {
+  return v.replace(/[<>"`{}\\]/g, "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 function list(formData: FormData, key: string): string[] {
   return s(formData, key)
@@ -171,12 +176,12 @@ export async function saveSeo(formData: FormData) {
     keywords: s(formData, "keywords"),
     twitterHandle: s(formData, "twitterHandle"),
     ogType: s(formData, "ogType") || "website",
-    gaId: s(formData, "gaId"),
-    gtmId: s(formData, "gtmId"),
-    fbPixelId: s(formData, "fbPixelId"),
-    clarityId: s(formData, "clarityId"),
-    googleVerification: s(formData, "googleVerification"),
-    bingVerification: s(formData, "bingVerification"),
+    gaId: seo.gaId ?? "", // managed in Admin → Integrations (legacy fallback)
+    gtmId: seo.gtmId ?? "", // managed in Admin → Integrations (legacy fallback)
+    fbPixelId: seo.fbPixelId ?? "", // managed in Admin → Integrations (legacy fallback)
+    clarityId: seo.clarityId ?? "", // managed in Admin → Integrations (legacy fallback)
+    googleVerification: seo.googleVerification ?? "", // managed in Admin → Integrations (legacy fallback)
+    bingVerification: seo.bingVerification ?? "", // managed in Admin → Integrations (legacy fallback)
     indexable: formData.get("indexable") === "on",
     robotsFollow: formData.get("robotsFollow") === "on",
     localBusiness: formData.get("localBusiness") === "on",
@@ -187,7 +192,19 @@ export async function saveSeo(formData: FormData) {
     ratingValue: s(formData, "ratingValue"),
     ratingCount: s(formData, "ratingCount"),
     faqSchema: formData.get("faqSchema") === "on",
+    lbName: plain(s(formData, "lbName"), 120),
+    lbAddress: plain(s(formData, "lbAddress"), 300),
+    lbPhone: /^[+\d][\d\s()-]{5,20}$/.test(s(formData, "lbPhone")) ? s(formData, "lbPhone") : "",
+    openingHours: s(formData, "openingHours").split("\n").map((l) => l.trim()).filter((l) => /^[A-Za-z, -]{2,40}\s+\d{2}:\d{2}-\d{2}:\d{2}$/.test(l)).slice(0, 14).join("\n"),
+    mapUrl: /^https:\/\/[^\s"'<>]{4,500}$/.test(s(formData, "mapUrl")) ? s(formData, "mapUrl") : "",
+    indexNowAt: seo.indexNowAt,
   };
+  // Coordinates must be numbers in range (they go into JSON-LD as-is).
+  const coord = (v: string, max: number) => (/^-?\d{1,3}(\.\d{1,8})?$/.test(v) && Math.abs(Number(v)) <= max ? v : "");
+  next.geoLat = coord(next.geoLat, 90);
+  next.geoLng = coord(next.geoLng, 180);
+  next.ratingValue = /^[0-5](\.\d)?$/.test(next.ratingValue) ? next.ratingValue : "";
+  next.ratingCount = /^\d{1,7}$/.test(next.ratingCount) ? next.ratingCount : "";
   await db.siteConfig.update({ where: { tenantId }, data: { seo: JSON.stringify(next) } });
   revalidatePath("/admin/seo");
   revalidatePath("/admin/appearance");
@@ -207,4 +224,38 @@ export async function saveCustomCss(formData: FormData) {
   }
   await db.siteConfig.update({ where: { tenantId }, data: { customCss: css } });
   revalidatePath("/admin/appearance");
+}
+
+// SEO cockpit quick edit for one page (title / description / focus keyword / noindex).
+const PageSeoInput = z.object({
+  id: z.string().min(1).max(40),
+  seoTitle: z.string().max(120),
+  seoDescription: z.string().max(320),
+  focusKeyword: z.string().max(80),
+  noindex: z.boolean(),
+});
+
+export async function savePageSeo(input: unknown): Promise<{ ok: boolean; message: string }> {
+  let tenantId: string;
+  try {
+    tenantId = await requireTenantId();
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Unauthorized" };
+  }
+  const parsed = PageSeoInput.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Check the lengths — title ≤120, description ≤320, keyword ≤80 characters." };
+  const { id, noindex } = parsed.data;
+  const res = await db.page.updateMany({
+    where: { id, tenantId },
+    data: {
+      seoTitle: plain(parsed.data.seoTitle, 120),
+      seoDescription: plain(parsed.data.seoDescription, 320),
+      focusKeyword: plain(parsed.data.focusKeyword, 80),
+      noindex,
+    },
+  });
+  if (!res.count) return { ok: false, message: "Page not found." };
+  revalidatePath("/admin/seo");
+  revalidatePath("/site", "layout");
+  return { ok: true, message: "Page SEO saved." };
 }

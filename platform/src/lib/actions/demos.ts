@@ -9,6 +9,7 @@ import { getVertical } from "@/lib/verticals";
 import { rateLimit } from "@/lib/rateLimit";
 import { sendDemoOtpWhatsApp } from "@/lib/demoWhatsApp";
 import { createTenantFromTemplate } from "@/lib/provision";
+import { fillDemoImages } from "@/lib/demoImages";
 import { randomBytes } from "node:crypto";
 import {
   demoDurationMs,
@@ -40,7 +41,27 @@ const formSchema = z.object({
   phone: z.string().min(7, "Please enter a valid phone number"),
   company: z.string().min(2, "Please enter your business name"),
   vertical: z.string().min(1),
+  city: z.string().trim().min(2, "Please enter your city").max(60),
+  role: z.string().trim().min(1, "Please select your role").max(40),
+  website: z.string().trim().max(60).optional(),
+  timeline: z.string().trim().max(40).optional(),
+  contactVia: z.string().trim().max(20).optional(),
+  needs: z.string().trim().max(1000).optional(),
 });
+
+// Extra qualifying answers go into the lead's message so sales sees them in Super Admin → Demo leads.
+function leadMessage(d: z.infer<typeof formSchema>): string {
+  return [
+    `City: ${d.city}`,
+    `Role: ${d.role}`,
+    d.website && `Current website: ${d.website}`,
+    d.timeline && `Wants to go live: ${d.timeline}`,
+    d.contactVia && `Best way to reach: ${d.contactVia}`,
+    d.needs && `Needs: ${d.needs}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 function genOtp(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
@@ -61,14 +82,16 @@ async function ensureDemoTenant(verticalId: string) {
   const v = getVertical(verticalId);
   if (!v?.demoSubdomain) return;
   if (await db.tenant.findUnique({ where: { subdomain: v.demoSubdomain }, select: { id: true } })) return;
-  await createTenantFromTemplate({
+  const created = await createTenantFromTemplate({
     businessName: v.name,
     subdomain: v.demoSubdomain,
     ownerEmail: v.demoEmail ?? `demo@${v.demoSubdomain}.test`,
     ownerPassword: randomBytes(18).toString("base64url"),
     plan: "pro",
     vertical: v.id,
-  }).catch(() => {}); // lost a race with a parallel request — the tenant exists now
+  }).catch(() => null); // lost a race with a parallel request — the tenant exists now
+  // Demo sites show sector photos + a logo (purchased sites keep blank slots for the owner's photos).
+  if (created) await fillDemoImages(created.id, v.id).catch(() => {});
 }
 
 function establishUrl(base: string, token: string, path: string) {
@@ -90,6 +113,12 @@ export async function requestDemoOtp(_prev: DemoFlowState, formData: FormData): 
     phone: formData.get("phone"),
     company: formData.get("company"),
     vertical: formData.get("vertical"),
+    city: formData.get("city") ?? "",
+    role: formData.get("role") ?? "",
+    website: formData.get("website") || undefined,
+    timeline: formData.get("timeline") || undefined,
+    contactVia: formData.get("contactVia") || undefined,
+    needs: formData.get("needs") || undefined,
   });
   if (!parsed.success) return { step: "error", message: parsed.error.issues[0]?.message ?? "Invalid input" };
 
@@ -111,6 +140,7 @@ export async function requestDemoOtp(_prev: DemoFlowState, formData: FormData): 
       company: parsed.data.company,
       vertical: vertical.id,
       type: "demo",
+      message: leadMessage(parsed.data),
       verified: false,
     },
   });

@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveRazorpay, savePlatform, saveBroadcast, savePlans, saveGst, saveReminders, triggerReminders, changeSuperPassword, addSuperAdmin, saveDemoSettings, saveGroq, type SettingsState } from "@/lib/actions/superSettings";
-import { GROQ_DEFAULT_MODEL, isValidGroqModelId } from "@/lib/groqModel";
-import { type Tier } from "@/lib/plans";
+import { saveRazorpay, savePlatform, saveBroadcast, savePlans, saveGst, saveReminders, triggerReminders, changeSuperPassword, addSuperAdmin, saveDemoSettings, saveAi, testAi, saveReferralSettings, type SettingsState } from "@/lib/actions/superSettings";
+import { AI_PROVIDERS, getProvider } from "@/lib/ai/providers";
+import { type Tier, type Duration, LIMIT_KEYS, LIMIT_LABELS } from "@/lib/plans";
+import type { ReferralSettings } from "@/lib/referral";
 import { Card } from "@/components/admin/ui";
-import { CreditCard, Building2, KeyRound, UserPlus, CheckCircle2, AlertCircle, Megaphone, Layers, FileText, BellRing, Smartphone, Sparkles } from "lucide-react";
+import { CreditCard, Building2, KeyRound, UserPlus, CheckCircle2, AlertCircle, Megaphone, Layers, FileText, BellRing, Smartphone, Sparkles, Gift } from "lucide-react";
 
 const init: SettingsState = { ok: false, message: "" };
 const inputCls = "w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:border-lime-500";
@@ -23,17 +24,18 @@ type Cfg = {
   gstin: string; businessAddress: string; gstRate: number; invoicePrefix: string;
   remindersEnabled: boolean; reminderDays: number; hasResendKey: boolean; senderEmail: string;
   demoOtpMode: string; demoDurationMinutes: number; hasWhatsAppToken: boolean; demoWhatsAppPhoneId: string;
-  hasGroqKey: boolean; groqModel: string;
+  aiProvider: string; aiKeyed: string[]; aiModels: Record<string, string>; aiBaseUrl: string;
 };
 
-export function SuperSettings({ cfg, admins, tiers }: { cfg: Cfg; admins: { email: string; name: string | null }[]; tiers: Tier[] }) {
+export function SuperSettings({ cfg, admins, tiers, durations, referral }: { cfg: Cfg; admins: { email: string; name: string | null }[]; tiers: Tier[]; durations: Duration[]; referral: ReferralSettings }) {
   const live = Boolean(cfg.razorpayKeyId && cfg.hasSecret);
   return (
     <div className="space-y-6 max-w-3xl">
       <DemoSettingsForm cfg={cfg} />
-      <GroqForm cfg={cfg} />
+      <AiForm cfg={cfg} />
       <RazorpayForm cfg={cfg} live={live} />
-      <PlansForm tiers={tiers} />
+      <PlansForm tiers={tiers} durations={durations} />
+      <ReferralForm r={referral} />
       <GstForm cfg={cfg} />
       <RemindersForm cfg={cfg} />
       <BroadcastForm cfg={cfg} />
@@ -46,12 +48,15 @@ export function SuperSettings({ cfg, admins, tiers }: { cfg: Cfg; admins: { emai
   );
 }
 
-function GroqForm({ cfg }: { cfg: Cfg }) {
+function AiForm({ cfg }: { cfg: Cfg }) {
   const router = useRouter();
-  const [state, action, pending] = useActionState(saveGroq, init);
-  const live = cfg.hasGroqKey;
-  const savedModel = cfg.groqModel && isValidGroqModelId(cfg.groqModel) ? cfg.groqModel : "";
-  const activeModel = savedModel || GROQ_DEFAULT_MODEL;
+  const [state, action, pending] = useActionState(saveAi, init);
+  const [test, runTest, testing] = useActionState(testAi, init);
+  const [pick, setPick] = useState(cfg.aiProvider || "groq");
+  const p = getProvider(pick);
+  const active = getProvider(cfg.aiProvider);
+  const keyed = new Set(cfg.aiKeyed);
+  const live = keyed.has(active.id);
 
   useEffect(() => {
     if (state.ok) router.refresh();
@@ -59,54 +64,99 @@ function GroqForm({ cfg }: { cfg: Cfg }) {
 
   return (
     <Card className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-lime-600" /> AI Website Builder (Groq)
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="flex items-center gap-2 font-semibold text-slate-900">
+          <Sparkles className="h-5 w-5 text-lime-600" /> AI Website Builder
         </h3>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${live ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-          {live ? "● AI enabled" : "Not configured"}
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${live ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+          {live ? `● Using ${active.name}` : "Not configured"}
         </span>
       </div>
-      <p className="text-sm text-slate-500 mb-4">
-        Powers the homepage AI prompt and admin AI builder. Get a free key from{" "}
-        <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-lime-600 underline">
-          console.groq.com
-        </a>
-        . Stored server-side only — never exposed to browsers.
+      <p className="mb-4 text-sm text-slate-500">
+        Pick which AI powers the homepage AI builder and the client admin AI. Keys are stored server-side only and kept per provider — switch any time.
       </p>
-      <form key={`${cfg.hasGroqKey}-${savedModel}`} action={action} className="space-y-4">
-        <p className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-          Active model: <span className="font-mono font-semibold text-slate-800">{activeModel}</span>
-          {!savedModel && <span className="text-slate-500"> (default)</span>}
-        </p>
-        <label className="block">
-          <span className={lbl}>Groq API key</span>
-          <input
-            name="groqApiKey"
-            type="password"
-            autoComplete="off"
-            placeholder={cfg.hasGroqKey ? "•••••••• (saved — leave blank to keep)" : "gsk_xxxxxxxx"}
-            className={inputCls}
-          />
-          <span className="block text-xs text-slate-400 mt-1">Key is saved securely. Leave blank when saving other fields to keep the existing key.</span>
-        </label>
-        <label className="block">
-          <span className={lbl}>Model (optional)</span>
-          <input
-            name="groqModel"
-            defaultValue={savedModel}
-            placeholder={GROQ_DEFAULT_MODEL}
-            className={inputCls}
-          />
-          <span className="block text-xs text-slate-400 mt-1">
-            Full model ID only (must include <code className="text-slate-500">/</code>), e.g.{" "}
-            <code className="text-slate-500">{GROQ_DEFAULT_MODEL}</code>. Leave blank to use default.
-          </span>
-        </label>
+
+      <form action={action} className="space-y-4">
+        <input type="hidden" name="aiProvider" value={pick} />
+        <div className="grid gap-2 sm:grid-cols-3">
+          {AI_PROVIDERS.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              onClick={() => setPick(x.id)}
+              className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                pick === x.id ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 hover:border-slate-400"
+              }`}
+            >
+              <span className="block text-sm font-semibold">{x.name}</span>
+              <span className={`block text-[11px] ${pick === x.id ? "text-white/70" : "text-slate-500"}`}>
+                {cfg.aiProvider === x.id ? "Active" : keyed.has(x.id) ? "Key saved" : "No key"}
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">{p.note}</p>
+
+        {/* key on the provider so its fields reset when switching */}
+        <div key={p.id} className="space-y-4">
+          {p.id === "custom" && (
+            <label className="block">
+              <span className={lbl}>Base URL</span>
+              <input name="aiBaseUrl" defaultValue={cfg.aiBaseUrl} placeholder="https://api.together.xyz/v1" className={inputCls} />
+              <span className="mt-1 block text-xs text-slate-400">The OpenAI-compatible endpoint; /chat/completions is added automatically.</span>
+            </label>
+          )}
+          <label className="block">
+            <span className={lbl}>{p.name} API key</span>
+            <input
+              name="aiKey"
+              type="password"
+              autoComplete="off"
+              placeholder={keyed.has(p.id) ? "•••••••• (saved — leave blank to keep)" : p.keyHint}
+              className={inputCls}
+            />
+            {p.keysUrl && (
+              <span className="mt-1 block text-xs text-slate-400">
+                Get a key at{" "}
+                <a href={p.keysUrl} target="_blank" rel="noreferrer" className="text-lime-600 underline">
+                  {new URL(p.keysUrl).hostname}
+                </a>
+              </span>
+            )}
+          </label>
+          <label className="block">
+            <span className={lbl}>Model {p.id === "custom" ? "" : "(optional)"}</span>
+            <input
+              name="aiModel"
+              list={`ai-models-${p.id}`}
+              defaultValue={cfg.aiModels[p.id] ?? ""}
+              placeholder={p.defaultModel || "model-id"}
+              className={inputCls}
+            />
+            <datalist id={`ai-models-${p.id}`}>
+              {p.models.map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
+            {p.defaultModel && <span className="mt-1 block text-xs text-slate-400">Blank = {p.defaultModel}. Any model id your account can use works.</span>}
+          </label>
+        </div>
+
         <Msg s={state} />
-        <button disabled={pending} className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 hover:bg-slate-800 disabled:opacity-60">
-          {pending ? "Saving..." : "Save Groq settings"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button disabled={pending} className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
+            {pending ? "Saving..." : `Save & use ${p.name}`}
+          </button>
+          <button
+            type="submit"
+            formAction={runTest}
+            disabled={testing}
+            className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {testing ? "Testing..." : `Test ${active.name}`}
+          </button>
+        </div>
+        <Msg s={test} />
       </form>
     </Card>
   );
@@ -151,20 +201,34 @@ function DemoSettingsForm({ cfg }: { cfg: Cfg }) {
   );
 }
 
-function PlansForm({ tiers }: { tiers: Tier[] }) {
+function PlansForm({ tiers, durations }: { tiers: Tier[]; durations: Duration[] }) {
   const [state, action, pending] = useActionState(savePlans, init);
   return (
     <Card className="p-6">
       <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-1"><Layers className="w-5 h-5 text-lime-600" /> Plans (prices &amp; limits)</h3>
-      <p className="text-sm text-slate-500 mb-4">Edit each plan&apos;s monthly price and service limit — changes apply to the pricing page and checkout instantly.</p>
+      <p className="text-sm text-slate-500 mb-4">Edit each plan&apos;s monthly price and limits (0 = unlimited; storage &amp; file size in MB, 1024 = 1 GB). Changes apply to the pricing page, checkout and enforcement instantly.</p>
       <form action={action} className="space-y-4">
         {tiers.map((t) => (
-          <div key={t.id} className="grid sm:grid-cols-3 gap-3 items-end">
-            <div className="text-sm font-medium text-slate-700 pb-2.5">{t.name}</div>
-            <label className="block"><span className={lbl}>Price (₹/month)</span><input name={`price_${t.id}`} type="number" min="0" defaultValue={Math.round(t.monthlyBase / 100)} className={inputCls} /></label>
-            <label className="block"><span className={lbl}>Max services (0 = ∞)</span><input name={`limit_${t.id}`} type="number" min="0" defaultValue={t.maxServices} className={inputCls} /></label>
-          </div>
+          <fieldset key={t.id} className="rounded-xl border border-slate-200 p-4">
+            <legend className="px-1 text-sm font-semibold text-slate-700">{t.name}</legend>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <label className="block"><span className={lbl}>Price (₹/month)</span><input name={`price_${t.id}`} type="number" min="0" defaultValue={Math.round(t.monthlyBase / 100)} className={inputCls} /></label>
+              {LIMIT_KEYS.map((k) => (
+                <label key={k} className="block"><span className={lbl}>{LIMIT_LABELS[k]}{k === "storageMb" || k === "uploadMb" ? " (MB)" : ""}</span><input name={`${k}_${t.id}`} type="number" min="0" defaultValue={t.limits[k]} className={inputCls} /></label>
+              ))}
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" name={`customDomain_${t.id}`} defaultChecked={t.customDomain} className="rounded" /> Custom domain included</label>
+          </fieldset>
         ))}
+        <fieldset className="rounded-xl border border-slate-200 p-4">
+          <legend className="px-1 text-sm font-semibold text-slate-700">Billing period discounts (%)</legend>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+            {durations.map((d) => (
+              <label key={d.id} className="block"><span className={lbl}>{d.label}</span><input name={`discount_${d.id}`} type="number" min="0" max="90" defaultValue={d.discountPct} className={inputCls} /></label>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 mt-2">Applies to every plan on the pricing page, checkout and in-admin renewals.</p>
+        </fieldset>
         <Msg s={state} />
         <button disabled={pending} className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 hover:bg-slate-800 disabled:opacity-60">{pending ? "Saving..." : "Save plans"}</button>
       </form>
@@ -301,6 +365,29 @@ function AddAdminForm({ admins }: { admins: { email: string; name: string | null
         <input name="password" type="password" required placeholder="Password (min 6)" className={inputCls} />
         <Msg s={state} />
         <button disabled={pending} className="rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold px-5 py-2.5 hover:bg-slate-50 disabled:opacity-60">{pending ? "Adding..." : "Add super admin"}</button>
+      </form>
+    </Card>
+  );
+}
+
+function ReferralForm({ r }: { r: ReferralSettings }) {
+  const [state, action, pending] = useActionState(saveReferralSettings, init);
+  return (
+    <Card className="p-6">
+      <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-1"><Gift className="w-5 h-5 text-lime-600" /> Referral program</h3>
+      <p className="text-sm text-slate-500 mb-4">Customers share their link and earn a commission on qualifying purchases by the people they refer. Buyers get no discount.</p>
+      <form action={action} className="space-y-4">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" name="enabled" defaultChecked={r.enabled} className="rounded" /> Program enabled</label>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <label className="block"><span className={lbl}>Commission (%)</span><input name="commissionPct" type="number" min="0" max="100" defaultValue={r.commissionPct} className={inputCls} /></label>
+          <label className="block"><span className={lbl}>Min order, before GST (₹)</span><input name="minOrder" type="number" min="0" defaultValue={r.minOrderPaise / 100} className={inputCls} /><span className="block text-xs text-slate-400 mt-1">Order must be above this.</span></label>
+          <label className="block"><span className={lbl}>Min withdrawal (₹)</span><input name="minWithdrawal" type="number" min="0" defaultValue={r.minWithdrawalPaise / 100} className={inputCls} /></label>
+          <label className="block"><span className={lbl}>Hold period (days)</span><input name="holdDays" type="number" min="0" max="365" defaultValue={r.holdDays} className={inputCls} /><span className="block text-xs text-slate-400 mt-1">Matches the refund window.</span></label>
+          <label className="block"><span className={lbl}>TDS on payouts (%)</span><input name="tdsPct" type="number" min="0" max="100" defaultValue={r.tdsPct} className={inputCls} /><span className="block text-xs text-slate-400 mt-1">Commission payouts may need TDS under Indian tax law — confirm with your CA.</span></label>
+        </div>
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" name="firstPurchaseOnly" defaultChecked={r.firstPurchaseOnly} className="rounded" /> Commission on first purchase only (off = renewals also earn)</label>
+        <Msg s={state} />
+        <button disabled={pending} className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-5 py-2.5 hover:bg-slate-800 disabled:opacity-60">{pending ? "Saving..." : "Save referral program"}</button>
       </form>
     </Card>
   );

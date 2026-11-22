@@ -22,7 +22,7 @@ export async function sendDemoOtpWhatsApp(phone: string, otp: string): Promise<{
         messaging_product: "whatsapp",
         to,
         type: "text",
-        text: { body: `Your StandardSaaS demo OTP is ${otp}. Valid for 10 minutes. Do not share.` },
+        text: { body: `Your SitePixl demo OTP is ${otp}. Valid for 10 minutes. Do not share.` },
       }),
     });
     return { sent: res.ok, mock: false };

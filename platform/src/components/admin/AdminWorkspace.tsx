@@ -13,6 +13,7 @@ export type WorkspaceTab = {
 /** Left icon-tabs + main content (+ optional sticky aside). Matches Appearance / Results polish. */
 export function AdminWorkspace({
   title,
+  subtitle,
   titleIcon,
   tabs,
   tab,
@@ -24,6 +25,8 @@ export function AdminWorkspace({
   asideWidth = 380,
 }: {
   title: string;
+  /** One-line description shown under the title (hidden on very small screens). */
+  subtitle?: string;
   titleIcon?: ReactNode;
   tabs: WorkspaceTab[];
   tab: string;
@@ -40,11 +43,18 @@ export function AdminWorkspace({
     <div className="admin-full-bleed flex flex-col flex-1 min-h-0">
       <div className="flex flex-col xl:flex-row xl:items-stretch flex-1 min-h-0 gap-0">
         <div className="w-full flex flex-col min-h-0 order-2 xl:order-1 flex-1 min-w-0">
-          <div className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-1 min-h-0 h-full">
-            <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 shrink-0 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                {titleIcon}
-                <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{title}</p>
+          <div className="flex flex-col rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 overflow-hidden flex-1 min-h-0 h-full shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]">
+            <div className="px-3 sm:px-4 py-2.5 border-b border-slate-100 dark:border-white/10 bg-gradient-to-r from-lime-50/70 via-white to-violet-50/60 dark:from-lime-500/[0.06] dark:via-slate-900 dark:to-violet-500/[0.06] shrink-0 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {titleIcon && (
+                  <span className="admin-grad inline-flex w-8 h-8 rounded-xl items-center justify-center shrink-0 shadow-md shadow-blue-600/20 [&>svg]:text-white">
+                    {titleIcon}
+                  </span>
+                )}
+                <div className="min-w-0">
+                  <h1 className="text-sm sm:text-[15px] font-bold text-slate-900 dark:text-white truncate">{title}</h1>
+                  {subtitle && <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
+                </div>
               </div>
               {toolbar}
             </div>
@@ -53,8 +63,8 @@ export function AdminWorkspace({
               <div
                 className={
                   many
-                    ? "flex flex-wrap gap-1 p-2 border-b border-slate-100 dark:border-slate-800 shrink-0"
-                    : "grid gap-1 p-2 border-b border-slate-100 dark:border-slate-800 shrink-0"
+                    ? "flex flex-wrap gap-1 p-2 border-b border-slate-100 dark:border-white/10 shrink-0"
+                    : "grid gap-1 p-2 border-b border-slate-100 dark:border-white/10 shrink-0"
                 }
                 style={many ? undefined : { gridTemplateColumns: `repeat(${Math.min(Math.max(tabs.length, 1), 6)}, minmax(0, 1fr))` }}
               >
@@ -70,7 +80,7 @@ export function AdminWorkspace({
                         many ? "min-w-[4.5rem] flex-1" : ""
                       } ${
                         on
-                          ? "bg-slate-900 text-white dark:bg-lime-500 dark:text-slate-900 shadow-sm"
+                          ? "admin-grad shadow-md shadow-blue-600/20"
                           : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                       }`}
                     >
@@ -95,7 +105,7 @@ export function AdminWorkspace({
               className="hidden xl:flex flex-col min-h-0 order-1 xl:order-3 shrink-0"
               style={{ width: asideWidth, flex: `0 0 ${asideWidth}px` }}
             >
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-1 min-h-0 flex flex-col sticky top-0 max-h-[calc(100vh-6rem)]">
+              <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 overflow-hidden flex-1 min-h-0 flex flex-col sticky top-0 max-h-[calc(100vh-6rem)]">
                 {aside}
               </div>
             </div>
@@ -107,5 +117,5 @@ export function AdminWorkspace({
 }
 
 export const fieldCls =
-  "w-full rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-lime-500 placeholder:text-slate-400";
+  "w-full rounded-xl border border-slate-300 dark:border-slate-600 dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm outline-none focus:border-lime-500 focus:ring-4 focus:ring-lime-500/15 placeholder:text-slate-400 transition";
 export const labelCls = "block text-[10px] font-semibold text-slate-500 dark:text-slate-400 mb-1";

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandLogo } from "@/components/BrandLogo";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X, Sparkles } from "lucide-react";
@@ -8,12 +9,13 @@ import { ThemeToggle } from "./ThemeToggle";
 import { mkt } from "@/lib/marketingTheme";
 
 // In-page sections of the landing page (ids must exist in app/(marketing)/page.tsx).
-const LINKS = [
+// `wide` links only show from xl up so the bar never wraps on small laptops.
+const LINKS: { label: string; id: string; wide?: boolean }[] = [
   { label: "Features", id: "features" },
   { label: "Sectors", id: "sectors" },
-  { label: "How it works", id: "how" },
+  { label: "How it works", id: "how", wide: true },
   { label: "Pricing", id: "pricing" },
-  { label: "FAQ", id: "faq" },
+  { label: "Contact", id: "contact" },
 ];
 
 export function MarketingHeader() {
@@ -54,23 +56,20 @@ export function MarketingHeader() {
   return (
     <header className={mkt.header}>
       <div className={`${mkt.container} h-16 flex items-center justify-between gap-4`}>
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <span className={mkt.logoMark}>S</span>
-          <span className={`${mkt.logoText} text-lg`}>
-            Standard<span className={mkt.logoAccent}>SaaS</span>
-          </span>
+        <Link href="/" className="flex shrink-0 items-center" aria-label="SitePixl home">
+          <BrandLogo size={32} id="spx-h" />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-1" aria-label="Main">
           {LINKS.map((l) => (
-            <a key={l.id} href={`/#${l.id}`} className={linkCls(l.id)} aria-current={onHome && active === l.id ? "true" : undefined}>
+            <a key={l.id} href={`/#${l.id}`} className={`${linkCls(l.id)} whitespace-nowrap ${l.wide ? "hidden xl:inline" : ""}`} aria-current={onHome && active === l.id ? "true" : undefined}>
               {l.label}
             </a>
           ))}
           <span className="mx-1.5 h-5 w-px bg-[var(--mkt-border)]" aria-hidden />
           <Link
             href="/ai-builder"
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition ${
               pathname === "/ai-builder" ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-text)]" : "text-[var(--mkt-accent-text)] hover:bg-[var(--mkt-accent-soft)]"
             }`}
           >
@@ -78,7 +77,7 @@ export function MarketingHeader() {
           </Link>
           <Link
             href="/demos"
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-semibold transition ${
               pathname === "/demos" ? "bg-[var(--mkt-accent-soft)] text-[var(--mkt-text)]" : "text-[var(--mkt-text-secondary)] hover:text-[var(--mkt-text)]"
             }`}
           >

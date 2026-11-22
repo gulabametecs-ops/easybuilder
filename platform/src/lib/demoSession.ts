@@ -4,6 +4,7 @@ import { db } from "./db";
 import { getPlatformConfig } from "./platformConfig";
 import { getVertical, VERTICALS } from "./verticals";
 import { SESSION_COOKIE } from "./auth";
+import { deleteDemoUploads, demoUploadPrefix } from "./demoMedia";
 
 export const DEMO_COOKIE = "demo_session";
 
@@ -47,15 +48,20 @@ function cookieDomain(): string | undefined {
   return `.${host}`;
 }
 
+// Demo sites run inside an iframe on /demos. A partitioned SameSite=None cookie
+// (CHIPS) survives there even when the browser blocks third-party cookies — and
+// *.localhost counts as cross-site to localhost:3000 in Chrome. Browsers accept
+// Secure cookies on http://localhost, so this works in dev too.
+export const IFRAME_COOKIE = {
+  httpOnly: true,
+  sameSite: "none" as const,
+  secure: true,
+  partitioned: true,
+  path: "/",
+};
+
 export function demoCookieOptions(maxAgeSec: number) {
-  return {
-    httpOnly: true,
-    sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: maxAgeSec,
-    domain: cookieDomain(),
-  };
+  return { ...IFRAME_COOKIE, maxAge: maxAgeSec, domain: cookieDomain() };
 }
 
 export async function setDemoCookie(token: string, maxAgeSec: number) {
@@ -85,7 +91,18 @@ function wipeSessionRows(
   return model.deleteMany({ where: { demoSessionId: sessionId } });
 }
 
-export async function cleanupDemoSessionData(sessionId: string) {
+/** `clearCookies`: only when the visitor who owns this session is the one making the request. */
+export async function cleanupDemoSessionData(sessionId: string, clearCookies = true) {
+  // Uploaded files live in the sandbox's own folder on the demo tenant — delete them permanently.
+  const s = await db.demoSession.findUnique({ where: { id: sessionId }, select: { vertical: true } });
+  const sub = s ? getVertical(s.vertical)?.demoSubdomain : undefined;
+  const tenant = sub ? await db.tenant.findUnique({ where: { subdomain: sub }, select: { id: true } }) : null;
+  if (tenant) {
+    await deleteDemoUploads(demoUploadPrefix(tenant.id, sessionId)).catch((err) =>
+      console.error("deleteDemoUploads failed", sessionId, err),
+    );
+  }
+
   await Promise.all([
     wipeSessionRows(db.lead, sessionId),
     wipeSessionRows(db.appointment, sessionId),
@@ -94,6 +111,8 @@ export async function cleanupDemoSessionData(sessionId: string) {
     wipeSessionRows(db.galleryItem, sessionId),
     wipeSessionRows(db.person, sessionId),
     wipeSessionRows(db.siteEvent, sessionId),
+    wipeSessionRows(db.property, sessionId),
+    wipeSessionRows(db.cause, sessionId),
     wipeSessionRows(db.volunteer, sessionId),
     wipeSessionRows(db.siteDonation, sessionId),
   ]);
@@ -109,7 +128,7 @@ export async function cleanupDemoSessionData(sessionId: string) {
     },
   });
 
-  try {
+  if (clearCookies) try {
     const store = await cookies();
     store.set(DEMO_COOKIE, "", { ...demoCookieOptions(0), maxAge: 0 });
     store.set(SESSION_COOKIE, "", { httpOnly: true, path: "/", maxAge: 0 });
@@ -220,7 +239,7 @@ export async function sweepExpiredDemoSessions() {
       take: 50,
     });
     for (const s of stale) {
-      await cleanupDemoSessionData(s.id);
+      await cleanupDemoSessionData(s.id, false); // someone else's session — don't touch this request's cookies
     }
   } catch (err) {
     console.error("sweepExpiredDemoSessions failed", err);

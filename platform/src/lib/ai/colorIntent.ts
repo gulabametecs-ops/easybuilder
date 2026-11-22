@@ -23,6 +23,12 @@ const PALETTES: Record<string, Palette> = {
   grey: { name: "Grey", primary: "#475569", secondary: "#0f172a" },
   gray: { name: "Grey", primary: "#475569", secondary: "#0f172a" },
 };
+// Mood words without a colour name ("darker, premium style").
+const MOODS: [RegExp, Palette][] = [
+  [/\b(dark|darker|premium|luxury|luxurious|royal|rich|elegant|classy)\b/, { name: "premium dark (black & gold)", primary: "#c9a227", secondary: "#0a0a0f" }],
+  [/\b(fresh|bright|light|lighter|vibrant|cheerful)\b/, { name: "fresh bright", primary: "#0ea5e9", secondary: "#0f172a" }],
+  [/\b(calm|soft|pastel|minimal|clean)\b/, { name: "calm minimal", primary: "#0d9488", secondary: "#134e4a" }],
+];
 const ROTATION = ["blue", "teal", "purple", "orange", "red", "green", "navy", "pink"];
 
 const COLOUR_WORD = /\b(colou?rs?|theme|palette|shade|tone)\b/i;
@@ -42,6 +48,10 @@ export function detectColorIntent(text: string, currentPrimary = ""): ColorInten
   const named = Object.keys(PALETTES).find((k) => new RegExp(`\\b${k}\\b`).test(t));
   if (named && (COLOUR_WORD.test(t) || /\b(make|change|use|switch|turn)\b/.test(t) || t.split(/\s+/).length <= 3)) {
     return PALETTES[named];
+  }
+  if (!named) {
+    const mood = MOODS.find(([re]) => re.test(t));
+    if (mood && (COLOUR_WORD.test(t) || /\b(style|look|feel|design)\b/.test(t))) return mood[1];
   }
   if (!named && COLOUR_WORD.test(t)) {
     // No colour named: rotate to the next palette that differs from the current one.

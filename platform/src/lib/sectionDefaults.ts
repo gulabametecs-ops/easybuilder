@@ -33,9 +33,27 @@ export const SECTION_META: { type: SectionType; label: string; description: stri
   { type: "richText", label: "Rich text / HTML", description: "Free-form HTML content block." },
   { type: "visionMission", label: "Vision & mission", description: "Vision, mission and values cards — used by NGOs and institutions." },
   { type: "eventList", label: "Events list", description: "Live events from Admin → Events, with upcoming/completed status." },
+  { type: "causeList", label: "Fundraising causes", description: "Live causes from Admin → Causes with goal progress, days left and donate buttons." },
+  { type: "propertyList", label: "Property listings", description: "Live listings from Admin → Properties, with buy / rent / PG filters." },
   { type: "volunteerForm", label: "Volunteer form", description: "Volunteer application (name, city, interest, availability)." },
   { type: "donatePay", label: "Donate / UPI / QR", description: "Razorpay, UPI QR and bank details from Settings → Payments." },
+  { type: "payOnline", label: "Pay online", description: "Payment-link buttons (Razorpay, PayPal, Stripe…) + UPI QR from Admin → Integrations." },
 ];
+
+// Per-section layout variants (SectionStyle.layout). First = block default.
+// Hero uses content.variant instead, so it is not listed here.
+export const SECTION_LAYOUTS: Partial<Record<SectionType, string[]>> = {
+  about: ["split", "reverse", "centered", "stacked"],
+  features: ["cards", "minimal", "numbered", "split"],
+  stats: ["default", "band", "cards", "minimal"],
+  serviceCategories: ["default", "list", "tiles"],
+  steps: ["default", "timeline", "cards"],
+  testimonials: ["default", "featured", "minimal", "dark"],
+  cta: ["default", "split", "minimal"],
+  gallery: ["grid", "masonry", "strip"],
+  team: ["default", "list"],
+  faq: ["default", "split"],
+};
 
 export const SECTION_DEFAULTS: { [K in SectionType]: SectionContentMap[K] } = {
   banner: {
@@ -212,12 +230,42 @@ export const SECTION_DEFAULTS: { [K in SectionType]: SectionContentMap[K] } = {
     emptyText: "New events will appear here once they are published.",
     groupByStatus: false,
   },
+  causeList: {
+    eyebrow: "CAUSES",
+    title: "Support a",
+    titleHighlight: "Cause",
+    subtitle: "Every rupee is tracked and reported. 80G tax benefit on all donations.",
+    category: "all",
+    featuredOnly: false,
+    showFilters: true,
+    showCompleted: true,
+    limit: 6,
+    emptyText: "New causes will appear here once they are published.",
+  },
+  propertyList: {
+    eyebrow: "LISTINGS",
+    title: "Featured",
+    titleHighlight: "Properties",
+    subtitle: "Verified listings with real photos, prices and site visits on request.",
+    purpose: "all",
+    featuredOnly: false,
+    showFilters: true,
+    limit: 9,
+    emptyText: "New listings will appear here once they are published.",
+  },
   donatePay: {
     eyebrow: "GIVE",
     title: "Donate",
     titleHighlight: "Easily",
     subtitle: "Pay online, scan the QR, or transfer to the bank account below.",
     suggestedAmounts: "500,1000,2500",
+  },
+  payOnline: {
+    eyebrow: "PAYMENTS",
+    title: "Pay",
+    titleHighlight: "Online",
+    subtitle: "Choose any option below — all payments are processed securely by the provider.",
+    emptyText: "Online payment options will appear here soon.",
   },
   volunteerForm: {
     title: "Join as a Volunteer",

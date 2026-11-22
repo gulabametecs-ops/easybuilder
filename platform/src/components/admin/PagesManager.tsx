@@ -9,8 +9,7 @@ import { SECTION_META } from "@/lib/sectionDefaults";
 import { Badge } from "./ui";
 import { PageCreator } from "./PageCreator";
 import { AIWebsiteModal } from "./AIWebsiteModal";
-import { DeletePageButton } from "./PageRowActions";
-import { duplicatePage } from "@/lib/actions/content";
+import { DeletePageButton, DuplicatePageButton } from "./PageRowActions";
 
 type PageRow = {
   id: string;
@@ -54,7 +53,8 @@ function PageThumb({ types, home }: { types: string[]; home?: boolean }) {
   );
 }
 
-export function PagesManager({ pages }: { pages: PageRow[] }) {
+export function PagesManager({ pages, pageLimit = 0 }: { pages: PageRow[]; pageLimit?: number }) {
+  const customCount = pages.filter((p) => !p.isSystem).length;
   const [createOpen, setCreateOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const published = pages.filter((p) => p.published).length;
@@ -72,6 +72,15 @@ export function PagesManager({ pages }: { pages: PageRow[] }) {
             <>
               <span className="text-slate-300 dark:text-slate-600">·</span>
               <span className="text-amber-600 dark:text-amber-400">{drafts} draft</span>
+            </>
+          )}
+          {pageLimit > 0 && (
+            <>
+              <span className="text-slate-300 dark:text-slate-600">·</span>
+              <span className={customCount >= pageLimit ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-slate-500"}>
+                {customCount}/{pageLimit} custom pages
+                {customCount >= pageLimit && <> · <Link href="/admin/billing" className="underline">Upgrade</Link></>}
+              </span>
             </>
           )}
         </div>
@@ -182,15 +191,13 @@ export function PagesManager({ pages }: { pages: PageRow[] }) {
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
-                  <form action={duplicatePage.bind(null, p.id)}>
-                    <button
-                      type="submit"
-                      className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
-                      title="Duplicate"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
-                  </form>
+                  <DuplicatePageButton
+                    id={p.id}
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    title="Duplicate"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </DuplicatePageButton>
                   {!p.isSystem && <DeletePageButton id={p.id} />}
                 </div>
               </div>

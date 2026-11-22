@@ -1,4 +1,5 @@
 import type { TemplateDef, SectionSeed } from "./types";
+import type { SectionContentMap } from "../config";
 
 const PHONE = "9000000000";
 const DEPARTMENTS = ["General Medicine", "Dental", "Eye Care", "Skin & Hair", "Mental Health"];
@@ -39,6 +40,18 @@ const bookSteps: SectionSeed<"steps"> = {
   },
 };
 
+const healthPlans: SectionContentMap["pricingPlans"]["plans"] = [
+  { name: "Basic Wellness", price: "₹999", period: "", features: ["Complete blood count", "Blood sugar (fasting)", "Lipid profile", "Urine routine", "Physician consultation"], featured: false, buttonLabel: "Book Now", buttonHref: "/book" },
+  { name: "Full Body", price: "₹1,499", period: "", features: ["Everything in Basic", "Liver & kidney function", "Thyroid profile", "HbA1c", "ECG", "Physician review of reports"], featured: true, buttonLabel: "Book Now", buttonHref: "/book" },
+  { name: "Executive", price: "₹3,999", period: "", features: ["Everything in Full Body", "Vitamin D & B12", "Chest X-ray", "2D Echo / TMT", "Eye & dental check-up", "Dietitian consultation"], featured: false, buttonLabel: "Book Now", buttonHref: "/book" },
+];
+
+const insurers: SectionSeed<"logos"> = {
+  type: "logos",
+  content: { title: "Cashless treatment with leading insurers & TPAs", items: ["Insurer Partner 1", "Insurer Partner 2", "TPA Partner 1", "TPA Partner 2", "Corporate Panel", "Government Scheme Desk"] },
+  style: { background: "light" },
+};
+
 const cta: SectionSeed<"cta"> = {
   type: "cta",
   content: { title: "Need to see a doctor?", highlight: "Book Your Appointment Today", phones: [PHONE], buttonLabel: "Book Appointment", buttonHref: "/book" },
@@ -47,9 +60,10 @@ const cta: SectionSeed<"cta"> = {
 export const hospital: TemplateDef = {
   theme: {
     colors: { primary: "#0e9aa7", primaryDark: "#0b7a85", secondary: "#0b2a3c", accent: "#5eead4", dark: "#07202e", light: "#f0f9fa", text: "#3d4f5c", heading: "#0b2a3c" },
-    font: "Manrope", radius: "1rem",
+    font: "Plus Jakarta Sans", radius: "1rem",
   },
   header: (biz) => ({
+    design: "classic",
     logoText: biz, logoImage: "",
     announcement: { show: false, text: "🩺 Full-body health check-up at ₹1,499 this month — book your slot.", link: "/book" },
     topbar: { show: true, address: "24×7 Emergency · OPD 8 AM – 9 PM", phones: [PHONE], email: "care@example.com", social: { facebook: "#", instagram: "#", whatsapp: "#" } },
@@ -59,6 +73,7 @@ export const hospital: TemplateDef = {
     cta: { label: "Book Appointment", href: "/book" },
   }),
   footer: (biz) => ({
+    design: "gradient",
     about: "Experienced specialists, modern diagnostics and genuinely caring staff — complete healthcare for your family, under one roof.",
     columns: [
       { title: "Quick Links", links: [ { label: "Home", href: "/" }, { label: "Departments", href: "/departments" }, { label: "Doctors", href: "/doctors" }, { label: "Health Packages", href: "/packages" }, { label: "Book Appointment", href: "/book" }, { label: "Contact", href: "/contact" } ] },
@@ -97,18 +112,19 @@ export const hospital: TemplateDef = {
       slug: "home", title: "Home", isSystem: true, order: 0,
       sections: [
         { type: "hero", content: {
-          variant: "split", customHtml: "",
-          badge: "24×7 EMERGENCY · EXPERT SPECIALISTS", titleTop: "Expert Care for Every", titleHighlight: "Member of Your Family",
+          variant: "slideshow", customHtml: "",
+          badge: "24×7 EMERGENCY · NABH-READY PROTOCOLS", titleTop: "Expert Care for Every", titleHighlight: "Member of Your Family",
           subtitle: "", description: `From routine check-ups to specialist treatment, ${biz} brings experienced doctors, in-house diagnostics and a caring team together — so you get answers faster.`, image: "",
           primaryBtn: { label: "Book Appointment", href: "/book" }, secondaryBtn: { label: "Find a Doctor", href: "/doctors" },
           features: [ { icon: "stethoscope", title: "20+ Specialists", text: "" }, { icon: "clock", title: "24×7 Emergency", text: "" }, { icon: "clipboard", title: "In-House Diagnostics", text: "" }, { icon: "star", title: "4.8 Patient Rating", text: "" } ],
+          slides: [
+            { titleTop: "Expert Care for Every", titleHighlight: "Member of Your Family", description: `Senior specialists, in-house diagnostics and a caring team — complete healthcare at ${biz}, under one roof.`, image: "", primaryBtn: { label: "Book Appointment", href: "/book" }, secondaryBtn: { label: "Find a Doctor", href: "/doctors" } },
+            { titleTop: "Emergency Care,", titleHighlight: "Day and Night", description: "Trained emergency physicians, ambulance support, ICU back-up and a 24×7 pharmacy — call us the moment you need help.", image: "", primaryBtn: { label: "Call Emergency", href: "/contact" }, secondaryBtn: { label: "Our Departments", href: "/departments" } },
+            { titleTop: "Full-Body Check-up", titleHighlight: "at ₹1,499", description: "60+ parameters, ECG and a physician review of your reports — results on WhatsApp the same evening.", image: "", primaryBtn: { label: "View Packages", href: "/packages" }, secondaryBtn: { label: "Book a Slot", href: "/book" } },
+          ],
         } },
-        { type: "features", content: { items: [
-          { icon: "stethoscope", title: "Senior Specialists", text: "Consult doctors with 10–20 years of experience, not trainees." },
-          { icon: "clock", title: "Minimal Waiting", text: "Timed appointments mean you're seen close to your slot." },
-          { icon: "clipboard", title: "Reports in Hours", text: "In-house lab and imaging — most reports ready the same day." },
-          { icon: "tag", title: "Transparent Billing", text: "Clear estimates upfront. Cashless for major insurers." },
-        ] }, style: { cardShadow: "md" } },
+        { type: "stats", content: { items: [ { value: "50,000+", label: "Patients Treated", icon: "users" }, { value: "20+", label: "Specialist Doctors", icon: "stethoscope" }, { value: "60", label: "Beds incl. 8 ICU", icon: "heart" }, { value: "12+", label: "Years of Service", icon: "award" } ] }, style: { layout: "band" } },
+        { type: "serviceCategories", content: { eyebrow: "DEPARTMENTS", title: "Specialist Care,", titleHighlight: "All in One Place", categories: DEPARTMENTS }, style: { layout: "tiles" } },
         { type: "about", content: {
           eyebrow: "ABOUT US", title: "Healthcare That Treats You", titleHighlight: "Like Family",
           body: [
@@ -117,32 +133,46 @@ export const hospital: TemplateDef = {
           ],
           image: "", points: ["Qualified, experienced specialists", "Modern diagnostic equipment", "Cashless insurance support", "24×7 emergency & pharmacy"],
           buttonLabel: "About Our Hospital", buttonHref: "/about",
-        } },
-        { type: "serviceCategories", content: { eyebrow: "DEPARTMENTS", title: "Specialist Care,", titleHighlight: "All in One Place", categories: DEPARTMENTS } },
+        }, style: { layout: "reverse", background: "light" } },
+        { type: "features", content: { items: [
+          { icon: "stethoscope", title: "Senior Specialists", text: "Consult doctors with 10–20 years of experience, not trainees." },
+          { icon: "clock", title: "Minimal Waiting", text: "Timed appointments mean you're seen close to your slot." },
+          { icon: "clipboard", title: "Reports in Hours", text: "In-house lab and imaging — most reports ready the same day." },
+          { icon: "tag", title: "Transparent Billing", text: "Clear estimates upfront. Cashless with leading insurers and TPAs." },
+        ] }, style: { layout: "numbered" } },
         { type: "team", content: { eyebrow: "OUR DOCTORS", title: "Meet Our", titleHighlight: "Specialists", members: doctors.slice(0, 4) } },
-        { type: "stats", content: { items: [ { value: "50,000+", label: "Patients Treated", icon: "users" }, { value: "20+", label: "Specialist Doctors", icon: "stethoscope" }, { value: "24×7", label: "Emergency Care", icon: "clock" }, { value: "12+", label: "Years of Service", icon: "award" } ] } },
-        bookSteps,
+        { type: "imageBanner", content: { title: "Medical emergency? We're open 24×7.", subtitle: "Emergency physicians, ambulance support and ICU back-up — every hour, every day, including public holidays.", buttonLabel: "Contact Emergency Desk", buttonHref: "/contact", image: "" } },
+        { type: "pricingPlans", content: { eyebrow: "PREVENTIVE CARE", title: "Popular Health", titleHighlight: "Check-up Packages", plans: healthPlans }, style: { background: "light" } },
+        { ...bookSteps, style: { layout: "timeline" } },
         { type: "testimonials", content: { eyebrow: "PATIENT STORIES", title: "Trusted by", titleHighlight: "Thousands of Families", items: [
-          { name: "Lakshmi Narayanan", role: "Cataract surgery patient", text: "My mother's cataract surgery was quick and completely painless. Dr. Farhan explained every step and she was home the same day.", rating: 5 },
+          { name: "Lakshmi Narayanan", role: "Daughter of a cataract patient", text: "My mother's cataract surgery was quick and completely painless. Dr. Farhan explained every step and she was home the same day.", rating: 5 },
           { name: "Arjun Mehta", role: "Dental patient", text: "Had a root canal done in a single sitting with almost no discomfort. The clinic is spotless and the staff are very polite.", rating: 5 },
           { name: "Fatima Begum", role: "Emergency visit", text: "We rushed in at 2 AM with my son's high fever. The emergency team was calm, quick and kept us informed throughout.", rating: 5 },
           { name: "Rohit Deshmukh", role: "Health check-up", text: "Booked the full-body package online. Tests done in an hour, reports on WhatsApp by evening, and a proper doctor review.", rating: 5 },
-        ] } },
-        hours,
+          { name: "Gurpreet Kaur", role: "Diabetes follow-up", text: "Dr. Anil reviews my sugar reports on WhatsApp between visits. My HbA1c has come down from 9.1 to 6.8 in a year.", rating: 5 },
+        ] }, style: { layout: "featured", background: "dark" } },
+        insurers,
         { type: "faq", content: { eyebrow: "FAQ", title: "Patient", titleHighlight: "Questions", items: [
           { q: "How do I book an appointment?", a: "Book online in under a minute, call us, or send a WhatsApp message. You'll get an instant confirmation with your slot." },
-          { q: "Do you accept health insurance?", a: "Yes. We offer cashless treatment with most major insurers and TPAs, and help with reimbursement paperwork for others." },
+          { q: "Do you accept health insurance?", a: "Yes. We offer cashless treatment with most major insurers and TPAs, and help with reimbursement paperwork for others. Ayushman Bharat and CGHS eligibility can be checked at the help desk." },
           { q: "Is emergency care available at night?", a: "Yes. Our emergency department, pharmacy and lab are open 24×7, including Sundays and public holidays." },
           { q: "How soon will I get my test reports?", a: "Most blood tests and X-rays are ready the same day. Reports are shared on WhatsApp and email, and printed copies are available at the desk." },
           { q: "Can I consult a doctor online?", a: "Yes. Video consultations are available for follow-ups and non-emergency concerns — select 'Online' when booking." },
           { q: "What should I bring to my first visit?", a: "A photo ID, your insurance card if applicable, and any previous prescriptions or reports." },
-        ] } },
-        cta,
+        ], intro: "Quick answers on appointments, insurance, reports and emergencies. Can't find yours? Call the help desk — we answer 24×7." } as SectionSeed<"faq">["content"], style: { layout: "split" } },
+        hours,
+        { ...cta, style: { layout: "split" } },
       ],
     },
     { slug: "departments", title: "Departments", isSystem: true, order: 1, sections: [
       { type: "serviceCategories", content: { eyebrow: "", title: "Our", titleHighlight: "Departments", categories: DEPARTMENTS } },
-      bookSteps,
+      { type: "features", content: { items: [
+        { icon: "heart", title: "Day-Care Procedures", text: "Cataract, endoscopy and minor surgeries with same-day discharge." },
+        { icon: "clipboard", title: "In-House Lab & Imaging", text: "Pathology, digital X-ray, ultrasound and ECG under the same roof." },
+        { icon: "users", title: "Multi-Specialist Review", text: "Complex cases are discussed jointly by the relevant specialists." },
+        { icon: "shield", title: "Infection Control", text: "Dedicated infection-control nurse and audited sterilisation protocols." },
+      ], eyebrow: "HOW WE CARE", title: "Built Around", titleHighlight: "the Patient" } as SectionSeed<"features">["content"], style: { layout: "split", background: "light" } },
+      { ...bookSteps, style: { layout: "cards" } },
       { type: "cta", content: { title: "Have a health concern?", highlight: "Consult Our Experts", phones: [PHONE], buttonLabel: "Book Appointment", buttonHref: "/book" } },
     ] },
     { slug: "doctors", title: "Doctors", isSystem: true, order: 2, sections: [
@@ -151,19 +181,32 @@ export const hospital: TemplateDef = {
       cta,
     ] },
     { slug: "packages", title: "Health Packages", isSystem: true, order: 3, sections: [
-      { type: "pricingPlans", content: { eyebrow: "PREVENTIVE CARE", title: "Health Check-up", titleHighlight: "Packages", plans: [
-        { name: "Basic Wellness", price: "₹999", period: "", features: ["Complete blood count", "Blood sugar (fasting)", "Lipid profile", "Urine routine", "Physician consultation"], featured: false, buttonLabel: "Book Now", buttonHref: "/book" },
-        { name: "Full Body", price: "₹1,499", period: "", features: ["Everything in Basic", "Liver & kidney function", "Thyroid profile", "HbA1c", "ECG", "Physician review of reports"], featured: true, buttonLabel: "Book Now", buttonHref: "/book" },
-        { name: "Executive", price: "₹3,999", period: "", features: ["Everything in Full Body", "Vitamin D & B12", "Chest X-ray", "2D Echo / TMT", "Eye & dental check-up", "Dietitian consultation"], featured: false, buttonLabel: "Book Now", buttonHref: "/book" },
-      ] } },
+      { type: "pricingPlans", content: { eyebrow: "PREVENTIVE CARE", title: "Health Check-up", titleHighlight: "Packages", plans: healthPlans } },
+      { type: "faq", content: { eyebrow: "BEFORE YOUR CHECK-UP", title: "Package", titleHighlight: "FAQs", items: [
+        { q: "Do I need to fast?", a: "Yes, 10–12 hours of fasting is needed for sugar and lipid tests. Water is allowed. Take regular BP or thyroid medicines unless your doctor says otherwise." },
+        { q: "How long does the check-up take?", a: "Around 2–3 hours for Full Body and half a day for Executive, including breakfast after the fasting samples." },
+        { q: "Can I book for my parents?", a: "Yes. Senior citizens get priority at every counter and a wheelchair escort on request." },
+      ], intro: "A little preparation gives more accurate results. Here's what to know before your check-up." } as SectionSeed<"faq">["content"], style: { layout: "split", background: "light" } },
       cta,
     ] },
     { slug: "about", title: "About", isSystem: true, order: 4, sections: [
       { type: "about", content: { eyebrow: "ABOUT US", title: "Caring for", titleHighlight: "Our Community", body: [
         `For over a decade, ${biz} has been the first call for thousands of families — for a child's fever at midnight, a parent's surgery or a routine check-up.`,
         "We invest in experienced specialists, modern equipment and a patient-first culture, so every visit feels unhurried, clear and reassuring.",
-      ], image: "", points: ["Patient-first", "Ethical, evidence-based care", "Latest technology", "Affordable & transparent"], buttonLabel: "", buttonHref: "" } },
-      { type: "stats", content: { items: [ { value: "50,000+", label: "Patients Treated", icon: "users" }, { value: "20+", label: "Specialists", icon: "stethoscope" }, { value: "15,000+", label: "Procedures", icon: "heart" }, { value: "12+", label: "Years", icon: "award" } ] } },
+      ], image: "", points: ["Patient-first", "Ethical, evidence-based care", "Latest technology", "Affordable & transparent"], buttonLabel: "", buttonHref: "" }, style: { layout: "stacked" } },
+      { type: "visionMission", content: {
+        eyebrow: "WHAT DRIVES US",
+        visionTitle: "Our Vision", visionText: "To be the most trusted family hospital in Your City — where every patient leaves with answers, not more questions.",
+        missionTitle: "Our Mission", missionText: "Ethical, evidence-based treatment by experienced specialists, at prices families can plan for.",
+        valuesTitle: "Our Values",
+        values: [
+          { icon: "heart", title: "Compassion", text: "We treat every patient the way we'd want our own parents treated." },
+          { icon: "shield", title: "Integrity", text: "No unnecessary tests, no surprise bills." },
+          { icon: "award", title: "Excellence", text: "Continuous training and audited clinical protocols." },
+        ],
+      }, style: { background: "light" } },
+      { type: "stats", content: { items: [ { value: "50,000+", label: "Patients Treated", icon: "users" }, { value: "20+", label: "Specialists", icon: "stethoscope" }, { value: "15,000+", label: "Procedures", icon: "heart" }, { value: "12+", label: "Years", icon: "award" } ] }, style: { layout: "minimal" } },
+      insurers,
       cta,
     ] },
     { slug: "contact", title: "Contact", isSystem: true, order: 5, sections: [

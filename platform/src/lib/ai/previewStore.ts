@@ -25,7 +25,7 @@ function pruneMemory() {
   }
 }
 
-function pruneDisk() {
+export function pruneDisk() {
   try {
     const now = Date.now();
     for (const name of readdirSync(DIR)) {

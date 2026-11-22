@@ -3,15 +3,17 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { submitDemoRequest, type ContactState } from "@/lib/actions/signup";
-import { Check, User, Mail, Phone, Building2, LayoutGrid, MessageCircle, Loader2, Lock, ArrowRight } from "lucide-react";
+import { Check, User, Mail, Phone, Building2, LayoutGrid, MessageCircle, Lock, ArrowRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { LegalConsent } from "./LegalConsent";
+import { BrandSpinner } from "@/components/BrandLogo";
 
 const initial: ContactState = { ok: false, message: "" };
 
 const CONTACT_VIA = [
-  { id: "call", label: "Call" },
-  { id: "whatsapp", label: "WhatsApp" },
-  { id: "email", label: "Email" },
+  { id: "call", label: "Call", icon: Phone },
+  { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { id: "email", label: "Email", icon: Mail },
 ] as const;
 
 const fieldCls =
@@ -106,12 +108,13 @@ export function DemoForm({ sectors = [] }: { sectors?: { id: string; name: strin
               type="button"
               onClick={() => setVia(c.id)}
               aria-pressed={via === c.id}
-              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+              className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
                 via === c.id
-                  ? "border-[var(--mkt-accent)] bg-[var(--mkt-accent-soft)] text-slate-900 ring-1 ring-[var(--mkt-accent)] dark:text-white"
-                  : "border-slate-200 text-slate-600 hover:border-[var(--mkt-accent)]/50 dark:border-white/10 dark:text-slate-300"
+                  ? "border-[var(--mkt-brand)] bg-[var(--mkt-brand)]/[0.08] text-[var(--mkt-brand)] ring-1 ring-[var(--mkt-brand)]"
+                  : "border-slate-200 text-slate-600 hover:border-[var(--mkt-brand)]/50 hover:text-slate-900 dark:border-white/10 dark:text-slate-300 dark:hover:text-white"
               }`}
             >
+              <c.icon className={`h-4 w-4 ${c.id === "whatsapp" && via !== c.id ? "text-[#25d366]" : ""}`} />
               {c.label}
             </button>
           ))}
@@ -127,15 +130,16 @@ export function DemoForm({ sectors = [] }: { sectors?: { id: string; name: strin
       <button
         type="submit"
         disabled={pending}
-        className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--mkt-accent)] py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-[var(--mkt-accent)]/25 transition hover:bg-[var(--mkt-accent-hover)] disabled:opacity-60"
+        className="mkt-brand-grad group inline-flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold shadow-[0_10px_28px_-10px_rgba(47,91,255,0.65)] transition hover:brightness-110 disabled:opacity-60"
       >
-        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        {pending ? <BrandSpinner className="h-4 w-4" /> : null}
         {pending ? "Sending…" : "Request my guided demo"}
         {!pending && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
       </button>
       <p className="flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
         <Lock className="h-3.5 w-3.5" /> We only use your details to contact you about your demo.
       </p>
+      <LegalConsent className="text-center" />
     </form>
   );
 }

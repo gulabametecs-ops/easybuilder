@@ -11,8 +11,12 @@ async function assertDemoCanMutate(recordDemoSessionId: string | null | undefine
   return recordDemoSessionId === demoId;
 }
 
+const LEAD_STATUSES = ["new", "contacted", "converted", "closed"];
+const APPT_STATUSES = ["pending", "confirmed", "completed", "cancelled"];
+
 // ─── Leads ───────────────────────────────────────────────────────────────────
 export async function updateLeadStatus(id: string, status: string) {
+  if (!LEAD_STATUSES.includes(status)) return;
   const tenantId = await requireTenantId({ demoOk: true });
   const lead = await db.lead.findFirst({ where: { id, tenantId } });
   if (!lead || !(await assertDemoCanMutate(lead.demoSessionId))) return;
@@ -32,6 +36,7 @@ export async function deleteLead(id: string) {
 
 // ─── Appointments ────────────────────────────────────────────────────────────
 export async function updateAppointmentStatus(id: string, status: string) {
+  if (!APPT_STATUSES.includes(status)) return;
   const tenantId = await requireTenantId({ demoOk: true });
   const row = await db.appointment.findFirst({ where: { id, tenantId } });
   if (!row || !(await assertDemoCanMutate(row.demoSessionId))) return;

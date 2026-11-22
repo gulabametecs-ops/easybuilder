@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   CheckCircle2, Palette, PanelTop, PanelBottom, Code2,
   Type, Squircle, Sparkles, Moon, Sun, Heading, AlignLeft,
@@ -51,27 +51,21 @@ const COLOR_ROLES: {
 export function AppearanceEditor({ theme, header, footer, customCss, version }: Props) {
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("Theme");
   const [previewHidden, setPreviewHidden] = useState(false);
-  const [previewTick, setPreviewTick] = useState(0);
-
-  useEffect(() => {
-    setPreviewTick((t) => t + 1);
-  }, [version]);
-
-  const src = `/?__edit=1&_r=${previewTick}&v=${encodeURIComponent(version)}`;
+  // `version` changes on every save, so it alone busts the preview cache and remounts the frame.
+  const src = `/?__edit=1&v=${encodeURIComponent(version)}`;
 
   return (
     <div className="admin-full-bleed flex flex-col flex-1 min-h-0">
       <div className="flex flex-col xl:flex-row xl:items-stretch flex-1 min-h-0 gap-0">
         {/* Left editor */}
         <div
-          className="w-full flex flex-col min-h-0 order-2 xl:order-1"
-          style={previewHidden ? { flex: "1 1 auto", width: "100%" } : { width: 400, flex: "0 0 400px", minWidth: 320, maxWidth: "100%" }}
+          className={`w-full flex flex-col min-h-0 flex-1 xl:order-1 ${previewHidden ? "" : "xl:flex-none xl:w-[400px]"}`}
         >
           <div className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-1 min-h-0 h-full">
             <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 shrink-0 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <Palette className="w-4 h-4 text-lime-600 shrink-0" />
-                <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">Appearance</p>
+                <h1 className="text-sm font-semibold text-slate-800 dark:text-white truncate">Appearance</h1>
               </div>
               {previewHidden && (
                 <button
@@ -123,10 +117,10 @@ export function AppearanceEditor({ theme, header, footer, customCss, version }: 
 
         {/* Right preview */}
         {!previewHidden && (
-          <div className="flex-1 min-w-0 min-h-[420px] xl:min-h-0 order-1 xl:order-3 flex flex-col">
+          <div className="hidden xl:flex flex-1 min-w-0 min-h-0 xl:order-3 flex-col">
             <DevicePreviewFrame
               src={src}
-              reloadKey={`${version}:${previewTick}`}
+              reloadKey={version}
               className="flex-1 min-h-0 h-[calc(100vh-8rem)]"
               onToggleHidden={() => setPreviewHidden(true)}
             />

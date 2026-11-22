@@ -8,6 +8,7 @@ export const coaching: TemplateDef = {
     font: "Sora", radius: "0.85rem",
   },
   header: (biz) => ({
+    design: "modern",
     logoText: biz, logoImage: "",
     announcement: { show: true, text: "🔥 New JEE, NEET & SSC batches starting soon · Book a FREE demo class today!", link: "/demo" },
     topbar: { show: true, address: "Results-driven coaching for JEE, NEET, UPSC & SSC", phones: ["9000000000"], email: "info@example.com", social: { facebook: "#", instagram: "#", whatsapp: "#" } },
@@ -17,7 +18,7 @@ export const coaching: TemplateDef = {
     cta: { label: "Book Free Demo", href: "/demo" },
   }),
   footer: (biz) => ({
-    design: "gradient",
+    design: "minimal",
     about: "Result-oriented coaching with expert faculty, small batches, weekly test series and a proven track record of selections in JEE, NEET, UPSC, SSC and banking.",
     columns: [
       { title: "Quick Links", links: [ { label: "Home", href: "/" }, { label: "About Us", href: "/about" }, { label: "Courses", href: "/courses" }, { label: "Faculty", href: "/faculty" }, { label: "Results", href: "/results" }, { label: "Free Demo", href: "/demo" } ] },
@@ -52,8 +53,20 @@ export const coaching: TemplateDef = {
           primaryBtn: { label: "Book Free Demo", href: "/demo" }, secondaryBtn: { label: "View Results", href: "/results" },
           features: [ { icon: "award", title: "2,000+ Selections", text: "" }, { icon: "graduation", title: "IIT / AIIMS Faculty", text: "" }, { icon: "users", title: "Max 40 per Batch", text: "" }, { icon: "clipboard", title: "Weekly Test Series", text: "" } ],
         } },
-        { type: "stats", content: { items: [ { value: "2,000+", label: "Selections", icon: "award" }, { value: "AIR 47", label: "Best JEE Rank", icon: "trending" }, { value: "50+", label: "Expert Faculty", icon: "graduation" }, { value: "15+", label: "Years of Results", icon: "star" } ] } },
-        { type: "features", style: { background: "light" }, content: { items: [
+        { type: "logos", content: { title: "Exams we prepare you for", items: ["JEE Main", "JEE Advanced", "NEET UG", "UPSC CSE", "SSC CGL", "IBPS PO", "RRB NTPC", "CUET"] } },
+        { type: "toppers", style: { background: "light" }, content: { eyebrow: "RESULTS 2025", title: "Meet Our", titleHighlight: "Top Rankers", items: [
+          { name: "Aditya Kumar", exam: "JEE Advanced 2025", score: "AIR 47", rank: "1", image: "" },
+          { name: "Sneha Reddy", exam: "NEET 2025", score: "AIR 142", rank: "2", image: "" },
+          { name: "Faizan Qureshi", exam: "JEE Main 2025", score: "99.92 %ile", rank: "3", image: "" },
+          { name: "Mohit Chauhan", exam: "SSC CGL 2025", score: "Selected", rank: "", image: "" },
+          { name: "Pallavi Singh", exam: "IBPS PO 2025", score: "Selected", rank: "", image: "" },
+          { name: "Tanvi Agarwal", exam: "NEET 2025", score: "680 / 720", rank: "", image: "" },
+        ] } },
+        { type: "stats", style: { layout: "cards" }, content: { items: [ { value: "2,000+", label: "Selections", icon: "award" }, { value: "AIR 47", label: "Best JEE Rank", icon: "trending" }, { value: "50+", label: "Expert Faculty", icon: "graduation" }, { value: "15+", label: "Years of Results", icon: "star" } ] } },
+        { type: "serviceCategories", style: { layout: "list" }, content: { eyebrow: "COURSES", title: "Programs for Every", titleHighlight: "Goal", categories: ["Engineering & Medical", "Government Jobs", "Board & Tuition"] } },
+        { type: "countdown", style: { background: "dark" }, content: { eyebrow: "SCHOLARSHIP TEST", title: "Win up to", titleHighlight: "100% Fee Waiver", subtitle: "Our next scholarship-cum-admission test is on Sunday, 13th December. Open to Class 8–12 and droppers — registration is free.", targetDate: "2026-12-13T10:00:00", buttonLabel: "Register Free", buttonHref: "/demo" } },
+        { type: "about", style: { layout: "centered" }, content: { eyebrow: "WHY US", title: "One Promise:", titleHighlight: "Results", body: [`Since day one, ${biz} has been built around a simple idea — teach concepts deeply, test often, and mentor every student personally.`, "Our structured plan covers the full syllabus months before the exam, leaving time for revision, mock tests and targeted improvement."], image: "", points: ["Concept-first teaching", "Full syllabus + 3 revision cycles", "All-India mock tests", "Personal mentor for each student", "Scholarships up to 100%", "Hostel & library facility"], buttonLabel: "Book Free Demo", buttonHref: "/demo" } },
+        { type: "features", style: { layout: "split", background: "light" }, content: { eyebrow: "WHY US", title: "Built for", titleHighlight: "Selections", items: [
           { icon: "graduation", title: "Faculty Who've Cracked It", text: "Learn from IITians, doctors and ex-civil servants who know exactly what the exam demands." },
           { icon: "users", title: "Small Batches", text: "Capped at 40 students so every doubt is heard and every student is tracked." },
           { icon: "clipboard", title: "Weekly Test Series", text: "Exam-pattern tests with all-India ranking and question-wise analysis." },
@@ -61,50 +74,52 @@ export const coaching: TemplateDef = {
           { icon: "book", title: "Smart Study Material", text: "Concise theory, solved examples and PYQs — updated every year to the latest pattern." },
           { icon: "trending", title: "Parent Progress Reports", text: "Monthly performance reports and parent-teacher meetings to keep everyone aligned." },
         ] } },
-        { type: "serviceCategories", content: { eyebrow: "COURSES", title: "Programs for Every", titleHighlight: "Goal", categories: ["Engineering & Medical", "Government Jobs", "Board & Tuition"] } },
-        { type: "toppers", content: { eyebrow: "OUR RESULTS", title: "Meet Our", titleHighlight: "Top Rankers", items: [
-          { name: "Aditya Kumar", exam: "JEE Advanced 2025", score: "AIR 47", rank: "1", image: "" },
-          { name: "Sneha Reddy", exam: "NEET 2025", score: "AIR 142", rank: "2", image: "" },
-          { name: "Mohit Chauhan", exam: "SSC CGL 2025", score: "Selected", rank: "", image: "" },
-          { name: "Pallavi Singh", exam: "IBPS PO 2025", score: "Selected", rank: "", image: "" },
+        { type: "pricingPlans", content: { eyebrow: "BATCHES & FEES", title: "Pick Your", titleHighlight: "Batch", plans: [
+          { name: "Foundation (Class 8–10)", price: "₹38,000", period: "per year", features: ["Olympiad & NTSE prep", "Weekend + 2 weekday classes", "Monthly parent report", "School syllabus support"], featured: false, buttonLabel: "Book Free Demo", buttonHref: "/demo" },
+          { name: "JEE / NEET 2-Year", price: "₹1,45,000", period: "full program", features: ["Class 11 + 12 complete syllabus", "Weekly all-India tests", "Personal mentor", "Printed modules + app", "No-cost EMI available"], featured: true, buttonLabel: "Book Free Demo", buttonHref: "/demo" },
+          { name: "SSC / Banking", price: "₹18,500", period: "6 months", features: ["Quant, reasoning, English, GA", "60 full mock tests", "Interview guidance", "Morning & evening batches"], featured: false, buttonLabel: "Book Free Demo", buttonHref: "/demo" },
         ] } },
-        { type: "about", content: { eyebrow: "WHY US", title: "One Promise:", titleHighlight: "Results", body: [`Since day one, ${biz} has been built around a simple idea — teach concepts deeply, test often, and mentor every student personally.`, "Our structured plan covers the full syllabus months before the exam, leaving time for revision, mock tests and targeted improvement."], image: "", points: ["Concept-first teaching", "Full syllabus + 3 revision cycles", "All-India mock tests", "Personal mentor for each student", "Scholarships up to 100%", "Hostel & library facility"], buttonLabel: "Book Free Demo", buttonHref: "/demo" } },
-        { type: "team", style: { background: "light" }, content: { eyebrow: "FACULTY", title: "Learn From the", titleHighlight: "Best", members: [
-          { name: "Er. Vivek Sinha", role: "Physics · JEE / NEET", image: "", note: "IIT Delhi · 14 yrs" },
-          { name: "Dr. Nandini Rao", role: "Biology · NEET", image: "", note: "MBBS, AIIMS · 10 yrs" },
-          { name: "Mr. Harish Pandey", role: "Mathematics · JEE", image: "", note: "IIT Kanpur · 12 yrs" },
+        { type: "team", style: { layout: "list", background: "light" }, content: { eyebrow: "FACULTY", title: "Learn From the", titleHighlight: "Best", members: [
+          { name: "Er. Vivek Sinha", role: "Physics · JEE / NEET", image: "", note: "B.Tech, IIT · 14 yrs" },
+          { name: "Dr. Nandini Rao", role: "Biology · NEET", image: "", note: "MBBS · 10 yrs" },
+          { name: "Mr. Harish Pandey", role: "Mathematics · JEE", image: "", note: "B.Tech, IIT · 12 yrs" },
           { name: "Mr. Alok Tripathi", role: "General Studies · UPSC", image: "", note: "Ex-Civil Services" },
         ] } },
-        { type: "steps", content: { eyebrow: "GET STARTED", title: "Your Path to", titleHighlight: "Selection", items: [
+        { type: "steps", style: { layout: "cards" }, content: { eyebrow: "GET STARTED", title: "Your Path to", titleHighlight: "Selection", items: [
           { title: "Book Free Demo", text: "Attend a live class, no charge", icon: "edit" },
           { title: "Scholarship Test", text: "Win up to 100% fee waiver", icon: "award" },
           { title: "Counselling", text: "Pick the right course & batch", icon: "headset" },
           { title: "Learn, Test, Improve", text: "Weekly tests and mentor reviews", icon: "trending" },
         ] } },
-        { type: "testimonials", content: { eyebrow: "SUCCESS STORIES", title: "What Our", titleHighlight: "Students Say", items: [
+        { type: "testimonials", style: { layout: "dark" }, content: { eyebrow: "SUCCESS STORIES", title: "What Our", titleHighlight: "Students Say", items: [
           { name: "Priya Verma", role: "NEET 2025 · AIR 1,284", text: "The weekly tests and doubt sessions made all the difference. My mentor tracked every weak chapter until it became a strength. Cleared NEET in my first attempt!", rating: 5 },
-          { name: "Arjun Nair", role: "JEE Advanced 2025 · IIT Madras", text: "Small batches meant I got real personal attention. The faculty here genuinely care about your rank, not just finishing the syllabus.", rating: 5 },
+          { name: "Arjun Nair", role: "JEE Advanced 2025 · IIT", text: "Small batches meant I got real personal attention. The faculty here genuinely care about your rank, not just finishing the syllabus.", rating: 5 },
           { name: "Sneha Das", role: "SSC CGL 2025 · Selected", text: "A clear study plan, daily practice sets and regular mock tests. I improved my score by 40 marks in three months.", rating: 5 },
           { name: "Mrs. Kavita Joshi", role: "Parent of JEE aspirant", text: "The monthly reports and parent meetings kept us informed. We could see our son's rank improving test after test.", rating: 5 },
         ] } },
-        { type: "faq", style: { background: "light" }, content: { eyebrow: "FAQ", title: "Questions Students", titleHighlight: "Ask Us", items: [
+        { type: "faq", content: { eyebrow: "FAQ", title: "Questions Students", titleHighlight: "Ask Us", items: [
           { q: "Can I attend a class before enrolling?", a: "Yes. Book a free demo class for any course and experience our teaching, material and test system before you decide." },
           { q: "What is the batch size?", a: "Batches are capped at 40 students so faculty can give personal attention and track every student's progress." },
           { q: "Do you offer scholarships?", a: "Yes. Our scholarship test offers fee waivers of up to 100% based on performance. Board toppers also get merit discounts." },
           { q: "Are online or hybrid classes available?", a: "Yes. All classes are recorded, and hybrid batches let you attend live online with full access to tests and doubt support." },
+          { q: "Do you have a batch for droppers?", a: "Yes. Our 1-year repeater batch for JEE and NEET starts in April and June, with a separate test series and evening doubt sessions." },
           { q: "How are parents kept informed?", a: "Parents get monthly performance reports, test-wise rank updates and regular parent-teacher meetings." },
           { q: "Do you offer EMI on fees?", a: "Yes. Fees can be paid in easy instalments or no-cost EMI. Ask our counsellors for current offers." },
         ] } },
-        { type: "cta", content: { title: "Your selection starts here", highlight: "Book a Free Demo Class", phones: ["9000000000"], buttonLabel: "Book Free Demo", buttonHref: "/demo" } },
+        { type: "cta", style: { background: "primary" }, content: { title: "Your selection starts here", highlight: "Book a Free Demo Class", phones: ["9000000000"], buttonLabel: "Book Free Demo", buttonHref: "/demo" } },
       ],
     },
     { slug: "about", title: "About", isSystem: true, order: 1, sections: [
       { type: "about", content: { eyebrow: "ABOUT US", title: "Why Students", titleHighlight: "Trust Us", body: [`${biz} is built on one promise — results. Our proven methodology, expert faculty and constant testing help students achieve their dream ranks.`, "We focus on concepts, practice and performance, not just lectures."], image: "", points: ["Result-oriented teaching", "Small, focused batches", "Regular tests & analysis", "Personal mentoring"], buttonLabel: "Book Free Demo", buttonHref: "/demo" } },
-      { type: "stats", content: { items: [ { value: "2,000+", label: "Selections", icon: "award" }, { value: "15+", label: "Years", icon: "star" }, { value: "50+", label: "Faculty", icon: "graduation" }, { value: "95%", label: "Success Rate", icon: "trending" } ] } },
+      { type: "stats", style: { layout: "band", background: "primary" }, content: { items: [ { value: "2,000+", label: "Selections", icon: "award" }, { value: "15+", label: "Years", icon: "star" }, { value: "50+", label: "Faculty", icon: "graduation" }, { value: "95%", label: "Success Rate", icon: "trending" } ] } },
+      { type: "gallery", style: { layout: "strip" }, content: { eyebrow: "INSIDE THE INSTITUTE", title: "Classrooms &", titleHighlight: "Test Halls" } },
       { type: "cta", content: { title: "Try before you enroll", highlight: "Book a Free Demo", phones: ["9000000000"], buttonLabel: "Book Free Demo", buttonHref: "/demo" } },
     ] },
     { slug: "courses", title: "Courses", isSystem: true, order: 2, sections: [
       { type: "serviceCategories", content: { eyebrow: "", title: "Our", titleHighlight: "Courses & Batches", categories: ["Engineering & Medical", "Government Jobs", "Board & Tuition"] } },
+      { type: "openingHours", style: { background: "light" }, content: { eyebrow: "BATCH TIMINGS", title: "Pick a Slot That", titleHighlight: "Fits School", note: "Weekend-only batches available for Class 9–10 and working SSC / banking aspirants.", days: [
+        { day: "Morning batch (droppers)", hours: "7:30am – 12:30pm" }, { day: "Afternoon batch (Class 11–12)", hours: "3:30pm – 7:00pm" }, { day: "Evening batch (SSC / Banking)", hours: "6:30pm – 9:00pm" }, { day: "Sunday test series", hours: "9:00am – 12:00pm" },
+      ] } },
       { type: "cta", content: { title: "Confused which course fits you?", highlight: "Get Free Counselling", phones: ["9000000000"], buttonLabel: "Book Free Demo", buttonHref: "/demo" } },
     ] },
     { slug: "faculty", title: "Faculty", isSystem: true, order: 3, sections: [

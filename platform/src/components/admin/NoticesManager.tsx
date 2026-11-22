@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, Trash2, Pencil, Eye, EyeOff, Pin, X, Paperclip, FileText,
-  Loader2, Megaphone, ArrowLeft, Search,
+  Megaphone, ArrowLeft, Search,
 } from "lucide-react";
 import { addNotice, updateNotice, deleteNotice, toggleNoticePublish, toggleNoticePin } from "@/lib/actions/notices";
 import { AdminSplitShell } from "./AdminSplitShell";
+import { BrandSpinner } from "@/components/BrandLogo";
 
 type Notice = {
   id: string;
@@ -33,7 +34,7 @@ const CAT_CLS: Record<string, string> = {
 const inputCls =
   "w-full rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-lime-500";
 
-export function NoticesManager({ notices: initial }: { notices: Notice[] }) {
+export function NoticesManager({ notices: initial, maxFileMb = 25 }: { notices: Notice[]; maxFileMb?: number }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [notices, setNotices] = useState(initial);
@@ -42,7 +43,12 @@ export function NoticesManager({ notices: initial }: { notices: Notice[] }) {
   const [q, setQ] = useState("");
   const [tick, setTick] = useState(0);
 
-  useEffect(() => setNotices(initial), [initial]);
+  // Re-sync when the server sends fresh data (adjust state during render, not in an effect).
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (prevInitial !== initial) {
+    setPrevInitial(initial);
+    setNotices(initial);
+  }
 
   const bump = () => { setTick((t) => t + 1); router.refresh(); };
   const filtered = notices.filter((n) => {
@@ -56,6 +62,7 @@ export function NoticesManager({ notices: initial }: { notices: Notice[] }) {
     <div className={pending ? "opacity-70 pointer-events-none" : ""}>
       <AdminSplitShell
         title="Notices"
+        subtitle="Announcements for your notice board and /notices page."
         titleIcon={<Megaphone className="w-4 h-4 text-lime-600 shrink-0" />}
         countLabel={`${notices.length}`}
         previewSrc={`/notices?__edit=1&_r=${tick}`}
@@ -94,7 +101,7 @@ export function NoticesManager({ notices: initial }: { notices: Notice[] }) {
                 });
               }}
             >
-              <NoticeFields />
+              <NoticeFields maxFileMb={maxFileMb} />
               <button type="submit" className="w-full rounded-xl bg-lime-500 text-white text-sm font-bold py-2.5 hover:bg-lime-600">Post notice</button>
             </form>
           </div>
@@ -115,7 +122,7 @@ export function NoticesManager({ notices: initial }: { notices: Notice[] }) {
               }}
             >
               <input type="hidden" name="id" value={editingNotice.id} />
-              <NoticeFields notice={editingNotice} />
+              <NoticeFields notice={editingNotice} maxFileMb={maxFileMb} />
               <button type="submit" className="w-full rounded-xl bg-lime-500 text-white text-sm font-bold py-2.5 hover:bg-lime-600">Save & apply</button>
             </form>
           </div>
@@ -190,7 +197,7 @@ export function NoticesManager({ notices: initial }: { notices: Notice[] }) {
   );
 }
 
-function NoticeFields({ notice }: { notice?: Notice }) {
+function NoticeFields({ notice, maxFileMb }: { notice?: Notice; maxFileMb: number }) {
   return (
     <>
       <label className="block">
@@ -213,7 +220,7 @@ function NoticeFields({ notice }: { notice?: Notice }) {
         <span className="text-[10px] font-semibold text-slate-400 mb-1 block">Link (optional)</span>
         <input name="link" defaultValue={notice?.link} placeholder="/result or https://…" className={inputCls} />
       </label>
-      <AttachmentInput url={notice?.attachmentUrl ?? ""} fileName={notice?.attachmentName ?? ""} />
+      <AttachmentInput url={notice?.attachmentUrl ?? ""} fileName={notice?.attachmentName ?? ""} maxFileMb={maxFileMb} />
       <div className="flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
           <input type="checkbox" name="pinned" defaultChecked={notice?.pinned} className="rounded" /> Pin to top
@@ -226,7 +233,7 @@ function NoticeFields({ notice }: { notice?: Notice }) {
   );
 }
 
-function AttachmentInput({ url, fileName }: { url: string; fileName: string }) {
+function AttachmentInput({ url, fileName, maxFileMb }: { url: string; fileName: string; maxFileMb: number }) {
   const [current, setCurrent] = useState({ url, name: fileName });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -268,12 +275,13 @@ function AttachmentInput({ url, fileName }: { url: string; fileName: string }) {
       ) : (
         <>
           <button type="button" onClick={() => ref.current?.click()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60">
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+            {busy ? <BrandSpinner className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
             {busy ? "Uploading…" : "Attach file"}
           </button>
           <input ref={ref} type="file" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
         </>
       )}
+      {!current.url && <p className="text-xs text-slate-400 mt-1">PDF, Word, Excel, images or text · max {maxFileMb} MB</p>}
       {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
     </div>
   );

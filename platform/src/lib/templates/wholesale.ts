@@ -43,6 +43,27 @@ const rates: SectionSeed<"priceList"> = {
   ] },
 };
 
+const downloads: SectionSeed<"downloads"> = {
+  type: "downloads",
+  content: { eyebrow: "FOR BUYERS", title: "Rate Lists &", titleHighlight: "Catalogues", items: [
+    { title: "This Week's Rate List", description: "Slab-wise rates on 300+ fast-moving SKUs, updated every Monday.", link: "", icon: "tag" },
+    { title: "Full Product Catalogue", description: "All 5,000+ products with pack sizes and case quantities.", link: "", icon: "book" },
+    { title: "Credit Application Form", description: "Apply for 7–30 day credit terms as a regular buyer.", link: "", icon: "clipboard" },
+    { title: "Festive Season Stock List", description: "Dry fruits, sweets packaging and gifting hampers for Diwali orders.", link: "", icon: "gift" },
+  ] },
+};
+
+const hours: SectionSeed<"openingHours"> = {
+  type: "openingHours",
+  content: { eyebrow: "WAREHOUSE TIMINGS", title: "Order, Pick Up or", titleHighlight: "Get It Delivered", note: "Orders confirmed before 4 PM ship the next morning. Self-pickup slots can be booked on WhatsApp.", days: [
+    { day: "Monday – Saturday", hours: "9:00 AM – 8:00 PM" },
+    { day: "Sunday", hours: "10:00 AM – 2:00 PM" },
+    { day: "Dispatch cut-off", hours: "4:00 PM daily" },
+    { day: "Loading bay (pickup)", hours: "8:00 AM – 6:00 PM" },
+  ] },
+  style: { background: "dark" },
+};
+
 const cta: SectionSeed<"cta"> = {
   type: "cta",
   content: { title: "Stocking up for the season?", highlight: "Get Today's Wholesale Rates", phones: [PHONE], buttonLabel: "Get Bulk Quote", buttonHref: "/enquiry" },
@@ -51,9 +72,10 @@ const cta: SectionSeed<"cta"> = {
 export const wholesale: TemplateDef = {
   theme: {
     colors: { primary: "#7c3aed", primaryDark: "#5b21b6", secondary: "#1a1744", accent: "#f59e0b", dark: "#110e2f", light: "#f6f4ff", text: "#3f3f55", heading: "#1a1744" },
-    font: "Sora", radius: "0.85rem",
+    font: "Sora", radius: "0.5rem",
   },
   header: (biz) => ({
+    design: "modern",
     logoText: biz, logoImage: "",
     announcement: { show: false, text: "📦 Festive stock is in — lock in bulk rates before prices rise. Enquire today!", link: "/enquiry" },
     topbar: { show: true, address: "Wholesale · Bulk Supply · Distribution · GST Invoicing", phones: [PHONE], email: "sales@example.com", social: { facebook: "#", instagram: "#", whatsapp: "#" } },
@@ -63,6 +85,7 @@ export const wholesale: TemplateDef = {
     cta: { label: "Get Bulk Quote", href: "/enquiry" },
   }),
   footer: (biz) => ({
+    design: "classic",
     about: "Direct-from-brand wholesale for retailers, offices and institutions — sharp slab pricing, GST invoices and dispatch within 24 hours.",
     columns: [
       { title: "Quick Links", links: [ { label: "Home", href: "/" }, { label: "Products", href: "/products" }, { label: "Bulk Rates", href: "/rates" }, { label: "Bulk Quote", href: "/enquiry" }, { label: "Contact", href: "/contact" } ] },
@@ -106,13 +129,21 @@ export const wholesale: TemplateDef = {
           primaryBtn: { label: "Get Bulk Quote", href: "/enquiry" }, secondaryBtn: { label: "See Bulk Rates", href: "/rates" },
           features: [ { icon: "tag", title: "Slab-Wise Pricing", text: "" }, { icon: "package", title: "5,000+ Products", text: "" }, { icon: "truck", title: "24-Hour Dispatch", text: "" }, { icon: "handshake", title: "Credit for Regulars", text: "" } ],
         } },
+        brands,
+        { type: "stats", content: { items: [ { value: "5,000+", label: "Products in Stock", icon: "package" }, { value: "1,200+", label: "Active Business Buyers", icon: "store" }, { value: "24 hrs", label: "Average Dispatch", icon: "truck" }, { value: "20+", label: "Years in Trade", icon: "award" } ] }, style: { layout: "band" } },
+        { type: "serviceCategories", content: { eyebrow: "WHAT WE SUPPLY", title: "Shop by", titleHighlight: "Category", categories: CATEGORIES }, style: { layout: "list" } },
+        { ...rates, style: { background: "light" } },
         { type: "features", content: { items: [
           { icon: "tag", title: "Direct-From-Brand Rates", text: "No middlemen — better margins on every carton you buy." },
           { icon: "package", title: "Always in Stock", text: "Deep inventory on fast movers, so your shelves never go empty." },
           { icon: "truck", title: "Dispatch in 24 Hours", text: "Own delivery fleet across the city and reliable transport partners beyond." },
           { icon: "clipboard", title: "GST-Ready Billing", text: "Proper tax invoices on every order for easy input credit." },
-        ] }, style: { cardShadow: "md" } },
-        { type: "serviceCategories", content: { eyebrow: "WHAT WE SUPPLY", title: "Shop by", titleHighlight: "Category", categories: CATEGORIES } },
+        ] }, style: { layout: "numbered" } },
+        { type: "pricingPlans", content: { eyebrow: "BUYER PROGRAMMES", title: "The More You Buy,", titleHighlight: "The More You Save", plans: [
+          { name: "Retailer", price: "₹10,000", period: "min. order", features: ["Standard slab rates", "Free city delivery above ₹25,000", "GST invoice on every order", "WhatsApp ordering"], featured: false, buttonLabel: "Start Ordering", buttonHref: "/enquiry" },
+          { name: "Preferred Buyer", price: "₹1.5 L", period: "per month", features: ["Extra 1–2% off slab rates", "15-day credit after 3 orders", "Priority festive stock allocation", "Dedicated account manager"], featured: true, buttonLabel: "Apply Now", buttonHref: "/enquiry" },
+          { name: "Institutional", price: "Custom", period: "annual contract", features: ["Fixed-rate quarterly contracts", "30-day credit terms", "Scheduled weekly deliveries", "Consolidated monthly billing"], featured: false, buttonLabel: "Talk to Sales", buttonHref: "/contact" },
+        ] } },
         { type: "about", content: {
           eyebrow: "ABOUT US", title: "Your Reliable", titleHighlight: "Wholesale Partner",
           body: [
@@ -121,17 +152,16 @@ export const wholesale: TemplateDef = {
           ],
           image: "", points: ["Direct sourcing from brands & mills", "Quality-checked, fresh-dated stock", "Credit terms for regular buyers", "Dedicated account manager"],
           buttonLabel: "About Us", buttonHref: "/about",
-        } },
-        brands,
-        rates,
-        { type: "stats", content: { items: [ { value: "5,000+", label: "Products in Stock", icon: "package" }, { value: "1,200+", label: "Active Business Buyers", icon: "store" }, { value: "24 hrs", label: "Average Dispatch", icon: "truck" }, { value: "20+", label: "Years in Trade", icon: "award" } ] } },
-        orderSteps,
+        }, style: { layout: "reverse", background: "dark" } },
+        { ...orderSteps, style: { layout: "timeline" } },
+        downloads,
         { type: "testimonials", content: { eyebrow: "BUYER REVIEWS", title: "Why Retailers", titleHighlight: "Stay With Us", items: [
           { name: "Mahesh Gupta", role: "Kirana store owner", text: "Rates are consistently lower than my old distributor and the order always arrives next morning. My margins have clearly improved.", rating: 5 },
           { name: "Sunita Rao", role: "Admin head, IT company", text: "We source all our office stationery and pantry supplies here. One GST invoice, one delivery, zero follow-ups.", rating: 5 },
           { name: "Abdul Rahman", role: "Supermarket owner", text: "Their credit terms and stock availability during festivals have been a big help for my business.", rating: 5 },
           { name: "Deepak Jain", role: "Hotel purchase manager", text: "Transparent slab pricing and genuine branded products. The account manager is always a call away.", rating: 5 },
-        ] } },
+        ] }, style: { layout: "minimal", background: "light" } },
+        hours,
         { type: "faq", content: { eyebrow: "FAQ", title: "Buyer", titleHighlight: "Questions", items: [
           { q: "What is the minimum order quantity?", a: "Minimum order value is ₹10,000 for delivery. Per-product minimums are usually one bag, tin or carton." },
           { q: "Do you provide GST invoices?", a: "Yes. Every order comes with a proper GST tax invoice so you can claim input tax credit." },
@@ -139,13 +169,16 @@ export const wholesale: TemplateDef = {
           { q: "How fast is delivery?", a: "Orders confirmed before 4 PM are dispatched within 24 hours. Delivery within the city is free above ₹25,000." },
           { q: "Can I get rates on WhatsApp?", a: "Yes. Send your product list on WhatsApp and we'll reply with a slab-wise quote within 2 working hours." },
           { q: "What if an item arrives damaged?", a: "Report it within 48 hours with a photo and we'll replace it or issue a credit note — no arguments." },
-        ] } },
-        cta,
+        ], intro: "MOQ, credit, GST and delivery — answers to what new buyers ask us most." } as SectionSeed<"faq">["content"], style: { layout: "split" } },
+        { type: "quoteForm", content: { title: "Send Your Product List", subtitle: "Products and quantities are enough — we'll reply with slab-wise rates within 2 working hours.", showSidebar: false }, style: { background: "light" } },
+        { ...cta, style: { layout: "minimal" } },
       ],
     },
     { slug: "products", title: "Products", isSystem: true, order: 1, sections: [
       { type: "serviceCategories", content: { eyebrow: "", title: "Our", titleHighlight: "Products", categories: CATEGORIES } },
       brands,
+      { type: "gallery", content: { eyebrow: "OUR WAREHOUSE", title: "Stock You Can", titleHighlight: "See" }, style: { layout: "strip", background: "light" } },
+      downloads,
       { type: "cta", content: { title: "Want bulk pricing?", highlight: "Request a Quote", phones: [PHONE], buttonLabel: "Get Quote", buttonHref: "/enquiry" } },
     ] },
     { slug: "rates", title: "Bulk Rates", isSystem: true, order: 2, sections: [
@@ -157,11 +190,26 @@ export const wholesale: TemplateDef = {
       { type: "about", content: { eyebrow: "ABOUT US", title: "Two Decades of", titleHighlight: "Trusted Trade", body: [
         `${biz} started as a small grocery wholesaler and has grown into a multi-category supplier serving over a thousand businesses.`,
         "Our promise has never changed: honest rates, genuine products and deliveries you can plan your business around.",
-      ], image: "", points: ["Direct sourcing", "Quality assured", "On-time delivery", "Credit options"], buttonLabel: "", buttonHref: "" } },
+      ], image: "", points: ["Direct sourcing", "Quality assured", "On-time delivery", "Credit options"], buttonLabel: "", buttonHref: "" }, style: { layout: "centered" } },
+      { type: "visionMission", content: {
+        eyebrow: "HOW WE TRADE",
+        visionTitle: "Our Vision", visionText: "To be the first call for every retailer and institution that wants to buy smarter in Your City.",
+        missionTitle: "Our Mission", missionText: "Direct sourcing, honest slab pricing and on-time delivery — so our buyers can focus on selling.",
+        valuesTitle: "What We Stand For",
+        values: [
+          { icon: "tag", title: "Fair Rates", text: "Published slabs, no hidden loading charges." },
+          { icon: "badge-check", title: "Genuine Stock", text: "Sourced from brands and authorised distributors only." },
+          { icon: "truck", title: "On Time", text: "Dispatch commitments we actually keep." },
+        ],
+      }, style: { background: "light" } },
       { type: "stats", content: { items: [ { value: "5,000+", label: "Products", icon: "package" }, { value: "1,200+", label: "Business Buyers", icon: "users" }, { value: "15+", label: "Delivery Vehicles", icon: "truck" }, { value: "20+", label: "Years", icon: "award" } ] } },
       cta,
     ] },
-    { slug: "contact", title: "Contact", isSystem: true, order: 4, sections: [ { type: "contactInfo", content: { eyebrow: "REACH US", title: "Visit Our", titleHighlight: "Warehouse", address: "Your warehouse address", phone: PHONE, email: "sales@example.com", hours: "Mon–Sat: 9 AM – 8 PM · Sunday: 10 AM – 2 PM", mapEmbed: "" } } ] },
+    { slug: "contact", title: "Contact", isSystem: true, order: 4, sections: [
+      { type: "contactInfo", content: { eyebrow: "REACH US", title: "Visit Our", titleHighlight: "Warehouse", address: "Your warehouse address", phone: PHONE, email: "sales@example.com", hours: "Mon–Sat: 9 AM – 8 PM · Sunday: 10 AM – 2 PM", mapEmbed: "" } },
+      hours,
+      { type: "contactForm", content: { title: "Write to Our Sales Desk", subtitle: "Questions about stock, credit or delivery areas — we reply the same working day." } },
+    ] },
     { slug: "enquiry", title: "Bulk Quote", isSystem: true, order: 5, sections: [
       { type: "quoteForm", content: { title: "Request a Bulk Quote", subtitle: "List your products and quantities — we'll send a slab-wise rate within 2 working hours.", showSidebar: true } },
       orderSteps,

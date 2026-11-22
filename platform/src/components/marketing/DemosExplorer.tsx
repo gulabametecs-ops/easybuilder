@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Check, Clock, Search, SearchX, X } from "lucide-react";
+import {
+  ArrowRight, ArrowUpRight, Check, Clock, Play, Search, ChevronDown,
+  GraduationCap, House, UtensilsCrossed, Stethoscope, Factory, Dumbbell, HeartHandshake, CalendarDays, LayoutGrid, Building2,
+  type LucideIcon,
+} from "lucide-react";
 import { VerticalIcon } from "./VerticalIcon";
 import { DemoVerticalPanel, previewUrl } from "./DemoVerticalPanel";
-import { DesignPicker } from "./DesignPicker";
 import { DemoConceptPreview } from "./DemoConceptPreview";
 import { DemoLiveStage } from "./DemoLiveStage";
 import { mkt } from "@/lib/marketingTheme";
@@ -39,6 +42,10 @@ export type DemoSector = {
   category: string;
   accent: string;
   image: string;
+  /** Hand-checked sector photos (hero first) for previews. */
+  photos?: string[];
+  /** First few service titles of the template, for preview cards. */
+  services?: string[];
   description: string;
   look?: string;
   /** Public demo tenant origin, e.g. http://demo-coaching.localhost:3000 */
@@ -63,19 +70,43 @@ type Props = {
   activeByVertical: Record<string, ActiveInfo>;
   focusVertical?: string;
   expired?: boolean;
+  /** Design to preselect for focusVertical (e.g. coming back from /demos/start). */
+  initialDesign?: string;
+  /** Open the live stage straight away when focusVertical's demo is active. */
+  autoLive?: boolean;
 };
 
-const ALL = "All";
+// Separate details page: name/phone/email + OTP, then back here with the live stage open.
+export const demoStartUrl = (vertical: string, design?: string) =>
+  `/demos/start?vertical=${encodeURIComponent(vertical)}${design ? `&design=${encodeURIComponent(design)}` : ""}`;
+
 const focusRing =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-bg)]";
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mkt-accent-2)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mkt-bg)]";
 
-export function DemosExplorer({ categories, sectors, activeByVertical, focusVertical, expired }: Props) {
-  const [category, setCategory] = useState(ALL);
-  const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(focusVertical ?? null);
-  const [designBy, setDesignBy] = useState<Record<string, string>>({});
-  const close = useCallback(() => setSelectedId(null), []); // stable: drawer effect depends on it
+function included(s: DemoSector): string[] {
+  if (s.id === "social-foundation")
+    return ["Six grassroots program areas + leadership team", "Live events with reports, gallery and documents", "Volunteer applications inbox in admin", `${s.designs.length} colour skins, mobile-ready`];
+  if (s.id === "ngo-charity")
+    return ["Causes, impact stats, 80G donate page", "Volunteer enquiry + event gallery", "Admin for pages, services, gallery & SEO", `${s.designs.length} switchable designs, mobile-ready`];
+  return [`Ready-made ${s.name} website with real content`, "Admin panel — edit pages, services, gallery & SEO", "Enquiry & lead capture built in", `${s.designs.length} switchable designs, mobile-ready`];
+}
 
+/** Showroom: pick an industry on the left, switch designs in one click, preview on the right. */
+// Category look in the sidebar accordion: icon + gradient tile.
+const CAT_STYLE: Record<string, { icon: LucideIcon; from: string; to: string }> = {
+  "Schools & Coaching": { icon: GraduationCap, from: "#3b82f6", to: "#6366f1" },
+  "Home & Local Services": { icon: House, from: "#f59e0b", to: "#f97316" },
+  "Food & Hospitality": { icon: UtensilsCrossed, from: "#ef4444", to: "#f97316" },
+  Healthcare: { icon: Stethoscope, from: "#06b6d4", to: "#0ea5e9" },
+  "Trade & Manufacturing": { icon: Factory, from: "#64748b", to: "#7c3aed" },
+  "Real Estate & Property": { icon: Building2, from: "#0f2341", to: "#c5a253" },
+  "Fitness & Wellness": { icon: Dumbbell, from: "#22c55e", to: "#14b8a6" },
+  "Community & Non-profit": { icon: HeartHandshake, from: "#ec4899", to: "#a855f7" },
+  "Events & Training": { icon: CalendarDays, from: "#8b5cf6", to: "#d946ef" },
+};
+const catStyle = (name: string) => CAT_STYLE[name] ?? { icon: LayoutGrid, from: "#64748b", to: "#334155" };
+
+export function DemosExplorer({ categories, sectors, activeByVertical, focusVertical, expired, initialDesign, autoLive }: Props) {
   const globalActive = useMemo(() => {
     const entry = Object.entries(activeByVertical)[0];
     if (!entry) return null;
@@ -83,47 +114,94 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
     return sector ? { sector, ...entry[1] } : null;
   }, [activeByVertical, sectors]);
 
-  const q = query.trim().toLowerCase();
-  const visible = sectors.filter(
-    (s) =>
-      (category === ALL || s.category === category) &&
-      (!q || s.name.toLowerCase().includes(q) || s.tagline.toLowerCase().includes(q)),
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(
+    focusVertical ?? globalActive?.sector.id ?? sectors.find((s) => s.status === "live")?.id ?? sectors[0]?.id,
   );
-  const selected = sectors.find((s) => s.id === selectedId) ?? null;
-  const liveCount = sectors.filter((s) => s.status === "live").length;
+  // Accordion: only one industry group open at a time — starts on the selected sector's group.
+  const [openCat, setOpenCat] = useState<string | null>(() => sectors.find((s) => s.id === selectedId)?.category ?? null);
+  const navRef = useRef<HTMLElement>(null);
+  const [designBy, setDesignBy] = useState<Record<string, string>>(
+    focusVertical && initialDesign ? { [focusVertical]: initialDesign } : {},
+  );
+  const [stage, setStage] = useState<ActiveInfo | null>(
+    autoLive && focusVertical ? (activeByVertical[focusVertical] ?? null) : null,
+  );
+  const stageRef = useRef<HTMLElement>(null);
 
-  const tabs = [{ name: ALL, image: "", count: sectors.length }, ...categories];
-  const charity = sectors.find((s) => s.id === "ngo-charity");
-  const foundation = sectors.find((s) => s.id === "social-foundation");
+  const selected = sectors.find((s) => s.id === selectedId) ?? sectors[0];
+  const current = selected.designs.find((d) => d.id === designBy[selected.id]) ?? selected.designs[0];
+  const active = activeByVertical[selected.id];
+  const live = selected.status === "live";
+  const blockedBy = live && globalActive && globalActive.sector.id !== selected.id ? globalActive.sector : undefined;
+  const setDesign = (id: string) => setDesignBy((m) => ({ ...m, [selected.id]: id }));
+
+  const q = query.trim().toLowerCase();
+  const groups = categories
+    .map((c) => ({
+      name: c.name,
+      items: sectors.filter((s) => s.category === c.name && (!q || s.name.toLowerCase().includes(q) || s.tagline.toLowerCase().includes(q))),
+    }))
+    .filter((g) => g.items.length > 0);
+
+  // Keyboard: 1–9 picks a design, ←/→ cycles (ignored while typing or in the live stage).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (stage || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((e.target as HTMLElement).closest("input, textarea, select, [contenteditable]")) return;
+      const ds = selected.designs;
+      const i = ds.findIndex((d) => d.id === current.id);
+      const n = /^[1-9]$/.test(e.key) ? +e.key - 1 : e.key === "ArrowRight" ? (i + 1) % ds.length : e.key === "ArrowLeft" ? (i - 1 + ds.length) % ds.length : -1;
+      if (!ds[n]) return;
+      e.preventDefault();
+      setDesignBy((m) => ({ ...m, [selected.id]: ds[n].id }));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected, current, stage]);
+
+  // Keep the selected industry visible inside the scrollable sidebar on first load.
+  useEffect(() => {
+    const nav = navRef.current;
+    const el = nav?.querySelector<HTMLElement>("[aria-current='true']");
+    if (nav && el) nav.scrollTop = Math.max(0, el.offsetTop - nav.offsetTop - 120);
+  }, []);
+
+  const pick = (id: string) => {
+    setSelectedId(id);
+    setOpenCat(sectors.find((s) => s.id === id)?.category ?? null);
+    if (window.innerWidth < 1024) stageRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
-    <div className={`${mkt.container} py-10 sm:py-14`}>
+    <div className={`${mkt.container} pb-20 pt-6`}>
       {globalActive && (
-        <div className="mb-8 flex flex-col gap-4 rounded-2xl border border-[var(--mkt-accent)]/30 bg-[var(--mkt-accent-soft)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--mkt-accent-soft)]">
-              <Clock className="h-5 w-5 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
+        <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.07] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-center gap-2.5 text-sm text-[var(--mkt-text)]">
+            <Clock className="h-4 w-4 text-emerald-600" />
+            <span>
+              <b>{globalActive.sector.name}</b> demo is running · ~{globalActive.minutesLeft} min left
             </span>
-            <div>
-              <p className="font-semibold text-[var(--mkt-text)]">{globalActive.sector.name} demo is running</p>
-              <p className={`mt-0.5 text-sm ${mkt.muted}`}>~{globalActive.minutesLeft} min left · preview any design</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
+          </p>
+          <div className="flex shrink-0 gap-2">
             <a
               href={previewUrl(globalActive.siteUrl, designBy[globalActive.sector.id] ?? "classic")}
               target="_blank"
               rel="noopener noreferrer"
-              className={`${mkt.btnPrimary} ${mkt.btnPrimarySm} ${focusRing}`}
+              className={`${mkt.btnSecondary} ${mkt.btnPrimarySm} ${focusRing}`}
             >
               Open website <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
             <button
               type="button"
-              onClick={() => setSelectedId(globalActive.sector.id)}
-              className={`${mkt.btnSecondary} ${mkt.btnPrimarySm} ${focusRing}`}
+              onClick={() => {
+                setSelectedId(globalActive.sector.id);
+                setOpenCat(globalActive.sector.category);
+                setStage(globalActive);
+              }}
+              className={`${mkt.btnPrimary} ${mkt.btnPrimarySm} ${focusRing}`}
             >
-              Designs & admin
+              Open live demo
             </button>
           </div>
         </div>
@@ -131,421 +209,251 @@ export function DemosExplorer({ categories, sectors, activeByVertical, focusVert
 
       {expired && focusVertical && (
         <p className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-          Your previous demo session ended. Request a new OTP to restart.
+          Your previous demo session ended. Request a new OTP below to restart.
         </p>
       )}
 
-      {charity && foundation && category === ALL && !q && (
-        <section className="mb-10 overflow-hidden rounded-3xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)]">
-          <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="bg-[var(--mkt-ink)] px-6 py-8 text-white sm:px-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mkt-accent-text)]">Two non-profit concepts</p>
-              <h2 className="font-display mt-3 text-2xl sm:text-3xl">Same cause. Completely different sites.</h2>
-              <p className="mt-3 text-sm leading-relaxed text-white/70">
-                Classic charity is donation-and-impact led. Social Foundation is grassroots — initiatives, public team, live event reports and volunteer applications.
-              </p>
-            </div>
-            <div className="grid sm:grid-cols-2">
-              {[charity, foundation].map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSelectedId(s.id)}
-                  className={`group flex flex-col text-left transition-colors hover:bg-[var(--mkt-accent-soft)] ${focusRing} ${s.id === "social-foundation" ? "sm:border-l sm:border-[var(--mkt-border)]" : ""}`}
-                >
-                  <div className="relative aspect-[16/7] overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={s.image} alt="" className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    <span className="absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-semibold" style={{ color: s.accent }}>
-                      {s.look}
-                    </span>
-                  </div>
-                  <div className="flex flex-1 flex-col p-5">
-                    <span className="text-lg font-semibold text-[var(--mkt-text)]">{s.name}</span>
-                    <span className={`mt-1 text-sm ${mkt.muted}`}>{s.tagline}</span>
-                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[var(--mkt-accent-text)]">
-                      Open this look <ArrowRight className="h-4 w-4 transition-transform motion-safe:group-hover:translate-x-1" />
-                    </span>
-                  </div>
-                </button>
+      <div className="grid gap-6 lg:grid-cols-[270px_minmax(0,1fr)] lg:gap-8">
+        {/* Industry picker */}
+        <aside className="lg:sticky lg:top-20 lg:self-start">
+          <label className="relative hidden lg:block">
+            <span className="sr-only">Search industries</span>
+            <Search className={`pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mkt.muted}`} />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search ${sectors.length} industries…`}
+              className={`${mkt.input} rounded-full py-2.5 pl-10`}
+            />
+          </label>
+          {/* Mobile: a native grouped select is the fastest picker */}
+          <label className="block lg:hidden">
+            <span className={`mb-1.5 block text-xs font-semibold uppercase tracking-wider ${mkt.muted}`}>Industry</span>
+            <select value={selected.id} onChange={(e) => pick(e.target.value)} className={`${mkt.input} font-semibold`}>
+              {categories.map((c) => (
+                <optgroup key={c.name} label={c.name}>
+                  {sectors
+                    .filter((s) => s.category === c.name)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                </optgroup>
               ))}
+            </select>
+          </label>
+          <nav
+            ref={navRef}
+            aria-label="Industries"
+            className="relative mt-4 hidden max-h-[calc(100vh/var(--mkt-zoom,1)-9.5rem)] space-y-2 overflow-y-auto overscroll-contain pb-4 pr-1 [scrollbar-width:thin] lg:block"
+          >
+            {groups.length === 0 && <p className={`px-2 text-sm ${mkt.muted}`}>No industry matches “{query.trim()}”.</p>}
+            {groups.map((g) => {
+              // While searching every matching group stays open.
+              const open = !!q || openCat === g.name;
+              const hasSelected = g.items.some((s) => s.id === selected.id);
+              const { icon: CatIcon, from, to } = catStyle(g.name);
+              return (
+                <div
+                  key={g.name}
+                  className={`overflow-hidden rounded-2xl border transition-colors duration-300 ${
+                    open ? "border-[var(--mkt-border)] bg-[var(--mkt-surface)] shadow-sm" : "border-transparent"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenCat(open && !q ? null : g.name)}
+                    aria-expanded={open}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition ${focusRing} ${
+                      open ? "" : "hover:bg-[var(--mkt-surface-muted)]"
+                    }`}
+                  >
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white shadow-sm transition-transform duration-300"
+                      style={{ backgroundImage: `linear-gradient(135deg, ${from}, ${to})`, transform: open ? "scale(1.06)" : undefined }}
+                    >
+                      <CatIcon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-[var(--mkt-text)]">{g.name}</span>
+                      <span className={`block truncate text-[11px] ${mkt.muted}`}>
+                        {g.items.length} {g.items.length === 1 ? "website" : "websites"}
+                        {!open && hasSelected && <span className="text-[var(--mkt-accent-text)]"> · {selected.name}</span>}
+                      </span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-300 ${mkt.muted} ${open ? "rotate-180" : ""}`} />
+                  </button>
+                  {/* grid-rows 0fr→1fr animates the height smoothly without measuring */}
+                  <div className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                    <ul className="min-h-0 space-y-0.5 overflow-hidden px-1.5" inert={!open}>
+                      {g.items.map((s, i) => {
+                        const on = s.id === selected.id;
+                        return (
+                          <li key={s.id} className={i === g.items.length - 1 ? "pb-1.5" : undefined}>
+                            <button
+                              type="button"
+                              onClick={() => pick(s.id)}
+                              aria-current={on ? "true" : undefined}
+                              className={`flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left text-sm transition ${focusRing} ${
+                                on
+                                  ? "bg-[var(--mkt-text)] font-semibold text-[var(--mkt-bg)]"
+                                  : "text-[var(--mkt-text-secondary)] hover:translate-x-0.5 hover:bg-[var(--mkt-surface-muted)] hover:text-[var(--mkt-text)]"
+                              }`}
+                            >
+                              <span
+                                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${on ? "bg-white/15" : "bg-[var(--mkt-surface-muted)]"}`}
+                                style={on ? undefined : { color: s.accent }}
+                              >
+                                <VerticalIcon name={s.icon} className="h-3.5 w-3.5" />
+                              </span>
+                              <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                              {activeByVertical[s.id] && <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" title="Demo running" />}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                </div>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Stage */}
+        <section ref={stageRef} aria-labelledby="demo-title" className="min-w-0 scroll-mt-20">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)]"
+                style={{ color: selected.accent }}
+              >
+                <VerticalIcon name={selected.icon} className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className={`text-xs ${mkt.muted}`}>
+                  {selected.category}
+                  {live ? "" : " · Coming soon"}
+                </p>
+                <h2 id="demo-title" className="font-display text-xl text-[var(--mkt-text)] sm:text-2xl">
+                  {selected.name}
+                </h2>
+                <p className={`mt-0.5 line-clamp-1 text-sm ${mkt.muted}`}>{selected.tagline}</p>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {active ? (
+                <button type="button" onClick={() => setStage(active)} className={`${mkt.btnSecondary} ${mkt.btnPrimaryMd} ${focusRing}`}>
+                  <Play className="h-4 w-4" /> Open live demo
+                </button>
+              ) : live ? (
+                <Link href={demoStartUrl(selected.id, current.id)} className={`${mkt.btnSecondary} ${mkt.btnPrimaryMd} ${focusRing}`}>
+                  <Play className="h-4 w-4" /> Try live with admin
+                </Link>
+              ) : null}
+              <Link
+                href={`/subscribe?vertical=${selected.id}${live ? `&design=${current.id}` : ""}`}
+                className={`${mkt.btnPrimary} ${mkt.btnPrimaryMd} ${focusRing}`}
+              >
+                {live ? "Use this design" : "Notify me"} <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* One-click design switcher */}
+          <div role="radiogroup" aria-label="Design" className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+            {selected.designs.map((d, i) => {
+              const on = d.id === current.id;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setDesign(d.id)}
+                  title={`${d.tagline} (press ${i + 1})`}
+                  className={`flex shrink-0 items-center gap-2.5 rounded-full border py-1.5 pl-1.5 pr-3 text-sm transition ${focusRing} ${
+                    on
+                      ? "border-[var(--mkt-text)] bg-[var(--mkt-text)] font-semibold text-[var(--mkt-bg)]"
+                      : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-[var(--mkt-text-secondary)] hover:border-[var(--mkt-border-strong)]"
+                  }`}
+                >
+                  <span className="flex -space-x-1">
+                    {[d.colors.primary, d.colors.secondary, d.colors.accent].map((c, k) => (
+                      <span key={k} className="h-5 w-5 rounded-full ring-2 ring-[var(--mkt-surface)]" style={{ background: c }} />
+                    ))}
+                  </span>
+                  {d.name}
+                  <kbd className={`hidden rounded border px-1 text-[10px] font-medium sm:inline ${on ? "border-white/25 opacity-70" : "border-[var(--mkt-border)] opacity-60"}`}>
+                    {i + 1}
+                  </kbd>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface-muted)] p-3 sm:p-5">
+            {/* ponytail: static mock — the real site is OTP-gated, an iframe here would only show the gate */}
+            <DemoConceptPreview key={selected.id} sector={selected} design={current} />
+          </div>
+          <p className={`mt-2 text-center text-xs ${mkt.muted}`}>
+            {current.blurb} · Same pages and content in every design. Press <kbd className="font-semibold">←</kbd>{" "}
+            <kbd className="font-semibold">→</kbd> to switch.
+          </p>
+
+          <div className="mt-6 grid gap-5 md:grid-cols-2">
+            <div className={`${mkt.card} p-5`}>
+              <h3 className="font-semibold text-[var(--mkt-text)]">What you get</h3>
+              <p className={`mt-1 text-sm ${mkt.muted}`}>{selected.description}</p>
+              <ul className="mt-4 space-y-2">
+                {included(selected).map((t) => (
+                  <li key={t} className="flex items-start gap-2 text-sm text-[var(--mkt-text-secondary)]">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className={`${mkt.card} p-5`}>
+              <h3 className="mb-3 font-semibold text-[var(--mkt-text)]">{live ? "Try the real site + admin" : "Coming soon"}</h3>
+              {live && !active && !blockedBy ? (
+                <div>
+                  <p className={`text-sm leading-relaxed ${mkt.muted}`}>
+                    Get a private 10-minute sandbox of this website with its full admin panel. Add a few details, verify with a
+                    one-time code and you&apos;re in — no card needed.
+                  </p>
+                  <Link href={demoStartUrl(selected.id, current.id)} className={`mt-4 w-full ${mkt.btnPrimary} ${mkt.btnPrimaryMd} ${focusRing}`}>
+                    <Play className="h-4 w-4" /> Start my free demo
+                  </Link>
+                </div>
+              ) : live ? (
+                <DemoVerticalPanel
+                  key={selected.id}
+                  vertical={selected}
+                  active={active}
+                  defaultOpen={focusVertical === selected.id && (!!expired || !active)}
+                  blocked={!!blockedBy && !active}
+                  blockedVerticalName={blockedBy?.name}
+                  blockedVerticalId={blockedBy?.id}
+                  designs={selected.designs}
+                  design={current.id}
+                  onShowActive={pick}
+                  onActivated={setStage}
+                />
+              ) : (
+                <p className="text-sm text-[var(--mkt-text-secondary)]">
+                  We&apos;re finishing the {selected.name} template. Leave an enquiry and we&apos;ll notify you the moment it&apos;s live.
+                </p>
+              )}
             </div>
           </div>
         </section>
+      </div>
+
+      {stage && (
+        <DemoLiveStage sector={selected} active={stage} design={current.id} onDesign={setDesign} onClose={() => setStage(null)} />
       )}
-
-      {/* Toolbar: category pills + search */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div
-          role="tablist"
-          aria-label="Filter by category"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 [scrollbar-width:none]"
-        >
-          {tabs.map((t) => {
-            const on = category === t.name;
-            return (
-              <button
-                key={t.name}
-                type="button"
-                role="tab"
-                aria-selected={on}
-                onClick={() => setCategory(t.name)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-sm font-medium transition-colors ${focusRing} ${
-                  on
-                    ? "border-transparent bg-[var(--mkt-text)] text-[var(--mkt-bg)]"
-                    : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-[var(--mkt-text-secondary)] hover:border-[var(--mkt-accent)]/40"
-                }`}
-              >
-                {t.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={t.image} alt="" className="h-6 w-6 rounded-full object-cover" />
-                ) : (
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mkt-accent)] text-[10px] font-bold text-[var(--mkt-accent-on)]">
-                    {liveCount}
-                  </span>
-                )}
-                {t.name}
-                <span className={`text-xs tabular-nums ${on ? "opacity-70" : mkt.muted}`}>{t.count}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <label className="relative block w-full lg:w-72">
-          <span className="sr-only">Search sectors</span>
-          <Search className={`pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${mkt.muted}`} />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search sectors…"
-            className={`${mkt.input} rounded-full py-2.5 pl-10`}
-          />
-        </label>
-      </div>
-
-      <div className="mt-8 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mkt-accent-text)]">Catalog</p>
-          <h2 className="mt-1 text-xl font-semibold text-[var(--mkt-text)] sm:text-2xl">Browse every sector</h2>
-        </div>
-        <p className={`hidden text-sm sm:block ${mkt.muted}`}>{visible.length} templates</p>
-      </div>
-
-      {visible.length === 0 ? (
-        <div className={`${mkt.cardSoft} mt-8 flex flex-col items-center px-6 py-16 text-center`}>
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--mkt-accent-soft)]">
-            <SearchX className="h-6 w-6 text-[var(--mkt-accent-text)]" />
-          </span>
-          <p className="mt-4 font-semibold text-[var(--mkt-text)]">No sectors match{q ? ` “${query.trim()}”` : ""}</p>
-          <p className={`mt-1 text-sm ${mkt.muted}`}>Try a different word, or tell us about your business.</p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                setCategory(ALL);
-              }}
-              className={`${mkt.btnSecondary} ${mkt.btnPrimarySm} ${focusRing}`}
-            >
-              Clear filters
-            </button>
-            <Link href="/subscribe" className={`${mkt.btnPrimary} ${mkt.btnPrimarySm} ${focusRing}`}>
-              Request my sector <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <ul className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((s) => {
-            const live = s.status === "live";
-            const running = !!activeByVertical[s.id];
-            return (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  id={`demo-${s.id}`}
-                  onClick={() => setSelectedId(s.id)}
-                  aria-haspopup="dialog"
-                  className={`group flex h-full w-full flex-col overflow-hidden text-left ${mkt.card} transition-transform duration-300 ease-out hover:border-[var(--mkt-accent)]/40 motion-safe:hover:-translate-y-1 ${focusRing}`}
-                >
-                  <div className="relative aspect-[16/10] w-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={s.image}
-                      alt={`${s.name} website example`}
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out motion-safe:group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                    <span
-                      className="absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/90 shadow-sm backdrop-blur"
-                      style={{ color: s.accent }}
-                    >
-                      <VerticalIcon name={s.icon} className="h-5 w-5" />
-                    </span>
-                    <span
-                      className={`absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold backdrop-blur ${
-                        live ? "bg-black/55 text-white" : "bg-white/85 text-slate-800"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${live ? "bg-[var(--mkt-accent)]" : "bg-amber-500"}`} />
-                      {running ? "Running" : live ? "Live" : "Coming soon"}
-                    </span>
-                    <span className="absolute bottom-3 left-3 flex -space-x-1.5" aria-hidden>
-                      {s.designs.map((d) => (
-                        <span
-                          key={d.id}
-                          className="h-4 w-4 rounded-full ring-2 ring-white/90"
-                          style={{ background: d.colors.primary === d.colors.secondary ? d.colors.dark : d.colors.secondary }}
-                        />
-                      ))}
-                    </span>
-                  </div>
-                  <div className="flex flex-1 flex-col p-5">
-                    <p className={`text-[11px] font-semibold uppercase tracking-wider ${mkt.muted}`}>
-                      {s.look ?? s.category}
-                    </p>
-                    <h3 className="mt-1 font-semibold text-[var(--mkt-text)]">{s.name}</h3>
-                    <p className={`mt-1 text-sm ${mkt.muted}`}>{s.tagline}</p>
-                    <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[var(--mkt-accent-text)]">
-                      {live ? `Explore ${s.designs.length} designs` : "View details"}
-                      <ArrowRight className="h-4 w-4 transition-transform duration-300 motion-safe:group-hover:translate-x-1" />
-                    </span>
-                  </div>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {selected && (
-        <DemoDrawer
-          key={selected.id}
-          sector={selected}
-          active={activeByVertical[selected.id]}
-          design={designBy[selected.id] ?? selected.designs[0]?.id ?? "classic"}
-          onDesign={(id) => setDesignBy((m) => ({ ...m, [selected.id]: id }))}
-          defaultOpen={focusVertical === selected.id && (!!expired || !activeByVertical[selected.id])}
-          blockedBy={
-            selected.status === "live" && globalActive && globalActive.sector.id !== selected.id
-              ? globalActive.sector
-              : undefined
-          }
-          onShowActive={setSelectedId}
-          onClose={close}
-        />
-      )}
-    </div>
-  );
-}
-
-function DemoDrawer({
-  sector,
-  active,
-  design,
-  onDesign,
-  defaultOpen,
-  blockedBy,
-  onShowActive,
-  onClose,
-}: {
-  sector: DemoSector;
-  active?: ActiveInfo;
-  design: string;
-  onDesign: (id: string) => void;
-  defaultOpen: boolean;
-  blockedBy?: DemoSector;
-  onShowActive: (id: string) => void;
-  onClose: () => void;
-}) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  const live = sector.status === "live";
-  const current = sector.designs.find((d) => d.id === design) ?? sector.designs[0];
-  const titleId = `demo-drawer-${sector.id}`;
-  const [started, setStarted] = useState<ActiveInfo | undefined>(active);
-  useEffect(() => {
-    setStarted(active);
-  }, [active]);
-
-  // Escape closes, background scroll locked, focus moved in and restored on close.
-  useEffect(() => {
-    const prevFocus = document.activeElement as HTMLElement | null;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prevOverflow;
-      prevFocus?.focus?.();
-    };
-  }, [onClose]);
-
-  const included =
-    sector.id === "social-foundation"
-      ? [
-          "Six grassroots program areas + public leadership team",
-          "Live events with reports, gallery and documents",
-          "Volunteer applications inbox in admin",
-          `${sector.designs.length} colour skins, mobile-ready`,
-        ]
-      : sector.id === "ngo-charity"
-        ? [
-            "Causes, impact stats, 80G donate page",
-            "Volunteer enquiry + event gallery",
-            "Admin for pages, services, gallery & SEO",
-            `${sector.designs.length} switchable designs, mobile-ready`,
-          ]
-        : [
-            `Ready-made ${sector.name} website with real content`,
-            "Admin panel — edit pages, services, gallery & SEO",
-            "Enquiry & lead capture built in",
-            `${sector.designs.length} switchable designs, mobile-ready`,
-          ];
-
-  if (started) {
-    return (
-      <DemoLiveStage
-        sector={sector}
-        active={started}
-        design={current?.id ?? "classic"}
-        onDesign={onDesign}
-        onClose={onClose}
-      />
-    );
-  }
-
-  return (
-    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-      <div
-        className="absolute inset-0 bg-slate-950/80 transition-opacity duration-300 starting:opacity-0 motion-reduce:transition-none"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div className="relative flex h-full w-full">
-        <div className="hidden min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white lg:flex">
-          {live && sector.demoUrl && current ? (
-            <DemoSiteFrame
-              src={`${sector.demoUrl.replace(/\/$/, "")}/?design=${encodeURIComponent(current.id)}`}
-              host={`${sector.name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.yoursite.in`}
-              title={`${sector.name} ${current.name} website`}
-            />
-          ) : current ? (
-            <div className="flex h-full items-center justify-center bg-[#0c0b0a] px-8">
-              <DemoConceptPreview sector={sector} design={current} />
-            </div>
-          ) : null}
-        </div>
-      <div className="relative ml-auto flex h-full w-full max-w-2xl shrink-0 flex-col bg-[var(--mkt-bg)] shadow-2xl transition-[transform,opacity] duration-300 ease-out starting:translate-x-8 starting:opacity-0 motion-reduce:transition-none sm:border-l sm:border-[var(--mkt-border)] lg:max-w-[26rem] xl:max-w-[28rem]">
-        {/* Header */}
-        <div className="relative h-40 shrink-0 overflow-hidden sm:h-48 lg:h-28">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={sector.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
-          <button
-            ref={closeRef}
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur transition-opacity hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            <X className="h-4 w-4" />
-          </button>
-          <div className="absolute bottom-4 left-5 right-5 flex items-end gap-3">
-            <span
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white shadow"
-              style={{ color: sector.accent }}
-            >
-              <VerticalIcon name={sector.icon} className="h-6 w-6" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-white/75">
-                {sector.category} · {live ? "Live demo" : "Coming soon"}
-              </p>
-              <h2 id={titleId} className="truncate text-xl font-bold text-white sm:text-2xl">
-                {sector.name}
-              </h2>
-            </div>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 space-y-8 overflow-y-auto overscroll-contain px-5 py-6 sm:px-7">
-          <section>
-            <p className="text-[var(--mkt-text-secondary)]">{sector.description}</p>
-            <h3 className={`mt-5 text-xs font-semibold uppercase tracking-wider ${mkt.muted}`}>What&apos;s included</h3>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-              {included.map((t) => (
-                <li key={t} className="flex items-start gap-2 text-sm text-[var(--mkt-text-secondary)]">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mkt-accent)]" /> {t}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <DesignPicker
-            designs={sector.designs}
-            value={current?.id ?? sector.designs[0]?.id ?? "classic"}
-            onChange={onDesign}
-            layout="drawer"
-            label="Choose a design"
-            hint="Same pages and content — only the look changes."
-          />
-
-          <section>
-            <h3 className="mb-3 font-semibold text-[var(--mkt-text)]">{live ? "Try it live" : "Coming soon"}</h3>
-            {live ? (
-              <DemoVerticalPanel
-                vertical={sector}
-                active={active}
-                defaultOpen={defaultOpen}
-                blocked={!!blockedBy && !active}
-                blockedVerticalName={blockedBy?.name}
-                blockedVerticalId={blockedBy?.id}
-                designs={sector.designs}
-                design={current?.id}
-                onShowActive={onShowActive}
-                onActivated={setStarted}
-              />
-            ) : (
-              <div className={`${mkt.cardSoft} px-4 py-4 text-sm text-[var(--mkt-text-secondary)]`}>
-                We&apos;re finishing the {sector.name} template. Leave an enquiry and we&apos;ll notify you the moment
-                it&apos;s live — or build it with us early.
-              </div>
-            )}
-          </section>
-        </div>
-
-        {/* Footer CTA */}
-        <div className="flex shrink-0 flex-col gap-2 border-t border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-          <p className={`text-sm ${mkt.muted}`}>
-            {live && current ? (
-              <>
-                Selected: <span className="font-semibold text-[var(--mkt-text)]">{current.name}</span>
-              </>
-            ) : (
-              "Get notified when it launches"
-            )}
-          </p>
-          {live && current ? (
-            <Link
-              href={`/subscribe?vertical=${sector.id}&design=${current.id}`}
-              className={`${mkt.btnPrimary} ${mkt.btnPrimaryMd} ${focusRing}`}
-            >
-              Use this design <ArrowRight className="h-4 w-4" />
-            </Link>
-          ) : (
-            <Link href={`/subscribe?vertical=${sector.id}`} className={`${mkt.btnPrimary} ${mkt.btnPrimaryMd} ${focusRing}`}>
-              Notify me / enquire <ArrowRight className="h-4 w-4" />
-            </Link>
-          )}
-        </div>
-      </div>
-      </div>
     </div>
   );
 }

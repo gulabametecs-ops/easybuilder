@@ -80,6 +80,13 @@ export type SeoConfig = {
   ratingValue: string; // aggregate rating (e.g. 4.8) for rich results
   ratingCount: string; // number of reviews
   faqSchema: boolean; // auto-generate FAQ structured data from FAQ sections
+  // LocalBusiness overrides (blank = use header/footer contact details)
+  lbName?: string;
+  lbAddress?: string;
+  lbPhone?: string;
+  openingHours?: string; // one per line, schema.org format e.g. "Mo-Sa 09:00-19:00"
+  mapUrl?: string; // Google Maps link (schema.org hasMap)
+  indexNowAt?: string; // ISO time of the last successful IndexNow submission
 };
 
 // ─── Section content types (discriminated by Section.type) ───────────────────
@@ -198,12 +205,49 @@ export type SectionContentMap = {
     emptyText: string;
     groupByStatus?: boolean;
   };
+  /** Live fundraising causes from Admin → Causes (lib/cause.ts): progress, days left, donate. */
+  causeList: {
+    eyebrow: string;
+    title: string;
+    titleHighlight: string;
+    subtitle: string;
+    /** "all" or a cause category name */
+    category: string;
+    featuredOnly: boolean;
+    /** category tabs above the grid */
+    showFilters: boolean;
+    /** include goal-reached / paused causes */
+    showCompleted: boolean;
+    limit: number;
+    emptyText: string;
+  };
+  /** Live listings from Admin → Properties (lib/property.ts). */
+  propertyList: {
+    eyebrow: string;
+    title: string;
+    titleHighlight: string;
+    subtitle: string;
+    /** "all" or one purpose: sale | rent | pg | project */
+    purpose: string;
+    featuredOnly: boolean;
+    /** buy/rent tabs, BHK, budget and locality filters above the grid */
+    showFilters: boolean;
+    limit: number;
+    emptyText: string;
+  };
   donatePay: {
     eyebrow: string;
     title: string;
     titleHighlight: string;
     subtitle: string;
     suggestedAmounts: string;
+  };
+  payOnline: {
+    eyebrow: string;
+    title: string;
+    titleHighlight: string;
+    subtitle: string;
+    emptyText: string;
   };
   volunteerForm: {
     title: string;
@@ -218,6 +262,7 @@ export type SectionType = keyof SectionContentMap;
 export type Spacing = "default" | "none" | "sm" | "lg";
 export type SectionStyle = {
   anchorId?: string; // for menu jump-links (#id)
+  layout?: string; // per-block layout variant (see SECTION_LAYOUTS in sectionDefaults); unknown → block default
   spacingTop?: Spacing;
   spacingBottom?: Spacing;
   hideOnMobile?: boolean;

@@ -83,7 +83,7 @@ export default async function ClientDetailPage({ params }: Props) {
                 <select name="method" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="cash">Cash</option><option value="upi">UPI</option><option value="bank">Bank transfer</option><option value="other">Other</option></select>
               </label>
               <label className="block"><span className="block text-xs font-medium text-slate-500 mb-1">Extend by</span>
-                <select name="months" defaultValue="12" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="1">1 Month</option><option value="3">3 Months</option><option value="6">6 Months</option><option value="12">1 Year</option><option value="24">2 Years</option><option value="lifetime">Lifetime</option></select>
+                <select name="months" defaultValue="12" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="1">1 Month</option><option value="3">3 Months</option><option value="6">6 Months</option><option value="12">1 Year</option><option value="24">2 Years</option><option value="36">3 Years</option></select>
               </label>
               <button className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-4 py-2 hover:bg-slate-800">Record</button>
             </form>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, useCallback } from "react";
 import Link from "next/link";
 import {
-  Sparkles, Loader2, LayoutDashboard, Globe, ArrowRight, ArrowUp, ExternalLink, ImagePlus,
-  Palette, ChevronDown, RotateCcw, Bot, User, Check,
+  Sparkles, LayoutDashboard, ArrowRight, ArrowUp, ExternalLink, ImagePlus,
+  Palette, ChevronDown, RotateCcw, User, Check, MessageSquare, Wand2, Layers, PanelsTopLeft, KeyRound, Copy,
 } from "lucide-react";
 import type { WebsiteBlueprint } from "@/lib/ai/blueprintSchema";
 import { saveAiDraft } from "@/lib/ai/promptStorage";
@@ -15,10 +15,11 @@ import { normalizeHexColor } from "@/lib/ai/applyBrand";
 import { detectColorIntent } from "@/lib/ai/colorIntent";
 import { PAGE_TEMPLATES } from "@/lib/pageTemplates";
 import { DESIGNS } from "@/lib/designs";
-import { AiBuildAnimation } from "./AiBuildAnimation";
+import { AiBuildAnimation, AiUpdateOverlay } from "./AiBuildAnimation";
 import { AiInlinePreview } from "./AiInlinePreview";
-import { AiAdminPreview } from "./AiAdminPreview";
 import { DesignPicker } from "./DesignPicker";
+import { LegalConsent } from "./LegalConsent";
+import { BrandSpinner } from "@/components/BrandLogo";
 
 const SECTION_LABEL: Record<string, string> = {
   faq: "FAQ", testimonials: "testimonials", pricingPlans: "pricing", priceList: "price list", gallery: "gallery",
@@ -91,11 +92,13 @@ function refineIdeas(bp: WebsiteBlueprint | null): string[] {
 }
 
 type Step = "prompt" | "design" | "building" | "ready";
-type RightView = "site" | "admin";
 type Msg = { role: "user" | "ai"; text: string };
 
-const DEFAULT_PRIMARY = "#171717";
-const DEFAULT_SECONDARY = "#b45309";
+// "" = auto: the server picks an industry palette. Fallbacks only tint the design thumbnails.
+const DEFAULT_PRIMARY = "";
+const DEFAULT_SECONDARY = "";
+const THUMB_PRIMARY = "#2f5bff";
+const THUMB_SECONDARY = "#0f172a";
 
 async function uploadAiFile(file: File): Promise<string> {
   const fd = new FormData();
@@ -124,14 +127,16 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
   const [pending, start] = useTransition();
   const [step, setStep] = useState<Step>("prompt");
   const [buildDone, setBuildDone] = useState(false);
-  const [rightView, setRightView] = useState<RightView>("site");
   const [previewKey, setPreviewKey] = useState("");
   const [previewLogin, setPreviewLogin] = useState<{ email: string; password: string } | null>(null);
   const [brandOpen, setBrandOpen] = useState(false);
+  const [leftTab, setLeftTab] = useState<"chat" | "design">("chat");
   const [thread, setThread] = useState<Msg[]>([]);
   const [look, setLook] = useState<LookId>("classic");
   const [focusSlug, setFocusSlug] = useState<string | undefined>(undefined);
   const lookRef = useRef<LookId>("classic");
+  const persist = (bp: WebsiteBlueprint, p: string) => saveAiDraft(p, bp);
+
   const pickLook = (id: LookId) => {
     lookRef.current = id;
     setLook(id);
@@ -143,6 +148,29 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
     });
   };
   const threadBox = useRef<HTMLDivElement>(null);
+  const summaryRef = useRef("");
+  // Refine: overlay plays while the AI works; the result is held here and applied when it ends.
+  const [updating, setUpdating] = useState<{ request: string; done: boolean } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [justUpdated, setJustUpdated] = useState(false);
+  const pendingUpdate = useRef<{ bp: WebsiteBlueprint; note: string; text: string; focus?: string } | null>(null);
+  const finishUpdate = useCallback(() => {
+    const u = pendingUpdate.current;
+    pendingUpdate.current = null;
+    setUpdating(null);
+    if (!u) return;
+    setBlueprint(u.bp);
+    saveAiDraft(u.note, u.bp);
+    if (u.focus) setFocusSlug(u.focus);
+    setThread((t) => [...t, { role: "ai", text: u.text }]);
+    setRefreshKey((k) => k + 1); // remount the preview = auto refresh
+    setJustUpdated(true);
+    window.setTimeout(() => setJustUpdated(false), 2600);
+  }, []);
+  const finishBuild = useCallback(() => {
+    setThread((t) => [...t, { role: "ai", text: summaryRef.current }]);
+    setStep("ready");
+  }, []);
 
   // scrollIntoView would also scroll the page; scroll just the chat panel.
   useEffect(() => {
@@ -150,12 +178,10 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [thread.length, pending]);
 
-  const persist = (bp: WebsiteBlueprint, p: string) => saveAiDraft(p, bp);
-
   const brand = () => ({
     companyName: companyName.trim(),
-    primaryColor,
-    secondaryColor,
+    primaryColor: primaryColor || undefined,
+    secondaryColor: secondaryColor || undefined,
     logoImage,
     heroImage,
   });
@@ -173,7 +199,6 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
   const build = () => {
     setError("");
     setBlueprint(null);
-    setRightView("site");
     setStep("building");
     setBuildDone(false);
     setThread([{ role: "user", text: prompt.trim() }]);
@@ -211,11 +236,14 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
           return;
         }
         const bp = withLook(applyBrandToBlueprint(data.blueprint as WebsiteBlueprint, brand()), lookRef.current);
+        // Show the palette that was actually used in the brand kit.
+        setPrimaryColor(normalizeHexColor(bp.design?.primaryColor) ?? primaryColor);
+        setSecondaryColor(normalizeHexColor(bp.design?.secondaryColor) ?? secondaryColor);
         setBlueprint(bp);
         persist(bp, prompt.trim());
+        // The build timeline (AiBuildAnimation) plays out, then finishBuild() opens the result.
+        summaryRef.current = summarize(bp);
         setBuildDone(true);
-        setThread((t) => [...t, { role: "ai", text: summarize(bp) }]);
-        setTimeout(() => setStep("ready"), 800);
       } catch {
         setError("Something went wrong. Please try again.");
         setStep("prompt");
@@ -225,10 +253,11 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
 
   const refine = (override?: string) => {
     const text = (override ?? refinePrompt).trim();
-    if (!blueprint || text.length < 3 || pending) return;
+    if (!blueprint || text.length < 3 || pending || updating) return;
     setError("");
     setThread((t) => [...t, { role: "user", text }]);
     setRefinePrompt("");
+    setUpdating({ request: text, done: false });
 
     // Colour-only requests: apply instantly on the client, no AI call.
     const colour = detectColorIntent(text, primaryColor);
@@ -239,10 +268,12 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
         applyBrandToBlueprint(blueprint, { ...brand(), primaryColor: colour.primary, secondaryColor: colour.secondary }),
         lookRef.current,
       );
-      setBlueprint(bp);
-      persist(bp, `${prompt.trim()}\n\nChange: ${text}`);
-      setRightView("site");
-      setThread((t) => [...t, { role: "ai", text: `Done — switched to a ${colour.name} colour theme. Say another colour anytime (e.g. “make it teal”).` }]);
+      pendingUpdate.current = {
+        bp,
+        note: `${prompt.trim()}\n\nChange: ${text}`,
+        text: `Done — switched to a ${colour.name} colour theme. Say another colour anytime (e.g. “make it teal”).`,
+      };
+      setUpdating({ request: text, done: true });
       return;
     }
 
@@ -251,12 +282,13 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
       const res = await fetch("/api/ai/website/public-modify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blueprint, prompt: text }),
+        body: JSON.stringify({ blueprint, prompt: text, page: focusSlug }),
       }).catch(() => null);
       const data = res ? await res.json().catch(() => ({})) : { error: "Network error — check your internet and try again." };
       if (!data.success) {
         const msg = data.error || "Could not apply changes.";
         setError(msg);
+        setUpdating(null);
         setThread((t) => [...t, { role: "ai", text: `I couldn't apply that: ${msg}` }]);
         return;
       }
@@ -271,12 +303,9 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
         applyBrandToBlueprint(data.blueprint as WebsiteBlueprint, { ...brand(), primaryColor: p, secondaryColor: s2 }),
         lookRef.current,
       );
-      setBlueprint(bp);
-      persist(bp, `${prompt.trim()}\n\nChange: ${text}`);
-      setRightView("site");
       const change = describeChange(before, bp);
-      if (change.focus) setFocusSlug(change.focus);
-      setThread((t) => [...t, { role: "ai", text: change.text }]);
+      pendingUpdate.current = { bp, note: `${prompt.trim()}\n\nChange: ${text}`, text: change.text, focus: change.focus };
+      setUpdating({ request: text, done: true });
     });
   };
 
@@ -339,8 +368,9 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
   const pageNames = blueprint?.pages.map((p) => p.name) ?? [];
   const designCards = useMemo(() => {
     const base = {
-      primary: primaryColor, primaryDark: primaryColor, secondary: secondaryColor, accent: primaryColor,
-      dark: secondaryColor, light: "#f8fafc", text: "#475569", heading: secondaryColor,
+      primary: primaryColor || THUMB_PRIMARY, primaryDark: primaryColor || THUMB_PRIMARY,
+      secondary: secondaryColor || THUMB_SECONDARY, accent: primaryColor || THUMB_PRIMARY,
+      dark: secondaryColor || THUMB_SECONDARY, light: "#f8fafc", text: "#475569", heading: secondaryColor || THUMB_SECONDARY,
     };
     return DESIGNS.map((d) => ({
       id: d.id, name: d.name, blurb: d.blurb, tagline: d.tagline, font: d.font || "Balanced default",
@@ -371,6 +401,7 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
         <span className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--mkt-text-muted)]">{label}</span>
         <input
           value={value}
+          placeholder="Auto"
           onChange={(e) => set(e.target.value)}
           className="w-20 bg-transparent font-mono text-xs text-[var(--mkt-text)] outline-none"
           aria-label={`${label} hex`}
@@ -409,31 +440,25 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
     </div>
   );
 
-  const lookPicker = (
-    <DesignPicker
-      designs={designCards}
-      value={look}
-      onChange={(id) => pickLook(id as LookId)}
-      layout="bar"
-      label="Design style"
-    />
-  );
 
-  // ─── Start screen: studio composer ─────────────────────────────────────────
+  // ─── Start screen: studio composer ────────────────────────────────────
   if (step === "prompt") {
     return (
-      <section className="relative isolate overflow-hidden bg-[var(--mkt-bg)]">
-        <div className="absolute inset-0 -z-10 mkt-hero-wash" aria-hidden />
-        <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-2xl flex-col justify-center px-4 py-14 sm:px-6">
+      <section className="mkt-hero-dark relative isolate overflow-hidden text-[var(--mkt-text)]">
+        <div className="mkt-hero-grid pointer-events-none absolute inset-0 -z-10" aria-hidden />
+        <div className="mkt-hero-glow pointer-events-none absolute inset-x-0 top-0 -z-10 h-[640px]" aria-hidden />
+        <div className="mx-auto flex min-h-[calc(100dvh/var(--mkt-zoom,1)-4rem)] max-w-3xl flex-col justify-center px-4 py-14 sm:px-6">
           <div className="text-center">
-            <span className={mkt.badge}>
-              <Sparkles className="w-3.5 h-3.5" /> AI website builder
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1 text-xs font-medium text-[var(--mkt-text-secondary)] shadow-sm">
+              <Sparkles className="h-3.5 w-3.5 text-[var(--mkt-accent-2)]" /> AI website builder
             </span>
-            <h1 className="font-display mt-5 text-[clamp(2.1rem,4.8vw,3.25rem)] leading-[1.12] text-[var(--mkt-text)]">
-              Describe the business. Get a full website.
+            <h1 className="font-display mt-6 text-[clamp(2rem,4.6vw,3.2rem)] font-bold leading-[1.05] tracking-[-0.04em]">
+              Describe your business.
+              <br />
+              <span className="mkt-gradient-text">Get a complete website.</span>
             </h1>
-            <p className={`mx-auto mt-4 max-w-xl text-[15px] leading-relaxed ${mkt.muted}`}>
-              Name, pages, services and tone from one prompt. Then chat to tweak headlines, colours and sections.
+            <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-[var(--mkt-text-muted)]">
+              AI plans the pages, writes the content and designs it in your brand — with a working admin panel. Then just chat to change anything.
             </p>
           </div>
 
@@ -442,16 +467,22 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
               e.preventDefault();
               plan();
             }}
-            className={`mt-10 ${mkt.card} p-3 sm:p-4`}
+            className="relative mt-10"
           >
-              <input
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="Business name — e.g. GULAB NGO"
-                aria-label="Business name"
-                className="w-full rounded-xl bg-transparent px-3 py-2 text-sm font-semibold text-[var(--mkt-text)] placeholder:font-normal placeholder:text-[var(--mkt-text-muted)] outline-none"
-              />
-              <div className="mx-3 border-t border-[var(--mkt-border)]" />
+            <div className="mkt-hero-frame-glow pointer-events-none absolute -inset-6 -z-10" aria-hidden />
+            <div className="rounded-3xl border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] p-2 shadow-[0_30px_80px_-30px_rgba(10,13,20,0.25)] transition focus-within:border-[var(--mkt-accent-2)]/60">
+              <div className="flex items-center gap-2.5 border-b border-[var(--mkt-border)] px-3 py-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--mkt-surface-muted)] text-[var(--mkt-text-muted)]">
+                  <PanelsTopLeft className="h-4 w-4" />
+                </span>
+                <input
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Business name — e.g. Royal Spice"
+                  aria-label="Business name"
+                  className="w-full bg-transparent text-[15px] font-semibold text-[var(--mkt-text)] placeholder:font-normal placeholder:text-[var(--mkt-text-muted)] outline-none"
+                />
+              </div>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -463,50 +494,59 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
                 }}
                 rows={4}
                 autoFocus
-                placeholder="Describe your website… e.g. A play school in Pune with programs, daily routine, fees, gallery and an admission enquiry form."
+                placeholder="What should the website do? e.g. A play school in Pune with programs, daily routine, fees, gallery and an admission enquiry form."
                 aria-label="Describe your website"
-                className="w-full resize-none bg-transparent px-3 py-3 text-[15px] leading-relaxed text-[var(--mkt-text)] placeholder:text-[var(--mkt-text-muted)] outline-none"
+                className="w-full resize-none bg-transparent px-4 py-3.5 text-[15px] leading-relaxed text-[var(--mkt-text)] placeholder:text-[var(--mkt-text-muted)] outline-none"
               />
-              {brandOpen && <div className="px-2 pb-3">{brandKit}</div>}
-              <div className="flex items-center justify-between gap-2 px-1">
+              {brandOpen && <div className="px-3 pb-3">{brandKit}</div>}
+              <div className="flex items-center justify-between gap-2 px-2 pb-1">
                 <button
                   type="button"
                   onClick={() => setBrandOpen((v) => !v)}
                   aria-expanded={brandOpen}
-                  className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] px-3 py-1.5 text-xs font-semibold text-[var(--mkt-text-secondary)] hover:border-[var(--mkt-accent)]/50 hover:text-[var(--mkt-text)] transition"
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] px-3 py-1.5 text-xs font-semibold text-[var(--mkt-text-secondary)] transition hover:border-[var(--mkt-border-strong)] hover:text-[var(--mkt-text)]"
                 >
                   <Palette className="h-3.5 w-3.5" />
                   Brand kit
-                  <span className="flex -space-x-1">
-                    <span className="h-3.5 w-3.5 rounded-full ring-2 ring-[var(--mkt-surface)]" style={{ background: primaryColor }} />
-                    <span className="h-3.5 w-3.5 rounded-full ring-2 ring-[var(--mkt-surface)]" style={{ background: secondaryColor }} />
-                  </span>
+                  {primaryColor || secondaryColor ? (
+                    <span className="flex -space-x-1">
+                      <span className="h-3.5 w-3.5 rounded-full ring-2 ring-[var(--mkt-surface)]" style={{ background: primaryColor || THUMB_PRIMARY }} />
+                      <span className="h-3.5 w-3.5 rounded-full ring-2 ring-[var(--mkt-surface)]" style={{ background: secondaryColor || THUMB_SECONDARY }} />
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-[var(--mkt-surface-muted)] px-1.5 py-px text-[10px] font-medium text-[var(--mkt-text-muted)]">Auto</span>
+                  )}
                   <ChevronDown className={`h-3.5 w-3.5 transition-transform ${brandOpen ? "rotate-180" : ""}`} />
                 </button>
                 <div className="flex items-center gap-3">
-                  <span className={`hidden text-[11px] sm:inline ${mkt.muted}`}>
-                    {canBuild ? "Enter to continue" : !nameOk ? "Add a business name" : "Describe your website"}
+                  <span className="hidden text-[11px] text-[var(--mkt-text-muted)] sm:inline">
+                    {canBuild ? "Press Enter ↵" : !nameOk ? "Add a business name" : "Describe your website"}
                   </span>
                   <button
                     type="submit"
                     disabled={!canBuild}
                     aria-label="Build my website"
-                    className="inline-flex h-11 items-center gap-2 rounded-full bg-[var(--mkt-accent)] px-4 text-sm font-semibold text-[var(--mkt-accent-on)] shadow-md shadow-[var(--mkt-accent)]/30 transition hover:bg-[var(--mkt-accent-hover)] disabled:cursor-not-allowed disabled:bg-[var(--mkt-border-strong)] disabled:text-[var(--mkt-text-muted)] disabled:shadow-none"
+                    className="inline-flex h-11 items-center gap-2 rounded-full mkt-brand-grad px-5 text-sm font-semibold shadow-[0_8px_30px_-8px_rgba(47,91,255,0.6)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
                   >
-                    Continue <ArrowUp className="h-4 w-4 rotate-90" strokeWidth={2.5} />
+                    <Wand2 className="h-4 w-4" /> Generate website
                   </button>
                 </div>
               </div>
+            </div>
           </form>
+          <LegalConsent
+            className="mt-3 text-center"
+            lead="Your prompt is sent to our AI provider to generate the site. By continuing you agree to our"
+          />
 
           {error && (
-            <p role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
+            <p role="alert" className="mt-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-700 dark:text-red-300">
               {error}
             </p>
           )}
 
-          <p className={`mt-8 text-center text-[11px] font-semibold uppercase tracking-[0.16em] ${mkt.muted}`}>Try a starting point</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
+            <span className="mr-1 text-xs text-[var(--mkt-text-muted)]">Try:</span>
             {EXAMPLES.map((ex) => (
               <button
                 key={ex.label}
@@ -515,25 +555,35 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
                   setPrompt(ex.prompt);
                   setCompanyName(ex.name);
                 }}
-                className={`rounded-2xl border px-4 py-3 text-left transition ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                   prompt === ex.prompt
-                    ? "border-[var(--mkt-accent)] bg-[var(--mkt-accent-soft)]"
-                    : "border-[var(--mkt-border)] bg-[var(--mkt-surface)]/80 hover:border-[var(--mkt-accent)]/45"
+                    ? "border-[var(--mkt-accent-2)]/50 bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)]"
+                    : "border-[var(--mkt-border)] bg-[var(--mkt-surface)] text-[var(--mkt-text-secondary)] hover:border-[var(--mkt-border-strong)] hover:text-[var(--mkt-text)]"
                 }`}
               >
-                <span className="block text-sm font-semibold text-[var(--mkt-text)]">{ex.label}</span>
-                <span className={`mt-0.5 line-clamp-1 block text-xs ${mkt.muted}`}>{ex.name}</span>
+                {ex.label}
               </button>
             ))}
           </div>
 
-          <ul className={`mt-8 grid gap-3 text-sm sm:grid-cols-3 ${mkt.muted}`}>
-            {["Multi-page draft", "Live preview + admin", "Chat to refine"].map((t) => (
-              <li key={t} className="flex items-center justify-center gap-2">
-                <Check className="h-4 w-4 text-[var(--mkt-accent)]" /> {t}
+          <ol className="mt-14 grid gap-3 sm:grid-cols-3">
+            {[
+              { icon: Layers, t: "Full multi-page site", d: "Pages, sections and real copy for your business" },
+              { icon: LayoutDashboard, t: "Admin panel included", d: "Edit pages, leads, gallery and SEO yourself" },
+              { icon: MessageSquare, t: "Chat to change", d: "“Add pricing”, “make it teal” — done in seconds" },
+            ].map((f, i) => (
+              <li key={f.t} className="rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] p-4 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mkt-accent-soft)] text-[var(--mkt-accent-text)]">
+                    <f.icon className="h-4 w-4" />
+                  </span>
+                  <span className="text-[11px] font-semibold text-[var(--mkt-text-muted)]">0{i + 1}</span>
+                </div>
+                <p className="mt-3 text-sm font-semibold text-[var(--mkt-text)]">{f.t}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--mkt-text-muted)]">{f.d}</p>
               </li>
             ))}
-          </ul>
+          </ol>
         </div>
       </section>
     );
@@ -544,15 +594,24 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
     const chosen = designCards.find((d) => d.id === look) ?? designCards[0];
     return (
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-        <button type="button" onClick={() => setStep("prompt")} className={`text-sm font-medium ${mkt.muted} hover:text-[var(--mkt-text)]`}>
-          ← Edit prompt
-        </button>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--mkt-text)] sm:text-3xl">
-            Choose a design for {companyName.trim() || "your website"}
-          </h1>
-          <button type="button" onClick={build} className={`${mkt.btnPrimary} ${mkt.btnPrimaryLg} shrink-0`}>
-            <Sparkles className="h-4 w-4" /> Build in {chosen.name}
+        <div className="flex items-center gap-3 text-xs font-medium">
+          <button type="button" onClick={() => setStep("prompt")} className={`${mkt.muted} hover:text-[var(--mkt-text)]`}>
+            ← Edit prompt
+          </button>
+          <span className={mkt.muted}>/</span>
+          <span className="rounded-full bg-[var(--mkt-accent-soft)] px-2.5 py-0.5 text-[var(--mkt-accent-text)]">Step 2 of 2 · Design</span>
+        </div>
+        <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="font-display text-2xl text-[var(--mkt-text)] sm:text-3xl">Pick a look for {companyName.trim() || "your website"}</h1>
+            <p className={`mt-2 text-sm ${mkt.muted}`}>Same content, different personality. You can switch anytime after it&apos;s built.</p>
+          </div>
+          <button
+            type="button"
+            onClick={build}
+            className="inline-flex shrink-0 items-center gap-2 rounded-full mkt-brand-grad px-6 py-3 text-sm font-semibold shadow-[0_8px_30px_-8px_rgba(47,91,255,0.6)] transition hover:brightness-110"
+          >
+            <Wand2 className="h-4 w-4" /> Build in {chosen.name}
           </button>
         </div>
         <div className="mt-8">
@@ -565,175 +624,244 @@ export function MarketingAIBuilder({ initialPrompt = "" }: { initialPrompt?: str
             }}
             layout="page"
             label=""
-            hint="Same content in your brand colours. You can change this later."
+            hint="Shown in your brand colours."
           />
         </div>
       </section>
     );
   }
 
-  // ─── Workspace: chat thread on the left, live preview on the right ─────────
+  // ─── Workspace: top bar · left panel (chat / design) · preview canvas ──────
   // Fixed to the viewport on desktop so the page never scrolls; each panel scrolls
   // inside itself (overscroll-contain stops wheel scroll leaking to the page).
+  const ready = step === "ready";
+  const lookName = DESIGNS.find((d) => d.id === look)?.name ?? "Original";
   return (
-    <section className="mx-auto grid max-w-[1500px] gap-4 px-3 py-3 sm:px-5 lg:h-[calc(100dvh-4rem)] lg:grid-cols-[380px_1fr] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
-      <div className={`${mkt.card} flex min-h-[70vh] flex-col overflow-hidden lg:min-h-0`}>
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--mkt-border)] px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: primaryColor }}>
-              <Sparkles className="h-4 w-4 text-white" />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold text-[var(--mkt-text)]">{companyName || "Your website"}</p>
-              <p className={`text-[11px] ${mkt.muted}`}>{step === "building" ? "Building…" : `${pageNames.length} pages · ${DESIGNS.find((d) => d.id === look)?.name ?? "Original"} design`}</p>
-            </div>
+    <section className="flex flex-col bg-[var(--mkt-bg-alt)] lg:h-[calc(100dvh/var(--mkt-zoom,1)-4rem)] lg:overflow-hidden">
+      {/* Top bar */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-2.5 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white" style={{ background: primaryColor || THUMB_PRIMARY }}>
+            {(companyName || "W").trim().slice(0, 1).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-[var(--mkt-text)]">{companyName || "Your website"}</p>
+            <p className={`flex items-center gap-1.5 text-[11px] ${mkt.muted}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${ready ? "bg-emerald-500" : "animate-pulse bg-amber-500"}`} />
+              {ready ? `${pageNames.length} pages · ${lookName} design` : "Building your website…"}
+            </p>
           </div>
-          <button type="button" onClick={reset} disabled={pending} className={`inline-flex items-center gap-1 text-xs font-medium ${mkt.muted} hover:text-[var(--mkt-text)] disabled:opacity-50`}>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={reset} disabled={pending} title="Start a new website" className={`hidden h-9 items-center gap-1.5 rounded-full px-3 text-xs font-medium sm:inline-flex ${mkt.muted} hover:bg-[var(--mkt-surface-muted)] hover:text-[var(--mkt-text)] disabled:opacity-50`}>
             <RotateCcw className="h-3.5 w-3.5" /> New
           </button>
-        </div>
-
-        <div ref={threadBox} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4">
-          {thread.map((m, i) => (
-            <div key={i} className={`flex gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
-              <span
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                  m.role === "user" ? "bg-[var(--mkt-surface-muted)] text-[var(--mkt-text-secondary)]" : "bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)]"
-                }`}
-              >
-                {m.role === "user" ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
-              </span>
-              <p
-                className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                  m.role === "user"
-                    ? "rounded-tr-sm bg-[var(--mkt-accent-soft)] text-[var(--mkt-text)]"
-                    : "rounded-tl-sm border border-[var(--mkt-border)] bg-[var(--mkt-surface-muted)] text-[var(--mkt-text-secondary)]"
-                }`}
-              >
-                {m.text}
-              </p>
-            </div>
-          ))}
-          {pending && (
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)]">
-                <Bot className="h-3.5 w-3.5" />
-              </span>
-              <span className={`inline-flex items-center gap-2 text-sm ${mkt.muted}`}>
-                <Loader2 className="h-4 w-4 animate-spin" /> {step === "building" ? "Planning pages & writing content…" : "Working on it…"}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {step === "ready" && (
-          <div className="shrink-0 space-y-2.5 border-t border-[var(--mkt-border)] p-3">
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
-              {ideas.map((idea) => (
-                <button
-                  key={idea}
-                  type="button"
-                  disabled={pending}
-                  onClick={() => refine(idea)}
-                  className="shrink-0 rounded-full border border-[var(--mkt-border)] px-2.5 py-1 text-[11px] text-[var(--mkt-text-secondary)] hover:border-[var(--mkt-accent)]/50 hover:text-[var(--mkt-text)] disabled:opacity-50 transition"
-                >
-                  {idea}
-                </button>
-              ))}
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                refine();
-              }}
-              className="flex items-end gap-2 rounded-2xl border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] p-2 focus-within:border-[var(--mkt-accent)]/60 transition"
-            >
-              <textarea
-                value={refinePrompt}
-                onChange={(e) => setRefinePrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    refine();
-                  }
-                }}
-                rows={2}
-                placeholder="Ask for a change… e.g. “make it blue”, “add an FAQ section”"
-                aria-label="Ask AI for a change"
-                className="min-h-[2.5rem] flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-[var(--mkt-text)] placeholder:text-[var(--mkt-text-muted)] outline-none"
-              />
-              <button
-                type="submit"
-                disabled={pending || refinePrompt.trim().length < 3}
-                aria-label="Send change"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-accent)] text-[var(--mkt-accent-on)] transition hover:bg-[var(--mkt-accent-hover)] disabled:bg-[var(--mkt-border-strong)] disabled:text-[var(--mkt-text-muted)]"
-              >
-                {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" strokeWidth={2.5} />}
+          {ready && (
+            <>
+              <button type="button" disabled={pending} onClick={() => openLive("site")} className={`${mkt.btnSecondary} h-9 px-3 text-xs disabled:opacity-50`}>
+                <ExternalLink className="h-3.5 w-3.5" /> <span className="hidden md:inline">Open site</span>
               </button>
-            </form>
-            {error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}
-            <details className="group">
-              <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-semibold text-[var(--mkt-text-secondary)] [&::-webkit-details-marker]:hidden">
-                <Palette className="h-3.5 w-3.5" /> Brand kit — colours, logo, hero image
-                <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="mt-2">{brandKit}</div>
-            </details>
-          </div>
-        )}
-      </div>
-
-      <div className={`${mkt.card} flex min-h-[80vh] flex-col overflow-hidden lg:min-h-0`}>
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--mkt-border)] px-3 py-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="inline-flex rounded-lg bg-[var(--mkt-surface-muted)] p-1">
-              {([["site", Globe, "Website"], ["admin", LayoutDashboard, "Admin"]] as const).map(([v, Icon, label]) => (
-                <button
-                  key={v}
-                  type="button"
-                  disabled={step !== "ready"}
-                  onClick={() => setRightView(v)}
-                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                    rightView === v ? "bg-[var(--mkt-surface)] text-[var(--mkt-text)] shadow-sm" : "text-[var(--mkt-text-muted)] hover:text-[var(--mkt-text)]"
-                  }`}
-                >
-                  <Icon className="h-3.5 w-3.5" /> {label}
-                </button>
-              ))}
-            </div>
-            {step === "ready" && <div className="hidden min-w-0 border-l border-[var(--mkt-border)] pl-3 xl:block">{lookPicker}</div>}
-          </div>
-          {step === "ready" && (
-            <div className="flex items-center gap-1.5">
-              <button type="button" disabled={pending} onClick={() => openLive("site")} className={`${mkt.btnSecondary} px-3 py-1.5 text-xs disabled:opacity-50`}>
-                <ExternalLink className="h-3.5 w-3.5" /> Open site
+              <button type="button" disabled={pending} onClick={() => openLive("admin")} className={`${mkt.btnSecondary} h-9 px-3 text-xs disabled:opacity-50`}>
+                <LayoutDashboard className="h-3.5 w-3.5" /> <span className="hidden md:inline">Open admin</span>
               </button>
-              <button type="button" disabled={pending} onClick={() => openLive("admin")} className={`${mkt.btnSecondary} px-3 py-1.5 text-xs disabled:opacity-50`}>
-                <LayoutDashboard className="h-3.5 w-3.5" /> Open admin
-              </button>
+              {previewLogin && (
+                // ponytail: native <details> as the popover — no state, closes on re-click
+                <details className="relative">
+                  <summary
+                    title="Admin login details"
+                    className={`${mkt.btnSecondary} h-9 w-9 cursor-pointer list-none p-0 [&::-webkit-details-marker]:hidden`}
+                  >
+                    <KeyRound className="h-3.5 w-3.5" />
+                  </summary>
+                  <div className={`${mkt.card} absolute right-0 top-11 z-50 w-72 p-3 text-xs shadow-xl`}>
+                    <p className="font-semibold text-[var(--mkt-text)]">Admin login (if asked)</p>
+                    {([["Email", previewLogin.email], ["Password", previewLogin.password]] as const).map(([k, v]) => (
+                      <div key={k} className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-[var(--mkt-surface-muted)] px-2.5 py-1.5">
+                        <span className="min-w-0">
+                          <span className={`block text-[10px] ${mkt.muted}`}>{k}</span>
+                          <span className="block truncate font-mono text-[var(--mkt-text)]">{v}</span>
+                        </span>
+                        <button type="button" onClick={() => navigator.clipboard?.writeText(v)} aria-label={`Copy ${k}`} className={`shrink-0 rounded p-1 ${mkt.muted} hover:text-[var(--mkt-text)]`}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
               <Link
                 href="/subscribe?from=ai"
                 onClick={() => blueprint && persist(blueprint, prompt.trim())}
-                className={`${mkt.btnPrimary} px-3.5 py-1.5 text-xs`}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full mkt-brand-grad px-4 text-xs font-semibold shadow-[0_6px_20px_-6px_rgba(47,91,255,0.6)] transition hover:brightness-110"
               >
                 Buy this website <ArrowRight className="h-3.5 w-3.5" />
               </Link>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="grid min-h-0 flex-1 gap-3 p-3 lg:grid-cols-[400px_1fr] lg:grid-rows-[minmax(0,1fr)]">
+        {/* Left panel: chat / design */}
+        <div className={`${mkt.card} flex min-h-[70vh] flex-col overflow-hidden lg:min-h-0`}>
+          <div className="flex shrink-0 gap-1 border-b border-[var(--mkt-border)] p-1.5">
+            {([["chat", MessageSquare, "Chat"], ["design", Palette, "Design & brand"]] as const).map(([v, Icon, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setLeftTab(v)}
+                className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition ${
+                  leftTab === v ? "bg-[var(--mkt-surface-muted)] text-[var(--mkt-text)]" : "text-[var(--mkt-text-muted)] hover:text-[var(--mkt-text)]"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" /> {label}
+              </button>
+            ))}
+          </div>
+
+          {leftTab === "chat" ? (
+            <>
+              <div ref={threadBox} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-5">
+                {thread.map((m, i) =>
+                  m.role === "user" ? (
+                    <div key={i} className="flex justify-end gap-2">
+                      <p className="max-w-[85%] rounded-2xl rounded-tr-md bg-[var(--mkt-text)] px-3.5 py-2.5 text-sm leading-relaxed text-[var(--mkt-bg)]">{m.text}</p>
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--mkt-surface-muted)] text-[var(--mkt-text-secondary)] ring-1 ring-[var(--mkt-border)]">
+                        <User className="h-3.5 w-3.5" />
+                      </span>
+                    </div>
+                  ) : (
+                    <div key={i} className="flex gap-2.5">
+                      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full mkt-brand-grad">
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="min-w-0 max-w-[88%]">
+                        <p className="text-[11px] font-semibold text-[var(--mkt-text-muted)]">AI builder</p>
+                        <p className="mt-1 text-sm leading-relaxed text-[var(--mkt-text-secondary)]">{m.text}</p>
+                        {i === 1 && blueprint && (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {pageNames.map((n) => (
+                              <span key={n} className="inline-flex items-center gap-1 rounded-md border border-[var(--mkt-border)] bg-[var(--mkt-surface-muted)] px-2 py-0.5 text-[11px] text-[var(--mkt-text-secondary)]">
+                                <Check className="h-3 w-3 text-emerald-500" /> {n}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ),
+                )}
+                {(pending || step === "building") && (
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full mkt-brand-grad">
+                      <Sparkles className="h-3.5 w-3.5" />
+                    </span>
+                    <span className={`inline-flex items-center gap-2 text-sm ${mkt.muted}`}>
+                      <BrandSpinner className="h-4 w-4" /> {step === "building" ? "Building your website — follow the progress on the right" : "Working on it…"}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {ready && (
+                <div className="shrink-0 space-y-2.5 border-t border-[var(--mkt-border)] p-3">
+                  {ideas.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {ideas.map((idea) => (
+                        <button
+                          key={idea}
+                          type="button"
+                          disabled={pending || !!updating}
+                          onClick={() => refine(idea)}
+                          className="inline-flex items-center gap-1 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-2.5 py-1 text-[11px] text-[var(--mkt-text-secondary)] transition hover:border-[var(--mkt-accent-2)]/50 hover:text-[var(--mkt-text)] disabled:opacity-50"
+                        >
+                          <Sparkles className="h-3 w-3 text-[var(--mkt-accent-2)]" /> {idea}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      refine();
+                    }}
+                    className="rounded-2xl border border-[var(--mkt-border-strong)] bg-[var(--mkt-surface)] p-2 shadow-sm transition focus-within:border-[var(--mkt-accent-2)]/60 focus-within:ring-4 focus-within:ring-[var(--mkt-accent-2)]/10"
+                  >
+                    <textarea
+                      value={refinePrompt}
+                      onChange={(e) => setRefinePrompt(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          refine();
+                        }
+                      }}
+                      rows={2}
+                      placeholder="Ask for a change… “make it blue”, “add an FAQ”"
+                      aria-label="Ask AI for a change"
+                      className="w-full resize-none bg-transparent px-2 py-1.5 text-sm text-[var(--mkt-text)] placeholder:text-[var(--mkt-text-muted)] outline-none"
+                    />
+                    <div className="flex items-center justify-between px-1">
+                      <span className={`text-[11px] ${mkt.muted}`}>Enter to send · Shift+Enter for new line</span>
+                      <button
+                        type="submit"
+                        disabled={pending || !!updating || refinePrompt.trim().length < 3}
+                        aria-label="Send change"
+                        className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--mkt-text)] text-[var(--mkt-bg)] transition hover:opacity-90 disabled:bg-[var(--mkt-border-strong)] disabled:text-[var(--mkt-text-muted)]"
+                      >
+                        {pending || updating ? <BrandSpinner className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" strokeWidth={2.5} />}
+                      </button>
+                    </div>
+                  </form>
+                  {error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="min-h-0 flex-1 space-y-7 overflow-y-auto overscroll-contain p-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--mkt-text-muted)]">Design style</p>
+                <p className={`mt-1 text-xs ${mkt.muted}`}>Same content — switch the whole look in one click.</p>
+                <div className="mt-3">
+                  <DesignPicker designs={designCards} value={look} onChange={(id) => pickLook(id as LookId)} layout="drawer" label="" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--mkt-text-muted)]">Brand</p>
+                <p className={`mt-1 text-xs ${mkt.muted}`}>Your colours, logo and hero photo — applied everywhere.</p>
+                <div className="mt-3">{brandKit}</div>
+              </div>
             </div>
           )}
         </div>
-        {step === "ready" && <div className="shrink-0 border-b border-[var(--mkt-border)] px-3 py-1.5 xl:hidden">{lookPicker}</div>}
-        {previewLogin && (
-          <div className="shrink-0 border-b border-[var(--mkt-border)] bg-[var(--mkt-surface-muted)] px-3 py-1.5 text-[11px]">
-            <span className="font-semibold text-[var(--mkt-text)]">Admin login (if asked): </span>
-            <span className="font-mono break-all">{previewLogin.email}</span> / <span className="font-mono">{previewLogin.password}</span>
+
+        {/* Preview canvas */}
+        <div className={`${mkt.card} flex min-h-[80vh] flex-col overflow-hidden lg:min-h-0`}>
+          <div className="mkt-canvas flex min-h-[75vh] flex-1 flex-col overflow-hidden lg:min-h-0 [&>*]:min-h-0 [&>*]:flex-1">
+            {step === "building" && (
+              <AiBuildAnimation
+                siteName={companyName || blueprint?.website.name}
+                pageNames={pageNames}
+                done={buildDone}
+                accent={primaryColor || THUMB_PRIMARY}
+                onFinished={finishBuild}
+              />
+            )}
+            {ready && previewBlueprint && (
+              <div className="relative flex min-h-0 flex-1 flex-col">
+                <div key={refreshKey} className={`flex min-h-0 flex-1 flex-col ${refreshKey ? "ai-refreshed" : ""}`}>
+                  <AiInlinePreview key={focusSlug ?? "home"} blueprint={previewBlueprint} initialSlug={focusSlug} />
+                </div>
+                {updating && <AiUpdateOverlay request={updating.request} done={updating.done} onFinished={finishUpdate} />}
+                {justUpdated && (
+                  <span className="ai-toast pointer-events-none absolute left-1/2 top-14 z-20 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg">
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} /> Website updated
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        )}
-        <div className="min-h-0 flex-1 overflow-auto overscroll-contain bg-[var(--mkt-surface-muted)]">
-          {step === "building" && (
-            <AiBuildAnimation siteName={companyName || blueprint?.website.name} pageNames={pageNames} done={buildDone} />
-          )}
-          {step === "ready" && previewBlueprint && rightView === "site" && <AiInlinePreview key={focusSlug ?? "home"} blueprint={previewBlueprint} initialSlug={focusSlug} />}
-          {step === "ready" && blueprint && rightView === "admin" && <AiAdminPreview blueprint={blueprint} />}
         </div>
       </div>
     </section>

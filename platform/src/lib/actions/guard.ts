@@ -70,3 +70,9 @@ export async function getDemoSessionId(): Promise<string | null> {
 export async function persistDemoOverlay(sessionId: string, overlay: DemoOverlay) {
   await saveDemoOverlay(sessionId, overlay);
 }
+
+/** Where-clause for update/delete of a tenant row: in a demo sandbox, only rows that sandbox created. */
+export async function ownedWhere(id: string, tenantId: string) {
+  const demoId = await getDemoSessionId();
+  return { id, tenantId, ...(demoId ? { demoSessionId: demoId } : {}) };
+}

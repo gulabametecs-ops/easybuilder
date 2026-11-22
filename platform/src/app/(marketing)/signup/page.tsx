@@ -4,7 +4,7 @@ import { SignupForm } from "@/components/marketing/SignupForm";
 import { MarketingPageHero } from "@/components/marketing/MarketingPageHero";
 import { mkt } from "@/lib/marketingTheme";
 
-export const metadata = { title: "Sign up — Standard SaaS" };
+export const metadata = { title: "Sign up — SitePixl" };
 
 export default function SignupPage() {
   return (

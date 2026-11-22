@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { runRenewalReminders } from "@/lib/reminders";
+import { runRetention } from "@/lib/retention";
+import { sweepExpiredDemoSessions } from "@/lib/demoSession";
+import { sweepAiPreviews } from "@/lib/ai/previewCleanup";
 
 // Daily cron (configured in vercel.json). CRON_SECRET is required in production.
 export async function GET(request: Request) {
@@ -18,6 +21,12 @@ export async function GET(request: Request) {
     }
   }
 
-  const result = await runRenewalReminders();
-  return NextResponse.json(result);
+  // ponytail: retention purge piggybacks on the one daily cron instead of a second schedule.
+  const [result, retention, , aiPreviews] = await Promise.all([
+    runRenewalReminders(),
+    runRetention(),
+    sweepExpiredDemoSessions(),
+    sweepAiPreviews({ force: true }),
+  ]);
+  return NextResponse.json({ ...result, retention, aiPreviews });
 }

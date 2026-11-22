@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireTenantId } from "./guard";
+import { requireAuth } from "./guard";
+import { limitError } from "@/lib/usage";
+import { canonicalPageSlug } from "@/lib/ai/completeHome";
 import { rateLimit } from "@/lib/rateLimit";
 import { callGroqJson, GroqError } from "@/lib/ai/groq";
 import { AI_SYSTEM_PROMPT, BLUEPRINT_JSON_INSTRUCTION, MODIFY_JSON_INSTRUCTION, MODIFY_SYSTEM_PROMPT } from "@/lib/ai/prompts";
@@ -68,9 +70,12 @@ async function logGeneration(
 
 /** Step 1: Plan only — returns blueprint + optional questions (no DB writes). */
 export async function planWebsiteFromPrompt(prompt: string): Promise<AiPlanResult> {
-  const tenantId = await requireTenantId();
+  const { tenant } = await requireAuth();
+  const tenantId = tenant.id;
   const text = prompt.trim().slice(0, MAX_PROMPT);
   if (text.length < 8) return { ok: false, error: "Please describe your website in a few words." };
+  const quota = await limitError(tenant, "aiEdits");
+  if (quota) return { ok: false, error: quota };
 
   try {
     checkRate(tenantId);
@@ -109,9 +114,18 @@ export async function applyWebsiteBlueprint(
   blueprint: WebsiteBlueprint,
   mode: "create_pages" | "replace_home" = "create_pages",
 ): Promise<AiApplyResult> {
-  const tenantId = await requireTenantId();
+  const { tenant } = await requireAuth();
+  const tenantId = tenant.id;
   const parsed = websiteBlueprintSchema.safeParse(filterValidSectionTypes(blueprint));
   if (!parsed.success) return { ok: false, error: "Invalid blueprint" };
+
+  // Plan limits: only pages/services this apply would newly create count.
+  const slugs = parsed.data.pages.map((p) => canonicalPageSlug(p.slug || p.name, p.name)).filter((s) => s !== "home");
+  const existing = await db.page.count({ where: { tenantId, slug: { in: slugs } } });
+  const over =
+    (await limitError(tenant, "pages", new Set(slugs).size - existing)) ??
+    (await limitError(tenant, "services", parsed.data.services?.length ?? 0));
+  if (over) return { ok: false, error: over };
 
   try {
     const result = await applyBlueprint({ tenantId, blueprint: parsed.data, mode });
@@ -148,9 +162,12 @@ export async function generateWebsiteFromPrompt(
 
 /** Modify existing site with partial operations. */
 export async function modifyWebsiteFromPrompt(prompt: string, pageId?: string): Promise<AiModifyResult> {
-  const tenantId = await requireTenantId();
+  const { tenant } = await requireAuth();
+  const tenantId = tenant.id;
   const text = prompt.trim().slice(0, MAX_PROMPT);
   if (text.length < 3) return { ok: false, error: "Describe the change you want." };
+  const quota = await limitError(tenant, "aiEdits");
+  if (quota) return { ok: false, error: quota };
 
   try {
     checkRate(tenantId);
@@ -173,6 +190,10 @@ ${MODIFY_JSON_INSTRUCTION}`,
       await logGeneration(tenantId, "modify", text, { status: "failed", error: parsed.error.message, pageId });
       return { ok: false, error: "AI returned invalid modification instructions." };
     }
+
+    const newPages = parsed.data.operations.filter((op) => op.op === "create_page").length;
+    const overPages = newPages ? await limitError(tenant, "pages", newPages) : null;
+    if (overPages) return { ok: false, error: overPages };
 
     const snapshot = await captureSiteSnapshot(tenantId, pageId);
     const pageIds = await applyOperations(tenantId, parsed.data.operations);

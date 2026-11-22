@@ -1,11 +1,20 @@
 import { isAllowedSectionType } from "./builderRegistry";
 import { PAGE_TEMPLATES } from "@/lib/pageTemplates";
 import { websiteBlueprintSchema, type WebsiteBlueprint } from "./blueprintSchema";
+import { dedupePages } from "./dedupePages";
+import { coerceListContent } from "./mapSectionContent";
 
 const VALID_TEMPLATES = new Set(PAGE_TEMPLATES.map((t) => t.id));
 
 const SECTION_ALIASES: Record<string, string> = {
   services: "serviceCategories",
+  properties: "propertyList",
+  listings: "propertyList",
+  propertylist: "propertyList",
+  causes: "causeList",
+  campaigns: "causeList",
+  fundraising: "causeList",
+  causelist: "causeList",
   service: "serviceCategories",
   servicecategories: "serviceCategories",
   contact: "contactForm",
@@ -123,7 +132,7 @@ function normalizeSection(raw: unknown) {
     sectionType,
     variant: clip(s.variant, 40) || undefined,
     style: styleRaw,
-    content: asRecord(s.content),
+    content: coerceListContent(sectionType, asRecord(s.content)),
     imageIntent,
   };
 }
@@ -170,10 +179,9 @@ export function normalizeBlueprint(raw: unknown): WebsiteBlueprint | null {
 
   const name = clip(websiteIn.name ?? root.name ?? "My Website", 120, "My Website");
   const pagesIn = Array.isArray(root.pages) ? root.pages : [];
-  const pages = pagesIn
-    .map(normalizePage)
-    .filter((p): p is NonNullable<typeof p> => !!p)
-    .slice(0, 12);
+  const pages = dedupePages(
+    pagesIn.map(normalizePage).filter((p): p is NonNullable<typeof p> => !!p),
+  ).slice(0, 12);
   if (pages.length === 0) {
     pages.push({
       name: "Home",
@@ -197,6 +205,15 @@ export function normalizeBlueprint(raw: unknown): WebsiteBlueprint | null {
         description: clip(row.description ?? row.body, 500),
       };
     });
+
+  // A price list the model left empty would render the "Item ₹0" placeholder — list the services instead.
+  for (const page of pages) {
+    for (const sec of page.sections) {
+      if (sec.sectionType !== "priceList" || Array.isArray(sec.content?.groups)) continue;
+      const items = services.slice(0, 10).map((sv) => ({ name: sv.title, price: "On request", note: sv.description.slice(0, 80) }));
+      if (items.length) sec.content = { ...(sec.content ?? {}), groups: [{ category: "Our services", items }] };
+    }
+  }
 
   const questionsIn = Array.isArray(root.questions) ? root.questions : [];
   const questions = questionsIn

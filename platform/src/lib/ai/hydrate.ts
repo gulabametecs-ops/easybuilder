@@ -3,13 +3,10 @@ import { designTheme, designSections } from "@/lib/designs";
 import { getPageTemplate } from "@/lib/pageTemplates";
 import { IMAGE_SLOTS, placeholderImage } from "@/lib/img";
 import type { SectionType, ThemeConfig, SectionStyle } from "@/lib/config";
-import type { WebsiteBlueprint, blueprintSectionSchema } from "./blueprintSchema";
+import type { WebsiteBlueprint } from "./blueprintSchema";
 import { isAllowedSectionType } from "./builderRegistry";
-import { z } from "zod";
 import { defaultTheme } from "@/lib/template";
 import { normalizeSectionContent } from "./mapSectionContent";
-
-type BlueprintSection = z.infer<typeof blueprintSectionSchema>;
 
 function fillEmptyImages(obj: Record<string, unknown>, type: SectionType) {
   const top = IMAGE_SLOTS[type] ?? { w: 800, h: 600 };
@@ -192,7 +189,6 @@ function resolvePageSectionsBase(
   design?: WebsiteBlueprint["design"],
 ): { type: SectionType; content: string; style: string }[] {
   const defaultStyle = styleFromDesign(design);
-  const styleJson = JSON.stringify(defaultStyle);
 
   // Prefer the AI's own sections. Templates only fill pages that have no sections yet.
   const aiSections = page.sections ?? [];

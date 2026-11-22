@@ -1,40 +1,27 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { readAiDraft, AI_BLUEPRINT_KEY } from "@/lib/ai/promptStorage";
+import { useAiDraftItem, AI_BLUEPRINT_KEY } from "@/lib/ai/promptStorage";
 import type { WebsiteBlueprint } from "@/lib/ai/blueprintSchema";
 import { AiBlueprintLivePreview } from "@/components/marketing/AiBlueprintLivePreview";
 import { slugify } from "@/lib/ai/hydrate";
 
-function loadBlueprint(): WebsiteBlueprint | null {
-  const draft = readAiDraft();
-  if (!draft?.blueprint) return null;
+function parseBlueprint(raw: string | null): WebsiteBlueprint | null {
+  if (!raw) return null;
   try {
-    return JSON.parse(draft.blueprint) as WebsiteBlueprint;
+    return JSON.parse(raw) as WebsiteBlueprint;
   } catch {
     return null;
   }
 }
 
 export default function AiPreviewPage() {
-  const [blueprint, setBlueprint] = useState<WebsiteBlueprint | null>(null);
+  // null until hydrated (keeps SSR markup stable); re-reads when another tab saves a new draft.
+  const raw = useAiDraftItem(AI_BLUEPRINT_KEY);
+  const blueprint = useMemo(() => parseBlueprint(raw), [raw]);
   const [pageSlug, setPageSlug] = useState("home");
-  const [ready, setReady] = useState(false);
-
-  const refresh = useCallback(() => {
-    setBlueprint(loadBlueprint());
-  }, []);
-
-  useEffect(() => {
-    refresh();
-    setReady(true);
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key === AI_BLUEPRINT_KEY) refresh();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, [refresh]);
+  const ready = raw !== null;
 
   if (!ready) {
     return <div className="min-h-screen bg-white" />;

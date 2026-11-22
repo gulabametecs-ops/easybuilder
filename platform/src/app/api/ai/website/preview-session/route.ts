@@ -4,6 +4,7 @@ import { rateLimit } from "@/lib/rateLimit";
 import { normalizeBlueprint } from "@/lib/ai/normalizeBlueprint";
 import { makePreviewKey, previewPublicUrls, putPreview } from "@/lib/ai/previewStore";
 import { ensureAiPreviewTenant } from "@/lib/ai/previewTenant";
+import { sweepAiPreviews } from "@/lib/ai/previewCleanup";
 
 export const maxDuration = 90;
 export const dynamic = "force-dynamic";
@@ -22,6 +23,9 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400 });
   }
+
+  // Clear expired previews from earlier visitors (throttled to once per 10 min, never blocks).
+  void sweepAiPreviews().catch(() => {});
 
   const blueprint = normalizeBlueprint(body.blueprint);
   if (!blueprint) {

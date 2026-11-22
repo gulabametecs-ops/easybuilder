@@ -3,15 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireTenantId, getDemoWriteContext, persistDemoOverlay, getDemoSessionId } from "./guard";
+import { requireAuth, requireTenantId, getDemoWriteContext, persistDemoOverlay, getDemoSessionId } from "./guard";
 import {
   patchSectionOverlay,
   addOverlaySection,
   setSectionOrderOverlay,
 } from "@/lib/demoOverlay";
 import { SECTION_DEFAULTS } from "@/lib/sectionDefaults";
-import { getPlatformConfig } from "@/lib/platformConfig";
-import { serviceLimitForPlan } from "@/lib/plans";
+import { limitError, releaseMediaIn } from "@/lib/usage";
 import { getPageTemplate } from "@/lib/pageTemplates";
 import type { SectionType } from "@/lib/config";
 
@@ -24,8 +23,13 @@ function slugify(input: string): string {
 }
 
 // ─── Pages ───────────────────────────────────────────────────────────────────
-export async function createPage(formData: FormData) {
-  const tenantId = await requireTenantId();
+export type LimitResult = { error: string } | undefined;
+
+export async function createPage(formData: FormData): Promise<LimitResult> {
+  const { tenant } = await requireAuth();
+  const tenantId = tenant.id;
+  const over = await limitError(tenant, "pages");
+  if (over) return { error: over };
   const title = (formData.get("title")?.toString() ?? "").trim() || "New Page";
   let slug = slugify(formData.get("slug")?.toString() || title);
 
@@ -80,13 +84,18 @@ export async function updatePageMeta(formData: FormData) {
 export async function deletePage(id: string) {
   const tenantId = await requireTenantId();
   // System pages are protected from deletion.
+  const page = await db.page.findFirst({ where: { id, tenantId, isSystem: false }, include: { sections: true } });
   await db.page.deleteMany({ where: { id, tenantId, isSystem: false } });
+  await releaseMediaIn(tenantId, page);
   revalidatePath("/admin/pages");
 }
 
 // Duplicate a page (with all its sections) into a new custom page.
-export async function duplicatePage(id: string) {
-  const tenantId = await requireTenantId();
+export async function duplicatePage(id: string): Promise<LimitResult> {
+  const { tenant } = await requireAuth();
+  const tenantId = tenant.id;
+  const over = await limitError(tenant, "pages");
+  if (over) return { error: over };
   const src = await db.page.findFirst({ where: { id, tenantId }, include: { sections: { orderBy: { order: "asc" } } } });
   if (!src) throw new Error("Not found");
   let slug = `${src.slug}-copy`;
@@ -299,18 +308,16 @@ async function uniqueServiceSlug(tenantId: string, title: string, excludeId?: st
   return slug;
 }
 
-export async function addService(formData: FormData) {
-  const tenantId = await requireTenantId({ demoOk: true });
+export async function addService(formData: FormData): Promise<LimitResult> {
+  const { tenant } = await requireAuth({ demoOk: true });
+  const tenantId = tenant.id;
   const category = (formData.get("category")?.toString() ?? "").trim() || "General";
   const title = (formData.get("title")?.toString() ?? "").trim();
   if (!title) return;
 
-  // Enforce the plan's service limit (0 = unlimited).
-  const [tenant, cfg] = await Promise.all([db.tenant.findUnique({ where: { id: tenantId } }), getPlatformConfig()]);
-  const limit = serviceLimitForPlan(tenant?.plan ?? "", cfg.planOverrides);
-  if (limit > 0 && (await db.service.count({ where: { tenantId } })) >= limit) {
-    return; // at limit — the UI shows an upgrade prompt
-  }
+  // Enforce the plan's service limit (demo tenants & legacy plans are unlimited).
+  const over = await limitError(tenant, "services");
+  if (over) return { error: over };
   const max = await db.service.aggregate({ where: { tenantId }, _max: { order: true } });
   const demoSessionId = await getDemoSessionId();
   await db.service.create({
@@ -368,16 +375,21 @@ export async function deleteService(id: string) {
   }
   const existing = await db.service.findFirst({ where: { id, tenantId } });
   await db.service.deleteMany({ where: { id, tenantId } });
+  if (!demoId) await releaseMediaIn(tenantId, existing);
   revalidatePath("/admin/services");
   revalidatePath("/");
   if (existing?.slug) revalidatePath(`/services/${existing.slug}`);
 }
 
 // ─── Gallery ─────────────────────────────────────────────────────────────────
-export async function addGalleryItem(formData: FormData) {
-  const tenantId = await requireTenantId({ demoOk: true });
+export async function addGalleryItem(formData: FormData): Promise<LimitResult> {
+  const { tenant } = await requireAuth({ demoOk: true });
+  const tenantId = tenant.id;
+  const over = await limitError(tenant, "gallery");
+  if (over) return { error: over };
   const category = (formData.get("category")?.toString() ?? "").trim() || "General";
   const image = (formData.get("image")?.toString() ?? "").trim();
+  if (!image) return { error: "Upload a photo or paste an image URL first." };
   const max = await db.galleryItem.aggregate({ where: { tenantId }, _max: { order: true } });
   const demoSessionId = await getDemoSessionId();
   await db.galleryItem.create({
@@ -401,7 +413,9 @@ export async function deleteGalleryItem(id: string) {
     const g = await db.galleryItem.findFirst({ where: { id, tenantId } });
     if (!g || g.demoSessionId !== demoId) return;
   }
+  const item = await db.galleryItem.findFirst({ where: { id, tenantId } });
   await db.galleryItem.deleteMany({ where: { id, tenantId } });
+  if (!demoId) await releaseMediaIn(tenantId, item);
   revalidatePath("/admin/gallery");
   revalidatePath("/");
 }

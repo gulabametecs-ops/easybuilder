@@ -7,6 +7,7 @@ import { DevicePreviewFrame } from "./DevicePreviewFrame";
 /** Shared left-editor + right live-preview shell (Pages / Services / Gallery / …). */
 export function AdminSplitShell({
   title,
+  subtitle,
   titleIcon,
   countLabel,
   toolbar,
@@ -16,6 +17,7 @@ export function AdminSplitShell({
   headerExtra,
 }: {
   title: string;
+  subtitle?: string;
   titleIcon?: ReactNode;
   countLabel?: string;
   toolbar?: ReactNode;
@@ -30,15 +32,19 @@ export function AdminSplitShell({
     <div className="admin-full-bleed flex flex-col flex-1 min-h-0">
       <div className="flex flex-col xl:flex-row xl:items-stretch flex-1 min-h-0 gap-0">
         <div
-          className="w-full flex flex-col min-h-0 order-2 xl:order-1"
-          style={previewHidden ? { flex: "1 1 auto", width: "100%" } : { width: 400, flex: "0 0 400px", minWidth: 300, maxWidth: "100%" }}
+          className={`w-full flex flex-col min-h-0 flex-1 xl:order-1 ${previewHidden ? "" : "xl:flex-none xl:w-[400px]"}`}
         >
           <div className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-1 min-h-0 h-full">
             <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 shrink-0 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 {titleIcon}
-                <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{title}</p>
-                {countLabel && <span className="text-xs text-slate-400 shrink-0">{countLabel}</span>}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-sm font-semibold text-slate-800 dark:text-white truncate">{title}</h1>
+                    {countLabel && <span className="text-xs text-slate-400 shrink-0">{countLabel}</span>}
+                  </div>
+                  {subtitle && <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 truncate">{subtitle}</p>}
+                </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 {previewHidden && (
@@ -61,7 +67,7 @@ export function AdminSplitShell({
         {!previewHidden && <div className="hidden xl:block w-px bg-slate-200 dark:bg-slate-700 shrink-0 order-1 xl:order-2 self-stretch" />}
 
         {!previewHidden && (
-          <div className="flex-1 min-w-0 min-h-[420px] xl:min-h-0 order-1 xl:order-3 flex flex-col">
+          <div className="hidden xl:flex flex-1 min-w-0 min-h-0 xl:order-3 flex-col">
             <DevicePreviewFrame
               src={previewSrc}
               reloadKey={previewKey}

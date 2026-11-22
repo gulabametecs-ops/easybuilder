@@ -1,7 +1,7 @@
 import { MarketingAIBuilder } from "@/components/marketing/MarketingAIBuilder";
 
 export const metadata = {
-  title: "AI Website Builder — Standard SaaS",
+  title: "AI Website Builder — SitePixl",
   description: "Describe your business and AI builds a complete multi-page website with a live preview and admin panel.",
 };
 

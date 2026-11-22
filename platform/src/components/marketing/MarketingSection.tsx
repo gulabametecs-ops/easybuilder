@@ -23,7 +23,7 @@ export function MarketingSection({
   return (
     <section
       id={id}
-      className={`scroll-mt-16 overflow-x-clip ${mkt.sectionDivider} py-14 sm:py-16 lg:py-20 ${bg} ${className}`}
+      className={`scroll-mt-16 overflow-x-clip ${mkt.sectionDivider} py-12 sm:py-14 lg:py-16 ${bg} ${className}`}
     >
       <div className={wrap}>{children}</div>
     </section>

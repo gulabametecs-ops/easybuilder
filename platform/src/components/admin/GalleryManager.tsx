@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, Images, ImageIcon, Tag, ArrowLeft, Search } from "lucide-react";
 import { addGalleryItem, deleteGalleryItem } from "@/lib/actions/content";
@@ -12,7 +12,7 @@ type Item = { id: string; category: string; image: string; caption: string };
 const inputCls =
   "w-full rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 px-3 py-2 text-sm outline-none focus:border-lime-500";
 
-export function GalleryManager({ items: initial, categories }: { items: Item[]; categories: string[] }) {
+export function GalleryManager({ items: initial, categories, limit = 0 }: { items: Item[]; categories: string[]; limit?: number }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [items, setItems] = useState(initial);
@@ -21,7 +21,12 @@ export function GalleryManager({ items: initial, categories }: { items: Item[]; 
   const [q, setQ] = useState("");
   const [tick, setTick] = useState(0);
 
-  useEffect(() => setItems(initial), [initial]);
+  // Re-sync when the server sends fresh data (adjust state during render, not in an effect).
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (prevInitial !== initial) {
+    setPrevInitial(initial);
+    setItems(initial);
+  }
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -47,6 +52,7 @@ export function GalleryManager({ items: initial, categories }: { items: Item[]; 
     <div className={pending ? "opacity-70 pointer-events-none" : ""}>
       <AdminSplitShell
         title="Gallery"
+        subtitle="Photos shown in your website gallery."
         titleIcon={<Images className="w-4 h-4 text-lime-600 shrink-0" />}
         countLabel={`${items.length}`}
         previewSrc={`/?__edit=1&_r=${tick}`}
@@ -75,11 +81,17 @@ export function GalleryManager({ items: initial, categories }: { items: Item[]; 
               <ArrowLeft className="w-3.5 h-3.5" /> Back
             </button>
             <p className="text-sm font-semibold text-slate-800 dark:text-white">Add photo</p>
+            {limit > 0 && items.length >= limit && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-200">
+                Plan limit reached ({limit} photos). <a href="/admin/billing" className="font-semibold underline">Upgrade</a> to add more.
+              </div>
+            )}
             <form
               className="space-y-3"
               action={(fd) => {
                 start(async () => {
-                  await addGalleryItem(fd);
+                  const r = await addGalleryItem(fd);
+                  if (r?.error) { alert(r.error); return; }
                   setAdding(false);
                   bump();
                 });

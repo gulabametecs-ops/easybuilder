@@ -1,9 +1,10 @@
-# Deployment Guide — StandardSaaS
+# Deployment Guide — SitePixl
 
-This takes your platform from local dev (SQLite) to **live on the internet** with
-PostgreSQL, real payments (Razorpay), image uploads, and per-client subdomains.
+This takes your platform from local dev to **live on the internet** with
+MySQL, real payments (Razorpay), image uploads, and per-client subdomains.
 
-You'll need free accounts on: **GitHub**, **Vercel**, **Neon** (Postgres),
+You'll need: **GitHub**, **Vercel** (or any Node host), a **MySQL 8** database
+(e.g. Aiven, PlanetScale-compatible, DigitalOcean, AWS RDS, or your own server),
 **Razorpay**, and a **domain** (e.g. from Namecheap/GoDaddy/Cloudflare).
 
 ---
@@ -12,44 +13,50 @@ You'll need free accounts on: **GitHub**, **Vercel**, **Neon** (Postgres),
 
 | Thing | Local (dev) | Production |
 | --- | --- | --- |
-| Database | SQLite (`dev.db`) | PostgreSQL (Neon) |
+| Database | MySQL on your PC (`127.0.0.1:3306`) | Hosted MySQL 8 |
 | Images | `public/uploads` | Vercel Blob |
 | Payments | Mock (no charge) | Razorpay live/test keys |
 | Domain | `*.localhost:3000` | `*.yourdomain.com` |
 
-The code already supports all of these — it switches automatically based on
-environment variables. Only **one file edit** is needed (the DB provider).
+The code switches automatically based on environment variables — no code edits.
 
 ---
 
-## Step 1 — Create a Postgres database (Neon)
+## Step 1 — Local MySQL (development)
 
-1. Go to <https://neon.tech> → sign up → **Create project**.
-2. Copy the **connection string** (looks like
-   `postgres://user:pass@ep-xxx.aws.neon.tech/dbname?sslmode=require`).
+1. Install MySQL Server 8 (already done on this PC) and note the root password.
+2. In `.env` set (URL-encode special characters in the password: `@`→`%40`, `#`→`%23`):
 
-## Step 2 — Switch the schema to Postgres
+   ```
+   DATABASE_URL="mysql://root:YOUR_PASSWORD@127.0.0.1:3306/standardsaas"
+   ```
+3. Create the database, tables and the 40 demo sites:
 
-In `prisma/schema.prisma`, change the datasource provider:
+   ```bash
+   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS standardsaas CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+   npm run db:setup      # = prisma migrate deploy + seed
+   ```
+   Local logins: super admin `super@platform.test` / `super1234`, demo admins `demo@<sector>.test` / `demo1234`.
 
-```prisma
-datasource db {
-  provider = "postgresql"   // was "sqlite"
-}
-```
+## Step 2 — Production MySQL
 
-> `src/lib/db.ts` already picks the Postgres adapter automatically when
-> `DATABASE_URL` starts with `postgres://` — no code change needed there.
+1. Create a MySQL 8 database (utf8mb4) at your provider and copy its connection
+   string: `mysql://USER:PASSWORD@HOST:3306/DBNAME`.
+2. With that URL as `DATABASE_URL`, create the tables and seed:
 
-Then, with your Neon URL set locally, create the tables:
+   ```bash
+   npx prisma migrate deploy
+   # seed requires your own super-admin login outside localhost:
+   SUPER_ADMIN_EMAIL="you@yourdomain.com" SUPER_ADMIN_PASSWORD="a-long-password" npm run seed
+   # (demo tenants get a random owner password in production — visitors use the demo OTP flow)
+   ```
 
-```bash
-# put the Neon URL in .env as DATABASE_URL, then:
-npx prisma migrate deploy
-# seed refuses to run on Postgres without your own super-admin login:
-SUPER_ADMIN_EMAIL="you@yourdomain.com" SUPER_ADMIN_PASSWORD="a-long-password" npm run seed
-# (demo tenants get a random owner password in production — visitors use the demo OTP flow)
-```
+> **Changing the schema later:** edit `prisma/schema.prisma`, then run
+> `npm run db:new-migration -- <name>`. It diffs the schema against
+> `prisma/migrations/schema.snapshot.prisma` (not the live DB, which MySQL makes look
+> different), writes the migration, rewrites TEXT defaults into the `DEFAULT ('…')` form
+> MySQL 8 accepts, applies it with `migrate deploy`, and updates the snapshot.
+> Don't use `prisma migrate dev` here. Long text fields use `@db.MediumText`; ids/keys stay plain `String`.
 
 ## Step 3 — Get a domain & plan DNS
 
@@ -70,7 +77,7 @@ Buy a domain (e.g. `mysaas.com`). You need **two DNS records** (added in Step 6)
 ## Step 5 — Push to GitHub
 
 ```bash
-git init && git add . && git commit -m "StandardSaaS"
+git init && git add . && git commit -m "SitePixl"
 # create a repo on github.com, then:
 git remote add origin https://github.com/you/standardsaas.git
 git push -u origin main
@@ -86,7 +93,7 @@ git push -u origin main
 
    | Name | Value |
    | --- | --- |
-   | `DATABASE_URL` | your Neon connection string |
+   | `DATABASE_URL` | your MySQL connection string (`mysql://…`) |
    | `NEXT_PUBLIC_ROOT_DOMAIN` | `mysaas.com` |
    | `AUTH_SECRET` | a long random string |
    | `RAZORPAY_KEY_ID` | your Razorpay key id |
@@ -151,6 +158,6 @@ by custom domain.
 ## Notes
 
 - `npm run postinstall` runs `prisma generate` automatically on Vercel builds.
-- Local dev is unchanged: SQLite + mock payments + local uploads still work with
-  an empty `.env` (copy `.env.example` → `.env`).
+- Local dev needs a running MySQL (see Step 1); payments are mocked and uploads go to
+  `public/uploads` while their keys are empty (copy `.env.example` → `.env`).
 - Keep `AUTH_SECRET` secret and unique per environment.

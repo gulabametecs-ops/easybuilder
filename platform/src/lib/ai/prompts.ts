@@ -1,6 +1,6 @@
 import { registryPromptBlock } from "./builderRegistry";
 
-export const AI_SYSTEM_PROMPT = `You are the planning engine for StandardSaaS — an existing multi-tenant website builder.
+export const AI_SYSTEM_PROMPT = `You are the planning engine for SitePixl — an existing multi-tenant website builder.
 
 RULES:
 - You do NOT generate HTML, CSS, or JavaScript.
@@ -51,7 +51,7 @@ Rules:
 - questions: industry-specific info still needed (registration no., donation link, timings, etc.)
 - content: only short copy fields (heading, title, description, body, ctaText, etc.)`;
 
-export const MODIFY_SYSTEM_PROMPT = `You are the modification engine for StandardSaaS website builder.
+export const MODIFY_SYSTEM_PROMPT = `You are the modification engine for SitePixl website builder.
 
 RULES:
 - Return ONLY the minimal operations needed — never regenerate the whole site for small edits.

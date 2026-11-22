@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   CalendarClock, Search, Phone, Mail, Trash2, MessageCircle, Download, Filter, Check,
 } from "lucide-react";
@@ -54,7 +54,12 @@ export function AppointmentsManager({ appts: initial }: { appts: Appt[] }) {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
 
-  useEffect(() => setAppts(initial), [initial]);
+  // Re-sync when the server sends fresh data (adjust state during render, not in an effect).
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (prevInitial !== initial) {
+    setPrevInitial(initial);
+    setAppts(initial);
+  }
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -86,6 +91,7 @@ export function AppointmentsManager({ appts: initial }: { appts: Appt[] }) {
     <div className={pending ? "opacity-70 pointer-events-none" : ""}>
       <AdminWorkspace
         title="Appointments"
+        subtitle="Booking requests from your website — confirm, call or WhatsApp customers."
         titleIcon={<CalendarClock className="w-4 h-4 text-lime-600 shrink-0" />}
         tabs={[{ id: "bookings", label: "Bookings", icon: CalendarClock }]}
         tab="bookings"
@@ -149,6 +155,9 @@ export function AppointmentsManager({ appts: initial }: { appts: Appt[] }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">{a.name}</p>
                   <Badge tone={tone[a.status] ?? "amber"}>{a.status}</Badge>
+                  <span className="text-[10px] text-slate-400" title="Received">
+                    {new Date(a.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" })}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                   <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{a.phone}</span>

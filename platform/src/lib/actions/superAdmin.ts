@@ -10,6 +10,7 @@ import { ROOT_DOMAIN } from "@/lib/domains";
 import { createTenantFromTemplate } from "@/lib/provision";
 import { getVertical } from "@/lib/verticals";
 import { assignInvoiceNo } from "@/lib/invoice";
+import { reverseReferralForOrder, settleReferralForOrder } from "@/lib/referralServer";
 
 const RESERVED = new Set(["www", "admin", "api", "app", "mail", "ftp", "root", "demo", "super", "dashboard", "static", "assets", "cdn"]);
 
@@ -81,7 +82,7 @@ export async function createClient(_prev: CreateClientState, formData: FormData)
 }
 
 // Extend a client's subscription by N months, or set it to lifetime.
-export async function extendSubscription(tenantId: string, plan: "1" | "3" | "6" | "12" | "24" | "lifetime") {
+export async function extendSubscription(tenantId: string, plan: "1" | "3" | "6" | "12" | "24" | "36" | "lifetime") {
   await requireSuper();
   const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
   if (!tenant) return;
@@ -136,9 +137,11 @@ export async function recordManualPayment(formData: FormData) {
       gateway: `manual-${method}`,
       status: "provisioned",
       tenantId,
+      referrerTenantId: tenant.referredByTenantId,
     },
   });
   await assignInvoiceNo(order.id);
+  await settleReferralForOrder(order.id).catch((e) => console.error("[referral] settle failed:", e));
 
   if (months === "lifetime") {
     await db.tenant.update({ where: { id: tenantId }, data: { subscriptionEndsAt: null, status: "active" } });
@@ -176,6 +179,8 @@ export async function recordRefund(formData: FormData) {
   const order = await db.order.findUnique({ where: { id: orderId } });
   if (!order) return;
   await db.order.update({ where: { id: orderId }, data: { status: "refunded", refundReason: reason, refundedAt: new Date() } });
+  await reverseReferralForOrder(orderId);
+  revalidatePath("/super/referrals");
   if (order.tenantId) revalidatePath(`/super/clients/${order.tenantId}`);
   revalidatePath("/super/orders");
 }

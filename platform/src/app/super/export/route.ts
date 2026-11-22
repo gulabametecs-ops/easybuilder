@@ -5,7 +5,8 @@ import { formatINR } from "@/lib/plans";
 
 function csv(rows: (string | number)[][]): string {
   return rows
-    .map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+    // Leading = + - @ would run as a formula in Excel — prefix with ' (CSV injection).
+    .map((r) => r.map((c) => `"${String(c ?? "").replace(/^([=+\-@])/, "'$1").replace(/"/g, '""')}"`).join(","))
     .join("\r\n");
 }
 function file(name: string, body: string) {
@@ -23,6 +24,13 @@ export async function GET(request: Request) {
     const rows: (string | number)[][] = [["Date", "Customer", "Email", "Phone", "Sector", "Plan", "Amount", "Status", "Gateway"]];
     for (const o of orders) rows.push([o.createdAt.toISOString().slice(0, 10), o.customerName, o.email, o.phone, verticalName(o.vertical), o.plan, formatINR(o.amount), o.status, o.gateway]);
     return file("orders.csv", csv(rows));
+  }
+
+  if (type === "payouts") {
+    const ws = await db.referralWithdrawal.findMany({ orderBy: { createdAt: "desc" }, include: { tenant: { select: { name: true, subdomain: true } } } });
+    const rows: (string | number)[][] = [["Requested", "Business", "Subdomain", "Gross (INR)", "TDS (INR)", "Net (INR)", "Method", "UPI", "Account name", "Account no.", "IFSC", "PAN", "Status", "UTR", "Processed"]];
+    for (const w of ws) rows.push([w.createdAt.toISOString().slice(0, 10), w.tenant.name, w.tenant.subdomain, (w.amount / 100).toFixed(2), (w.tdsAmount / 100).toFixed(2), (w.netAmount / 100).toFixed(2), w.method, w.upiId, w.accountName, w.accountNumber, w.ifsc, w.pan, w.status, w.reference, w.processedAt ? w.processedAt.toISOString().slice(0, 10) : ""]);
+    return file("payouts.csv", csv(rows));
   }
 
   if (type === "leads") {

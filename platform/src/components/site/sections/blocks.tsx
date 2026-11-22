@@ -8,6 +8,7 @@ import type { SectionContentMap } from "@/lib/config";
 import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { headingStylesFrom, textStyleProps, cardStyleCss, readContentStyles, readItemStyle, type FieldStyle } from "@/lib/fieldStyle";
 import { HeroSlideshowBlock } from "./newBlocks";
+import { cardSize } from "./cardGrid";
 
 type ServiceRow = { id: string; category: string; title: string; description: string; image: string; slug?: string };
 type GalleryRow = { id: string; category: string; image: string; caption: string };
@@ -307,39 +308,95 @@ export function HeroBlock({ c: raw }: { c: SectionContentMap["hero"] }) {
 }
 
 // ─── About ───────────────────────────────────────────────────────────────────
-export function AboutBlock({ c }: { c: SectionContentMap["about"] }) {
+export function AboutBlock({ c, layout }: { c: SectionContentMap["about"]; layout?: string }) {
   const fs = readContentStyles(c);
-  return (
-    <section className={`${SEC} bg-white`}>
-      <div className={`${WRAP} grid lg:grid-cols-2 gap-12 lg:gap-20 items-center`}>
-        <div className="relative order-last lg:order-first">
-          <div aria-hidden className={`absolute -inset-3 sm:-inset-5 ${RADIUS_LG} bg-gradient-to-br from-primary/20 to-transparent blur-xl`} />
-          <Media src={c.image} w={IMAGE_SLOTS.about.w} h={IMAGE_SLOTS.about.h} className={`relative w-full aspect-[4/3] ${RADIUS_LG} shadow-[var(--site-shadow-lg)] ring-1 ring-[var(--site-line)]`} />
-        </div>
-        <div>
-          <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} center={false} styles={headingStylesFrom(c)} />
-          <div className="-mt-6 space-y-4">
-            {c.body.map((p, i) => (
-              <p key={i} className="site-muted text-lg leading-relaxed" {...textStyleProps(fs.body)}>{p}</p>
+  const body = (cls: string) => (
+    <div className={cls}>
+      {(c.body ?? []).map((p, i) => (
+        <p key={i} className="site-muted text-lg leading-relaxed" {...textStyleProps(fs.body)}>{p}</p>
+      ))}
+    </div>
+  );
+  const points = (cls: string) => c.points?.length > 0 && (
+    <ul className={cls}>
+      {c.points.map((pt) => (
+        <li key={pt} className="flex items-center gap-3 font-medium" {...textStyleProps(fs.points)}>
+          <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Icon name="check" className="w-3.5 h-3.5" strokeWidth={3} />
+          </span>
+          {pt}
+        </li>
+      ))}
+    </ul>
+  );
+  const button = (cls: string) => c.buttonLabel && (
+    <Link href={c.buttonHref || "#"} className={`btn-primary inline-flex items-center gap-2 px-7 py-3.5 font-semibold ${cls}`} {...textStyleProps(fs.buttonLabel)}>
+      {c.buttonLabel} <Icon name="arrow" className="w-4 h-4" />
+    </Link>
+  );
+  const heading = (center: boolean) => <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} center={center} styles={headingStylesFrom(c)} />;
+
+  // Centred statement: no image, large text, points as pill chips.
+  if (layout === "centered") {
+    return (
+      <section className={`${SEC} bg-white`}>
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 text-center">
+          {heading(true)}
+          <div className="-mt-6 space-y-5">
+            {(c.body ?? []).map((p, i) => (
+              <p key={i} className={`site-muted leading-relaxed ${i === 0 ? "text-xl sm:text-2xl" : "text-lg"}`} {...textStyleProps(fs.body)}>{p}</p>
             ))}
           </div>
           {c.points?.length > 0 && (
-            <ul className="mt-8 grid sm:grid-cols-2 gap-x-6 gap-y-3.5">
+            <ul className="mt-10 flex flex-wrap justify-center gap-2.5">
               {c.points.map((pt) => (
-                <li key={pt} className="flex items-center gap-3 font-medium" {...textStyleProps(fs.points)}>
-                  <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shrink-0 shadow-sm">
-                    <Icon name="check" className="w-3.5 h-3.5" strokeWidth={3} />
-                  </span>
-                  {pt}
+                <li key={pt} className={`${CHIP} gap-2 rounded-full px-4 py-2 text-sm font-semibold`} {...textStyleProps(fs.points)}>
+                  <Icon name="check" className="w-3.5 h-3.5" strokeWidth={3} /> {pt}
                 </li>
               ))}
             </ul>
           )}
-          {c.buttonLabel && (
-            <Link href={c.buttonHref || "#"} className="btn-primary inline-flex items-center gap-2 px-7 py-3.5 mt-10 font-semibold" {...textStyleProps(fs.buttonLabel)}>
-              {c.buttonLabel} <Icon name="arrow" className="w-4 h-4" />
-            </Link>
-          )}
+          {button("mt-10")}
+        </div>
+      </section>
+    );
+  }
+
+  // Wide image on top, text + points in two columns below.
+  if (layout === "stacked") {
+    return (
+      <section className={`${SEC} bg-white`}>
+        <div className={WRAP}>
+          <Media src={c.image} w={IMAGE_SLOTS.about.w} h={IMAGE_SLOTS.about.h} className={`w-full aspect-[16/10] sm:aspect-[21/9] ${RADIUS_LG} shadow-[var(--site-shadow-lg)] ring-1 ring-[var(--site-line)]`} />
+          <div className="mt-12 sm:mt-16 grid lg:grid-cols-2 gap-10 lg:gap-20">
+            <div>
+              {heading(false)}
+              {body("-mt-6 space-y-4")}
+            </div>
+            <div className="lg:pt-2">
+              {points("grid gap-y-4")}
+              {button("mt-10")}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // "split" (default) = image left; "reverse" = image right.
+  const reverse = layout === "reverse";
+  return (
+    <section className={`${SEC} bg-white`}>
+      <div className={`${WRAP} grid lg:grid-cols-2 gap-12 lg:gap-20 items-center`}>
+        <div className={`relative order-last${reverse ? "" : " lg:order-first"}`}>
+          <div aria-hidden className={`absolute -inset-3 sm:-inset-5 ${RADIUS_LG} bg-gradient-to-br from-primary/20 to-transparent blur-xl`} />
+          <Media src={c.image} w={IMAGE_SLOTS.about.w} h={IMAGE_SLOTS.about.h} className={`relative w-full aspect-[4/3] ${RADIUS_LG} shadow-[var(--site-shadow-lg)] ring-1 ring-[var(--site-line)]`} />
+        </div>
+        <div>
+          {heading(false)}
+          {body("-mt-6 space-y-4")}
+          {points("mt-8 grid sm:grid-cols-2 gap-x-6 gap-y-3.5")}
+          {button("mt-10")}
         </div>
       </div>
     </section>
@@ -360,12 +417,17 @@ function CategoryHeading({ cat }: { cat: string }) {
 }
 
 // ─── Service categories ──────────────────────────────────────────────────────
+// Service cards: up to 3 per row (2 on tablet), and a short last row sits centred.
+const CARD_ROW = "flex flex-wrap justify-center gap-5";
+
 export function ServiceCategoriesBlock({
   c,
   servicesByCategory,
+  layout,
 }: {
   c: SectionContentMap["serviceCategories"];
   servicesByCategory: Map<string, ServiceRow[]>;
+  layout?: string;
 }) {
   // Categories may arrive as objects (AI output) or name categories with no services;
   // keep only real names that have services, else show every service category.
@@ -380,12 +442,51 @@ export function ServiceCategoriesBlock({
         <div className="space-y-16">
           {cats.map((cat) => {
             const items = servicesByCategory.get(cat) ?? [];
+            const href = (s: ServiceRow) => `/services/${s.slug || svcSlug(s.title)}`;
+            if (layout === "list") {
+              return (
+                <div key={cat}>
+                  <CategoryHeading cat={cat} />
+                  <div className="divide-y divide-[var(--site-line)] border-y border-[var(--site-line)]">
+                    {items.map((s) => (
+                      <Link key={s.id} href={href(s)} className="group grid grid-cols-[1fr_auto] sm:grid-cols-[minmax(0,18rem)_1fr_auto] items-center gap-x-6 gap-y-1.5 py-6 sm:px-2 transition-colors hover:bg-primary/[0.04]">
+                        <h4 className="font-semibold text-lg leading-snug group-hover:text-primary transition-colors">{s.title}</h4>
+                        {s.description && <p className="site-muted text-sm leading-relaxed line-clamp-2 col-start-1 row-start-2 sm:col-start-auto sm:row-start-auto">{s.description}</p>}
+                        <span className="col-start-2 row-span-2 sm:col-start-auto sm:row-span-1 w-10 h-10 rounded-full ring-1 ring-inset ring-[var(--site-line)] text-primary flex items-center justify-center transition-colors group-hover:bg-primary group-hover:text-white group-hover:ring-primary">
+                          <Icon name="arrow" className="w-4 h-4" />
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            if (layout === "tiles") {
+              return (
+                <div key={cat}>
+                  <CategoryHeading cat={cat} />
+                  <div className={CARD_ROW}>
+                    {items.map((s) => (
+                      <Link key={s.id} href={href(s)} style={cardSize(items.length, 20).style} className={`${cardSize(items.length, 20).className} group relative block overflow-hidden aspect-[4/3] sm:aspect-[4/5] ${RADIUS_LG} ring-1 ring-[var(--site-line)] shadow-[var(--site-shadow-sm)]`}>
+                        <Media src={s.image} w={IMAGE_SLOTS.service.w} h={IMAGE_SLOTS.service.h} className="absolute inset-0 w-full h-full transition-transform duration-700 group-hover:scale-105" />
+                        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                        <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6 text-white">
+                          <h4 className="text-xl font-bold leading-snug text-white">{s.title}</h4>
+                          {s.description && <p className="text-white/75 text-sm mt-1.5 leading-relaxed line-clamp-2">{s.description}</p>}
+                          <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-white">View details <Icon name="arrow" className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" /></span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
             return (
               <div key={cat}>
                 <CategoryHeading cat={cat} />
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className={CARD_ROW}>
                   {items.map((s) => (
-                    <Link key={s.id} href={`/services/${s.slug || svcSlug(s.title)}`} className="card sec-card site-lift overflow-hidden flex flex-col group">
+                    <Link key={s.id} href={`/services/${s.slug || svcSlug(s.title)}`} style={cardSize(items.length, 20).style} className={`${cardSize(items.length, 20).className} card sec-card site-lift overflow-hidden flex flex-col group`}>
                       <div className="relative overflow-hidden">
                         <Media src={s.image} w={IMAGE_SLOTS.service.w} h={IMAGE_SLOTS.service.h} className="w-full aspect-[16/10] transition-transform duration-500 group-hover:scale-105" />
                       </div>
@@ -407,8 +508,70 @@ export function ServiceCategoriesBlock({
 }
 
 // ─── Stats ───────────────────────────────────────────────────────────────────
-export function StatsBlock({ c }: { c: SectionContentMap["stats"] }) {
+// Long values ("38 Lakh sq ft") shrink a step instead of wrapping onto two lines.
+function StatValue({ v }: { v: string }) {
+  const len = (v ?? "").length;
+  const scale = len > 10 ? 0.62 : len > 7 ? 0.78 : 1;
+  return <span className="whitespace-nowrap" style={scale < 1 ? { fontSize: `${scale}em` } : undefined}>{v}</span>;
+}
+export function StatsBlock({ c, layout }: { c: SectionContentMap["stats"]; layout?: string }) {
   const allCards = readContentStyles(c).items;
+  const rows = (c.items ?? []).map((s, i) => {
+    const row = s as typeof s & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
+    return { s, i, cardCss: cardStyleCss(readItemStyle(row) ?? allCards), t: row.__styles ?? {} };
+  });
+
+  // Full-width brand band, big white numbers.
+  if (layout === "band") {
+    return (
+      <section className="site-on-dark relative py-14 sm:py-16 bg-primary text-white overflow-hidden">
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20" />
+        <div className={`relative ${WRAP} grid grid-cols-2 lg:grid-cols-4 gap-y-10 lg:divide-x lg:divide-white/20`}>
+          {rows.map(({ s, i, t }) => (
+            <div key={s.label || i} className="text-center px-4">
+              <div className="text-5xl sm:text-6xl font-extrabold tracking-[-0.04em] tabular-nums text-white" {...textStyleProps(t.value)}><StatValue v={s.value} /></div>
+              <div className="mt-2 text-sm sm:text-base font-semibold uppercase tracking-[0.12em] text-white/80" {...textStyleProps(t.label)}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Each stat in its own light card, icon + number left-aligned.
+  if (layout === "cards") {
+    return (
+      <section className="site-sec py-16 sm:py-20 bg-light">
+        <div className={`${WRAP} grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6`}>
+          {rows.map(({ s, i, t, cardCss }) => (
+            <div key={s.label || i} className="sec-card site-lift p-5 sm:p-7 flex flex-col" style={cardCss}>
+              <span className={`${CHIP} w-11 h-11 mb-6`}><Icon name={s.icon} className="w-5 h-5" /></span>
+              <div className="text-3xl sm:text-5xl font-extrabold tracking-[-0.04em] tabular-nums text-primary" {...textStyleProps(t.value)}><StatValue v={s.value} /></div>
+              <div className="mt-2 font-semibold text-[var(--card-text,var(--c-heading))]" {...textStyleProps(t.label)}>{s.label}</div>
+              <span aria-hidden className="mt-5 h-1 w-10 rounded-full bg-primary/30" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // One divided row, no icons, large numbers.
+  if (layout === "minimal") {
+    return (
+      <section className="site-sec py-12 sm:py-16 bg-white">
+        <div className={`${WRAP} grid grid-cols-2 lg:grid-cols-4 border-y border-[var(--site-line)]`}>
+          {rows.map(({ s, i, t }) => (
+            <div key={s.label || i} className="py-8 sm:py-10 px-3 text-center border-[var(--site-line)] odd:border-r lg:border-r lg:last:border-r-0 [&:nth-child(n+3)]:border-t lg:[&:nth-child(n+3)]:border-t-0">
+              <div className="text-4xl sm:text-6xl font-bold tracking-[-0.05em] tabular-nums text-[var(--c-heading)]" {...textStyleProps(t.value)}><StatValue v={s.value} /></div>
+              <div className="site-muted mt-2 text-sm font-medium" {...textStyleProps(t.label)}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="site-on-dark relative py-16 sm:py-20 bg-dark overflow-hidden">
       <div aria-hidden className="site-blob w-[30rem] h-[18rem] left-1/2 -translate-x-1/2 -top-40 opacity-25" />
@@ -422,7 +585,7 @@ export function StatsBlock({ c }: { c: SectionContentMap["stats"] }) {
               <span className={`${CHIP} w-11 h-11 mb-4`}>
                 <Icon name={s.icon} className="w-5 h-5" />
               </span>
-              <div className="text-4xl sm:text-5xl font-extrabold tracking-[-0.04em] tabular-nums text-[var(--card-text,#fff)]" {...textStyleProps(t.value)}>{s.value}</div>
+              <div className="text-4xl sm:text-5xl font-extrabold tracking-[-0.04em] tabular-nums text-[var(--card-text,#fff)]" {...textStyleProps(t.value)}><StatValue v={s.value} /></div>
               <div className="site-muted text-sm font-medium mt-2" {...textStyleProps(t.label)}>{s.label}</div>
             </div>
           );
@@ -436,27 +599,56 @@ export function StatsBlock({ c }: { c: SectionContentMap["stats"] }) {
 export function GalleryBlock({
   c,
   galleryByCategory,
+  layout,
 }: {
   c: SectionContentMap["gallery"];
   galleryByCategory: Map<string, GalleryRow[]>;
+  layout?: string;
 }) {
+  const caption = (g: GalleryRow) => g.caption && (
+    <figcaption className="absolute inset-x-0 bottom-0 p-3 text-xs font-medium text-white bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+      {g.caption}
+    </figcaption>
+  );
   return (
     <section className={`${SEC} bg-white`}>
       <div className={WRAP}>
         <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
         <div className="space-y-14">
-          {Array.from(galleryByCategory.entries()).map(([cat, items]) => (
+          {Array.from(galleryByCategory.entries()).map(([cat, items]) => layout === "masonry" ? (
+            <div key={cat}>
+              <CategoryHeading cat={cat} />
+              <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 sm:gap-4">
+                {items.map((g, i) => (
+                  <figure key={g.id} className="card relative mb-3 sm:mb-4 break-inside-avoid overflow-hidden group ring-1 ring-[var(--site-line)]">
+                    <Media src={g.image} w={IMAGE_SLOTS.gallery.w} h={IMAGE_SLOTS.gallery.h} alt={g.caption} className={`w-full ${["aspect-[3/4]", "aspect-square", "aspect-[4/5]", "aspect-[4/3]", "aspect-[2/3]"][i % 5]} transition-transform duration-500 group-hover:scale-105`} />
+                    {caption(g)}
+                  </figure>
+                ))}
+              </div>
+            </div>
+          ) : layout === "strip" ? (
+            <div key={cat}>
+              <CategoryHeading cat={cat} />
+              <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 sm:scroll-px-0 pb-4 [scrollbar-width:thin]">
+                {items.map((g) => (
+                  <figure key={g.id} className="shrink-0 w-[78%] sm:w-72 lg:w-80 snap-start group">
+                    <div className={`overflow-hidden ${RADIUS_LG} ring-1 ring-[var(--site-line)]`}>
+                      <Media src={g.image} w={IMAGE_SLOTS.gallery.w} h={IMAGE_SLOTS.gallery.h} alt={g.caption} className="w-full aspect-[4/5] transition-transform duration-500 group-hover:scale-105" />
+                    </div>
+                    {g.caption && <figcaption className="site-muted mt-3 text-sm font-medium">{g.caption}</figcaption>}
+                  </figure>
+                ))}
+              </div>
+            </div>
+          ) : (
             <div key={cat}>
               <CategoryHeading cat={cat} />
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {items.map((g) => (
                   <figure key={g.id} className="card relative overflow-hidden group ring-1 ring-[var(--site-line)]">
                     <Media src={g.image} w={IMAGE_SLOTS.gallery.w} h={IMAGE_SLOTS.gallery.h} alt={g.caption} className="w-full aspect-square transition-transform duration-500 group-hover:scale-105" />
-                    {g.caption && (
-                      <figcaption className="absolute inset-x-0 bottom-0 p-3 text-xs font-medium text-white bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        {g.caption}
-                      </figcaption>
-                    )}
+                    {caption(g)}
                   </figure>
                 ))}
               </div>
@@ -469,9 +661,73 @@ export function GalleryBlock({
 }
 
 // ─── Steps (How it works) ────────────────────────────────────────────────────
-export function StepsBlock({ c }: { c: SectionContentMap["steps"] }) {
+export function StepsBlock({ c, layout }: { c: SectionContentMap["steps"]; layout?: string }) {
   const styles = readContentStyles(c);
   const allCards = styles.items;
+  const items = c.items ?? [];
+  const styled = (s: (typeof items)[number]) => {
+    const row = s as typeof s & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
+    return { cardCss: cardStyleCss(readItemStyle(row) ?? allCards), t: row.__styles ?? {} };
+  };
+
+  // Vertical timeline with a connecting line.
+  if (layout === "timeline") {
+    return (
+      <section className={`${SEC} bg-light`}>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
+          <ol>
+            {items.map((s, i) => {
+              const { t } = styled(s);
+              return (
+                <li key={i} className="relative pl-16 sm:pl-20 pb-10 last:pb-0">
+                  {i < items.length - 1 && <span aria-hidden className="absolute left-6 sm:left-7 top-14 bottom-0 w-0.5 -translate-x-1/2 bg-primary/25" />}
+                  <span className="absolute left-0 top-0 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary text-white font-bold tabular-nums flex items-center justify-center shadow-[0_0_0_6px_color-mix(in_srgb,var(--c-primary)_14%,transparent)]">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="pt-1.5 sm:pt-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <Icon name={s.icon} className="w-5 h-5 text-primary shrink-0" />
+                      <h4 className="font-semibold text-lg sm:text-xl" {...textStyleProps(t.title)}>{s.title}</h4>
+                    </div>
+                    <p className="site-muted mt-2 leading-relaxed" {...textStyleProps(t.text)}>{s.text}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      </section>
+    );
+  }
+
+  // Big-number cards in a grid.
+  if (layout === "cards") {
+    return (
+      <section className={`${SEC} bg-light`}>
+        <div className={WRAP}>
+          <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {items.map((s, i) => {
+              const { cardCss, t } = styled(s);
+              return (
+                <div key={i} className="sec-card site-lift relative p-7 sm:p-8 text-left" style={cardCss}>
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-6xl sm:text-7xl font-extrabold leading-none tracking-tighter tabular-nums text-primary">{String(i + 1).padStart(2, "0")}</span>
+                    <span className={`${CHIP} w-12 h-12 shrink-0`}><Icon name={s.icon} className="w-5 h-5" /></span>
+                  </div>
+                  <div className="mt-8 h-px bg-[var(--site-line)]" />
+                  <h4 className="font-semibold text-xl mt-6" {...textStyleProps(t.title)}>{s.title}</h4>
+                  <p className="site-muted mt-2 leading-relaxed" {...textStyleProps(t.text)}>{s.text}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={`${SEC} bg-light`}>
       <div className={WRAP}>
@@ -501,8 +757,48 @@ export function StepsBlock({ c }: { c: SectionContentMap["steps"] }) {
 }
 
 // ─── CTA band ────────────────────────────────────────────────────────────────
-export function CtaBlock({ c }: { c: SectionContentMap["cta"] }) {
+export function CtaBlock({ c, layout }: { c: SectionContentMap["cta"]; layout?: string }) {
   const fs = readContentStyles(c);
+  if (layout === "split" || layout === "minimal") {
+    const split = layout === "split";
+    const actions = (
+      <div className={`flex flex-col sm:flex-row flex-wrap gap-3 ${split ? "lg:justify-end" : "justify-center"}`}>
+        <Link href={c.buttonHref || "/contact"} className="btn-primary inline-flex items-center justify-center gap-2 px-7 py-4 font-semibold" {...textStyleProps(fs.buttonLabel)}>
+          {c.buttonLabel} <Icon name="arrow" className="w-4 h-4" />
+        </Link>
+        {(c.phones ?? []).map((p) => (
+          <a key={p} href={`tel:${p}`} className="btn-ghost inline-flex items-center justify-center gap-2 px-6 py-4 font-semibold tabular-nums" {...textStyleProps(fs.phones)}>
+            <Icon name="phone" className="w-4 h-4 text-primary" /> {p}
+          </a>
+        ))}
+      </div>
+    );
+    if (split) {
+      return (
+        <section className="site-sec py-14 sm:py-20">
+          <div className={WRAP}>
+            <div className={`relative overflow-hidden ${RADIUS_LG} border border-[var(--site-line)] bg-[var(--site-surface)] shadow-[var(--site-shadow-lg)] px-6 py-10 sm:px-12 sm:py-14 grid lg:grid-cols-[1fr_auto] gap-8 lg:gap-12 items-center`}>
+              <span aria-hidden className="absolute inset-y-0 left-0 w-1.5 bg-primary" />
+              <div>
+                <p className="text-primary text-sm font-semibold uppercase tracking-[0.12em]" {...textStyleProps(fs.title)}>{c.title}</p>
+                <h2 className="text-3xl sm:text-4xl font-bold mt-3" {...textStyleProps(fs.highlight)}>{c.highlight}</h2>
+              </div>
+              {actions}
+            </div>
+          </div>
+        </section>
+      );
+    }
+    return (
+      <section className="site-sec py-20 sm:py-24 bg-white">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
+          <p className="site-muted text-lg font-medium" {...textStyleProps(fs.title)}>{c.title}</p>
+          <h2 className="text-4xl sm:text-5xl font-bold mt-3 mb-10" {...textStyleProps(fs.highlight)}>{c.highlight}</h2>
+          {actions}
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="py-10 sm:py-14">
       <div className={WRAP}>
@@ -577,12 +873,57 @@ function PersonCard({
   );
 }
 
-export function TeamBlock({ c, people }: { c: SectionContentMap["team"]; people?: LivePerson[] }) {
+/** Horizontal person row (team.list layout). */
+function PersonRow({ name, role, image, note, bio, linkedin, instagram, t = {} }: {
+  name: string; role: string; image: string; note?: string; bio?: string;
+  linkedin?: string; instagram?: string; t?: Record<string, FieldStyle>;
+}) {
+  return (
+    <div className="flex items-start sm:items-center gap-4 sm:gap-8 py-6 sm:py-7">
+      <Media src={image} w={IMAGE_SLOTS.team.w} h={IMAGE_SLOTS.team.h} alt={name} className="w-16 h-16 sm:w-24 sm:h-24 rounded-full shrink-0 ring-4 ring-primary/10" />
+      <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,14rem)_1fr] sm:gap-8 sm:items-center">
+        <div>
+          <h4 className="font-semibold text-lg" {...textStyleProps(t.name)}>{name}</h4>
+          <p className="text-primary text-sm font-medium mt-0.5" {...textStyleProps(t.role)}>{role}</p>
+          {note && <p className="site-muted text-xs mt-1.5" {...textStyleProps(t.note)}>{note}</p>}
+        </div>
+        {bio && <p className="site-muted text-sm leading-relaxed mt-2 sm:mt-0">{bio}</p>}
+      </div>
+      {(linkedin || instagram) && (
+        <div className="hidden sm:flex gap-2 shrink-0">
+          {linkedin ? <a href={linkedin} className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center" aria-label="LinkedIn"><Icon name="linkedin" className="w-4 h-4" /></a> : null}
+          {instagram ? <a href={instagram} className="w-9 h-9 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center" aria-label="Instagram"><Icon name="instagram" className="w-4 h-4" /></a> : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TeamBlock({ c, people, layout }: { c: SectionContentMap["team"]; people?: LivePerson[]; layout?: string }) {
   const styles = readContentStyles(c);
   const allCards = styles.members;
   const live = (people ?? []).filter((p) => p.name);
   const leadership = live.filter((p) => p.groupName === "leadership");
   const core = live.filter((p) => p.groupName !== "leadership");
+
+  if (layout === "list") {
+    return (
+      <section className={`${SEC} bg-white`}>
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
+          <div className="divide-y divide-[var(--site-line)] border-y border-[var(--site-line)]">
+            {live.length > 0
+              ? [...leadership, ...core].map((m) => (
+                <PersonRow key={m.id} name={m.name} role={m.role} image={m.image} note={m.experience} bio={m.bio} linkedin={m.linkedin} instagram={m.instagram} />
+              ))
+              : (c.members ?? []).map((m, i) => (
+                <PersonRow key={i} name={m.name} role={m.role} image={m.image} note={m.note} t={(m as typeof m & { __styles?: Record<string, FieldStyle> }).__styles} />
+              ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className={`${SEC} bg-white`}>
@@ -642,7 +983,7 @@ export function VisionMissionBlock({ c }: { c: SectionContentMap["visionMission"
             { icon: "star", title: c.visionTitle, text: c.visionText, titleKey: "visionTitle", textKey: "visionText" },
             { icon: "trending", title: c.missionTitle, text: c.missionText, titleKey: "missionTitle", textKey: "missionText" },
           ].map((card) => (
-            <div key={card.title} className="relative overflow-hidden rounded-[calc(var(--site-radius)*1.6)] bg-dark text-white p-8 sm:p-10 min-h-[240px] flex flex-col justify-end">
+            <div key={card.title} className="site-on-dark relative overflow-hidden rounded-[calc(var(--site-radius)*1.6)] bg-dark text-white p-8 sm:p-10 min-h-[240px] flex flex-col justify-end">
               <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-primary/35 via-transparent to-black/40" />
               <div className="relative">
                 <span className="w-12 h-12 rounded-2xl bg-white/10 ring-1 ring-white/15 inline-flex items-center justify-center mb-4">
@@ -804,9 +1145,120 @@ function initials(name: string): string {
   return (name || "?").split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
 
-export function TestimonialsBlock({ c }: { c: SectionContentMap["testimonials"] }) {
+function Stars({ rating, className = "" }: { rating: number; className?: string }) {
+  return (
+    <div className={`flex gap-0.5 ${className}`} role="img" aria-label={`${rating} out of 5 stars`}>
+      {Array.from({ length: 5 }).map((_, s) => (
+        <Icon key={s} name="star" className={`w-4 h-4 ${s < rating ? "text-amber-400 fill-current" : "text-slate-300"}`} />
+      ))}
+    </div>
+  );
+}
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <span aria-hidden className={`w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-white bg-gradient-to-br from-primary to-[var(--c-primary-dark)] ring-2 ring-[var(--site-surface)] shadow-sm`}>
+      {initials(name)}
+    </span>
+  );
+}
+
+export function TestimonialsBlock({ c, layout }: { c: SectionContentMap["testimonials"]; layout?: string }) {
   const styles = readContentStyles(c);
   const allCards = styles.items;
+  const rows = (c.items ?? []).map((t) => {
+    const row = t as typeof t & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
+    return { t, cardCss: cardStyleCss(readItemStyle(row) ?? allCards), fs: row.__styles ?? {}, rating: Math.min(5, Math.max(0, Math.round(t.rating || 5))) };
+  });
+  const heading = <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />;
+  const person = ({ t, fs }: (typeof rows)[number], cls = "") => (
+    <figcaption className={`flex items-center gap-3 ${cls}`}>
+      <Avatar name={t.name} />
+      <div className="min-w-0 text-left">
+        <p className="font-semibold truncate" {...textStyleProps(fs.name)}>{t.name}</p>
+        <p className="site-muted text-xs" {...textStyleProps(fs.role)}>{t.role}</p>
+      </div>
+    </figcaption>
+  );
+
+  // First quote large / full width, the rest in a small grid.
+  if (layout === "featured" && rows.length > 0) {
+    const [first, ...rest] = rows;
+    return (
+      <section className={`${SEC} bg-white`}>
+        <div className={WRAP}>
+          {heading}
+          <figure className={`sec-card relative p-8 sm:p-12 lg:p-16 text-left`} style={first.cardCss}>
+            <span aria-hidden className="absolute -top-4 right-6 sm:right-12 text-[10rem] sm:text-[14rem] leading-none font-serif text-primary/10 select-none">&ldquo;</span>
+            <Stars rating={first.rating} className="mb-6" />
+            <blockquote className="relative text-xl sm:text-3xl lg:text-4xl font-semibold leading-snug tracking-tight max-w-4xl text-[var(--card-text,var(--c-heading))]" {...textStyleProps(first.fs.text)}>“{first.t.text}”</blockquote>
+            {person(first, "mt-8 sm:mt-10")}
+          </figure>
+          {rest.length > 0 && (
+            <div className="mt-5 sm:mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+              {rest.map((r, i) => (
+                <figure key={i} className="sec-card p-6 flex flex-col text-left" style={r.cardCss}>
+                  <Stars rating={r.rating} className="mb-4" />
+                  <blockquote className="text-sm leading-relaxed flex-1" {...textStyleProps(r.fs.text)}>“{r.t.text}”</blockquote>
+                  {person(r, "mt-5")}
+                </figure>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  }
+
+  // No cards: centred large quotes stacked.
+  if (layout === "minimal") {
+    return (
+      <section className={`${SEC} bg-white`}>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
+          {heading}
+          <div className="space-y-16 sm:space-y-20">
+            {rows.map(({ t, fs, rating }, i) => (
+              <figure key={i}>
+                <Stars rating={rating} className="justify-center mb-6" />
+                <blockquote className="text-2xl sm:text-3xl font-medium leading-snug tracking-tight text-[var(--c-heading)]" {...textStyleProps(fs.text)}>“{t.text}”</blockquote>
+                <figcaption className="mt-6 text-sm">
+                  <span className="font-semibold" {...textStyleProps(fs.name)}>{t.name}</span>
+                  {t.role && <span className="site-muted" {...textStyleProps(fs.role)}> · {t.role}</span>}
+                </figcaption>
+                {i < rows.length - 1 && <span aria-hidden className="block mx-auto mt-16 sm:mt-20 h-1 w-12 rounded-full bg-primary/30" />}
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Dark background, glass cards.
+  if (layout === "dark") {
+    return (
+      <section className="site-on-dark relative py-20 sm:py-28 bg-dark overflow-hidden">
+        <div aria-hidden className="site-blob w-[32rem] h-[22rem] -top-40 left-1/2 -translate-x-1/2 opacity-30" />
+        <div aria-hidden className="site-gridlines" />
+        <div className={`relative ${WRAP}`}>
+          {heading}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {rows.map((r, i) => (
+              <figure key={i} className="sec-card relative p-7 flex flex-col text-left backdrop-blur-md" style={r.cardCss}>
+                <span aria-hidden className="text-5xl leading-none font-serif text-primary">&ldquo;</span>
+                <blockquote className="mt-2 text-[1.05rem] leading-relaxed flex-1 text-white/90" {...textStyleProps(r.fs.text)}>{r.t.text}</blockquote>
+                <div className="mt-6 pt-5 border-t border-white/10 flex items-center justify-between gap-3">
+                  {person(r, "min-w-0")}
+                  <Stars rating={r.rating} className="shrink-0" />
+                </div>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={`${SEC} bg-white`}>
       <div className={WRAP}>
@@ -820,16 +1272,10 @@ export function TestimonialsBlock({ c }: { c: SectionContentMap["testimonials"] 
             return (
             <figure key={i} className="sec-card card site-lift relative p-7 flex flex-col text-left" style={cardCss}>
               <span aria-hidden className="absolute top-3 right-5 text-7xl leading-none font-serif text-primary/15 select-none">&rdquo;</span>
-              <div className="flex gap-0.5 mb-5" role="img" aria-label={`${rating} out of 5 stars`}>
-                {Array.from({ length: 5 }).map((_, s) => (
-                  <Icon key={s} name="star" className={`w-4 h-4 ${s < rating ? "text-amber-400 fill-current" : "text-slate-300"}`} />
-                ))}
-              </div>
+              <Stars rating={rating} className="mb-5" />
               <blockquote className="text-[1.05rem] leading-relaxed flex-1" {...textStyleProps(fs.text)}>“{t.text}”</blockquote>
               <figcaption className="flex items-center gap-3 mt-6 pt-5 border-t border-[var(--site-line)]">
-                <span aria-hidden className="w-11 h-11 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-white bg-gradient-to-br from-primary to-[var(--c-primary-dark)] ring-2 ring-[var(--site-surface)] shadow-sm">
-                  {initials(t.name)}
-                </span>
+                <Avatar name={t.name} />
                 <div className="min-w-0">
                   <p className="font-semibold truncate" {...textStyleProps(fs.name)}>{t.name}</p>
                   <p className="site-muted text-xs" {...textStyleProps(fs.role)}>{t.role}</p>
@@ -845,12 +1291,18 @@ export function TestimonialsBlock({ c }: { c: SectionContentMap["testimonials"] 
 }
 
 // ─── FAQ (native accordion, no JS) ───────────────────────────────────────────
-export function FaqBlock({ c }: { c: SectionContentMap["faq"] }) {
+export function FaqBlock({ c, layout }: { c: SectionContentMap["faq"]; layout?: string }) {
   const allCards = readContentStyles(c).items;
+  const split = layout === "split";
+  // ponytail: faq content has no intro field; split reads an optional `intro`/`subtitle` key if a template sets one.
+  const intro = (c as { intro?: string; subtitle?: string }).intro || (c as { subtitle?: string }).subtitle;
   return (
     <section className={`${SEC} bg-light`}>
-      <div className="mx-auto max-w-3xl px-4 sm:px-6">
-        <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
+      <div className={split ? `${WRAP} grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-6 lg:gap-16 items-start` : "mx-auto max-w-3xl px-4 sm:px-6"}>
+        <div className={split ? "lg:sticky lg:top-28" : "contents"}>
+          <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} center={!split} styles={headingStylesFrom(c)} />
+          {split && intro && <p className="site-muted text-lg leading-relaxed -mt-8 mb-10 lg:mb-0">{intro}</p>}
+        </div>
         <div className="space-y-3">
           {c.items.map((f, i) => {
             const row = f as typeof f & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
@@ -891,9 +1343,73 @@ export function LogosBlock({ c }: { c: SectionContentMap["logos"] }) {
 }
 
 // ─── Features / Why choose us ────────────────────────────────────────────────
-export function FeaturesBlock({ c }: { c: SectionContentMap["features"] }) {
+export function FeaturesBlock({ c, layout }: { c: SectionContentMap["features"]; layout?: string }) {
   const styles = readContentStyles(c);
   const allCards = styles.items;
+  const rows = (c.items ?? []).map((f) => ({ f, fs: (f as typeof f & { __styles?: Record<string, FieldStyle> }).__styles ?? {} }));
+
+  // No card boxes: icon + title + text under a thin top rule.
+  if (layout === "minimal") {
+    return (
+      <section className={`${SEC} bg-white`}>
+        <div className={`${WRAP} grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12`}>
+          {rows.map(({ f, fs }, i) => (
+            <div key={i} className="group border-t-2 border-[var(--site-line)] pt-7 transition-colors hover:border-primary">
+              <Icon name={f.icon} className="w-7 h-7 text-primary" />
+              <h4 className="font-semibold text-lg mt-5" {...textStyleProps(fs.title)}>{f.title}</h4>
+              {f.text && <p className="site-muted text-sm mt-2 leading-relaxed" {...textStyleProps(fs.text)}>{f.text}</p>}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Big 01/02/03 numerals, 2-column list.
+  if (layout === "numbered") {
+    return (
+      <section className={`${SEC} bg-white`}>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 grid md:grid-cols-2 gap-x-14">
+          {rows.map(({ f, fs }, i) => (
+            <div key={i} className="flex gap-5 sm:gap-7 py-8 border-b border-[var(--site-line)]">
+              <span aria-hidden className="text-5xl sm:text-6xl font-extrabold leading-none tracking-tighter tabular-nums text-primary/25 shrink-0 w-16 sm:w-20">{String(i + 1).padStart(2, "0")}</span>
+              <div>
+                <h4 className="font-semibold text-xl" {...textStyleProps(fs.title)}>{f.title}</h4>
+                {f.text && <p className="site-muted mt-2 leading-relaxed" {...textStyleProps(fs.text)}>{f.text}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  // Sticky heading left, items stacked right. features content has no heading fields,
+  // so read optional eyebrow/title keys a template may add, else a generic heading.
+  if (layout === "split") {
+    const h = c as { eyebrow?: string; title?: string; titleHighlight?: string };
+    return (
+      <section className={`${SEC} bg-white`}>
+        <div className={`${WRAP} grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-4 lg:gap-20 items-start`}>
+          <div className="lg:sticky lg:top-28">
+            <SectionHeading eyebrow={h.eyebrow} title={h.title || "Why choose"} highlight={h.title ? h.titleHighlight : "us"} center={false} styles={headingStylesFrom(c)} />
+          </div>
+          <div className="divide-y divide-[var(--site-line)]">
+            {rows.map(({ f, fs }, i) => (
+              <div key={i} className="flex gap-5 py-7 first:pt-0">
+                <span className={`${CHIP} w-12 h-12 shrink-0`}><Icon name={f.icon} className="w-5 h-5" /></span>
+                <div>
+                  <h4 className="font-semibold text-lg" {...textStyleProps(fs.title)}>{f.title}</h4>
+                  {f.text && <p className="site-muted mt-1.5 leading-relaxed" {...textStyleProps(fs.text)}>{f.text}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={`${SEC} bg-white`}>
       <div className={WRAP}>
@@ -924,7 +1440,9 @@ function embedUrl(url: string): string {
   if (yt) return `https://www.youtube.com/embed/${yt[1]}`;
   return url;
 }
-export function VideoBlock({ c }: { c: SectionContentMap["video"] }) {
+export function VideoBlock({ c, editMode }: { c: SectionContentMap["video"]; editMode?: boolean }) {
+  // Empty video: show the placeholder only in the builder, render nothing on the live site.
+  if (!c.url?.trim() && !editMode) return null;
   const fs = readContentStyles(c);
   return (
     <section className="py-20 sm:py-28 bg-light">

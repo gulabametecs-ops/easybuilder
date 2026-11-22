@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { getCurrentTenant } from "@/lib/tenant";
 import { parsePayments } from "@/lib/payments";
+import { applyPaymentToggles, parseIntegrations } from "@/lib/integrations";
 import { createRazorpayOrderWithKeys, verifyRazorpaySignatureWithSecret } from "@/lib/razorpay";
 import { getActiveDemoSession } from "@/lib/demoSession";
 
@@ -16,6 +17,7 @@ export async function startSiteDonation(input: {
   phone: string;
   amountInr: number;
   eventId?: string;
+  causeId?: string;
   note?: string;
 }): Promise<
   | { status: "razorpay"; donationId: string; rzpOrderId: string; keyId: string; amount: number }
@@ -27,16 +29,25 @@ export async function startSiteDonation(input: {
   const amountInr = Math.round(Number(input.amountInr) || 0);
   if (amountInr < 1) return { status: "error", message: "Enter an amount of at least ₹1." };
   const name = clean(input.name) || "Supporter";
+  const demo = await getActiveDemoSession();
+  const causeId = clean(input.causeId);
+  if (causeId) {
+    const cause = await db.cause.findFirst({ where: { id: causeId, tenantId: tenant.id, published: true }, select: { status: true, demoSessionId: true } });
+    // a demo visitor's cause is only theirs (same rule as getSiteCauses)
+    if (!cause || (cause.demoSessionId && cause.demoSessionId !== demo?.id)) return { status: "error", message: "This cause is no longer available." };
+    if (cause.status === "paused") return { status: "error", message: "Donations to this cause are paused right now." };
+  }
 
   const cfg = await db.siteConfig.findUnique({ where: { tenantId: tenant.id } });
-  const pay = parsePayments(cfg?.payments);
-  const demo = await getActiveDemoSession();
+  // Razorpay switched off in Admin → Integrations behaves like "no keys" (UPI/bank fallback).
+  const pay = applyPaymentToggles(parsePayments(cfg?.payments), parseIntegrations(cfg?.integrations));
   const amount = amountInr * 100;
 
   const donation = await db.siteDonation.create({
     data: {
       tenantId: tenant.id,
       eventId: clean(input.eventId),
+      causeId,
       name,
       email: clean(input.email),
       phone: clean(input.phone),

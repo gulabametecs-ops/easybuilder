@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { planFor } from "@/lib/usage";
 import { requireRole } from "./guard";
 
 export type DomainState = { ok: boolean; message: string };
@@ -22,6 +23,11 @@ export async function saveCustomDomain(_prev: DomainState, formData: FormData): 
   const domain = normalizeDomain(formData.get("domain")?.toString() ?? "");
   if (!domain) return { ok: false, message: "Enter your domain, e.g. www.mybusiness.com" };
   if (!DOMAIN_RE.test(domain)) return { ok: false, message: "That doesn't look like a valid domain." };
+  // Custom domains: every plan except Starter (legacy plans & demo tenants keep access).
+  const { tier } = await planFor(tenant);
+  if (tier && !tier.customDomain && domain !== tenant.customDomain) {
+    return { ok: false, message: `Custom domains are included from the Professional plan. Upgrade your ${tier.name} plan from Billing to connect one.` };
+  }
 
   const clash = await db.tenant.findFirst({ where: { customDomain: domain, NOT: { id: tenantId } } });
   if (clash) return { ok: false, message: "This domain is already connected to another account." };

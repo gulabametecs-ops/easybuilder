@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { Plus, Trash2, CalendarDays, FileText, Loader2, Paperclip, X, GripVertical, CalendarCheck, CalendarClock } from "lucide-react";
+import { useRef, useState, useTransition } from "react";
+import { Plus, Trash2, CalendarDays, FileText, Paperclip, X, GripVertical, CalendarCheck, CalendarClock } from "lucide-react";
 import { saveEvent, deleteEvent } from "@/lib/actions/events";
 import { ImageInput } from "./ImageInput";
 import { AdminWorkspace } from "./AdminWorkspace";
+import { Badge, EmptyState, btnPrimary } from "./ui";
 import { parseBlocks, parseDocs, parseStringList, resolveEventKind, type EventBlock, type EventDoc } from "@/lib/eventContent";
+import { BrandSpinner } from "@/components/BrandLogo";
 
 type Ev = {
   id: string;
@@ -57,12 +59,17 @@ async function uploadFile(file: File): Promise<{ url: string; name: string }> {
   return { url: data.url, name: data.name || file.name };
 }
 
-export function EventsManager({ events: initial }: { events: Ev[] }) {
+export function EventsManager({ events: initial, maxFileMb = 25 }: { events: Ev[]; maxFileMb?: number }) {
   const [pending, start] = useTransition();
   const [events, setEvents] = useState(initial);
   const [editing, setEditing] = useState<Ev | null | "new">(null);
   const [filter, setFilter] = useState<"all" | "upcoming" | "completed">("all");
-  useEffect(() => setEvents(initial), [initial]);
+  // Re-sync when the server sends fresh data (adjust state during render, not in an effect).
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (prevInitial !== initial) {
+    setPrevInitial(initial);
+    setEvents(initial);
+  }
 
   const visible = events.filter((e) => {
     if (filter === "all") return true;
@@ -73,6 +80,7 @@ export function EventsManager({ events: initial }: { events: Ev[] }) {
     <div className={pending ? "opacity-70 pointer-events-none" : ""}>
       <AdminWorkspace
         title="Events"
+        subtitle="Upcoming programs and completed event reports shown on /events."
         titleIcon={<CalendarDays className="w-4 h-4 text-lime-600 shrink-0" />}
         tabs={[
           { id: "all", label: "All", icon: CalendarDays },
@@ -90,6 +98,7 @@ export function EventsManager({ events: initial }: { events: Ev[] }) {
         {editing ? (
           <EventForm
             event={editing === "new" ? null : editing}
+            maxFileMb={maxFileMb}
             onCancel={() => setEditing(null)}
             onSave={(fd) => start(async () => { await saveEvent(fd); setEditing(null); })}
           />
@@ -100,20 +109,27 @@ export function EventsManager({ events: initial }: { events: Ev[] }) {
               return (
                 <li key={e.id} className="flex items-start gap-3 px-4 py-3">
                   <button type="button" className="flex-1 text-left min-w-0" onClick={() => setEditing(e)}>
-                    <p className="font-semibold text-slate-900 dark:text-white truncate">{e.title}</p>
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="font-semibold text-slate-900 dark:text-white truncate">{e.title}</span>
+                      {!e.published && <Badge tone="amber">Draft</Badge>}
+                    </span>
                     <p className="text-xs text-slate-500">
                       {kind === "upcoming" ? "Upcoming" : "Completed"} · {e.date || "No date"} · {e.location || "No location"}
                     </p>
                   </button>
-                  <button type="button" className="p-1.5 text-slate-400 hover:text-red-500" onClick={() => start(async () => { await deleteEvent(e.id); })} aria-label="Delete">
+                  <button type="button" className="p-1.5 text-slate-400 hover:text-red-500" onClick={() => { if (confirm(`Delete "${e.title}"? This cannot be undone.`)) start(async () => { await deleteEvent(e.id); }); }} aria-label="Delete">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </li>
               );
             })}
             {visible.length === 0 && (
-              <li className="px-4 py-10 text-sm text-slate-500 text-center">
-                {filter === "all" ? "No events yet. Add an upcoming camp or a completed program report." : `No ${filter} events.`}
+              <li>
+                {filter === "all" ? (
+                  <EmptyState icon={<CalendarDays />} title="No events yet" hint="Add an upcoming camp or a completed program report — it appears on your /events page." action={<button type="button" onClick={() => setEditing("new")} className={btnPrimary}><Plus className="w-4 h-4" /> Add first event</button>} />
+                ) : (
+                  <p className="text-center text-xs text-slate-400 py-10">No {filter} events.</p>
+                )}
               </li>
             )}
           </ul>
@@ -123,7 +139,7 @@ export function EventsManager({ events: initial }: { events: Ev[] }) {
   );
 }
 
-function EventForm({ event, onCancel, onSave }: { event: Ev | null; onCancel: () => void; onSave: (fd: FormData) => void }) {
+function EventForm({ event, maxFileMb, onCancel, onSave }: { event: Ev | null; maxFileMb: number; onCancel: () => void; onSave: (fd: FormData) => void }) {
   const [docs, setDocs] = useState<EventDoc[]>(parseDocs(event?.documents || "[]"));
   const [gallery, setGallery] = useState<string[]>(parseStringList(event?.gallery || "[]"));
   const [blocks, setBlocks] = useState<EventBlock[]>(parseBlocks(event?.blocks || "[]"));
@@ -180,7 +196,7 @@ function EventForm({ event, onCancel, onSave }: { event: Ev | null; onCancel: ()
       <section className="space-y-3">
         <h3 className="text-sm font-bold text-slate-900 dark:text-white">3. Documents</h3>
         <p className="text-xs text-slate-500">PDF, Word or images — reports, declarations, attendance.</p>
-        <DocsEditor docs={docs} onChange={setDocs} />
+        <DocsEditor docs={docs} onChange={setDocs} maxFileMb={maxFileMb} />
       </section>
 
       <section className="space-y-3">
@@ -222,18 +238,22 @@ function EventForm({ event, onCancel, onSave }: { event: Ev | null; onCancel: ()
   );
 }
 
-function DocsEditor({ docs, onChange }: { docs: EventDoc[]; onChange: (v: EventDoc[]) => void }) {
+function DocsEditor({ docs, onChange, maxFileMb }: { docs: EventDoc[]; onChange: (v: EventDoc[]) => void; maxFileMb: number }) {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [label, setLabel] = useState("");
 
   async function add(file?: File) {
     if (!file) return;
     setBusy(true);
+    setError("");
     try {
       const up = await uploadFile(file);
       onChange([...docs, { label: label.trim() || up.name.replace(/\.[^.]+$/, "") || "Document", url: up.url }]);
       setLabel("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setBusy(false);
     }
@@ -258,11 +278,13 @@ function DocsEditor({ docs, onChange }: { docs: EventDoc[]; onChange: (v: EventD
       <div className="flex flex-wrap gap-2">
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="File name e.g. Activity report" className={`${input} sm:max-w-xs`} />
         <button type="button" onClick={() => ref.current?.click()} disabled={busy} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+          {busy ? <BrandSpinner className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
           {busy ? "Uploading…" : "Add document"}
         </button>
-        <input ref={ref} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" onChange={(e) => add(e.target.files?.[0])} />
+        <input ref={ref} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv" onChange={(e) => { add(e.target.files?.[0]); e.target.value = ""; }} />
       </div>
+      <p className="text-xs text-slate-400">PDF, Word, Excel, PowerPoint, images or text · max {maxFileMb} MB per file</p>
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
 }
@@ -379,7 +401,9 @@ function DocRow({ doc, onChange }: { doc: EventDoc; onChange: (d: EventDoc) => v
         try {
           const up = await uploadFile(f);
           onChange({ label: doc.label || up.name, url: up.url });
-        } finally { setBusy(false); }
+        } catch (err) {
+          alert(err instanceof Error ? err.message : "Upload failed");
+        } finally { setBusy(false); e.target.value = ""; }
       }} />
     </div>
   );

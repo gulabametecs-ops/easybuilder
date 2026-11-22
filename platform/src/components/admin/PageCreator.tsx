@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   FileText, Rocket, Info, LayoutGrid, Images, Tag, HelpCircle, Users, Bell, Mail,
-  Loader2, Plus, X, CalendarClock, Play, Timer, Trophy, Download, ListOrdered,
+  Plus, X, CalendarClock, Play, Timer, Trophy, Download, ListOrdered,
   ChevronRight, Check, Sparkles, type LucideIcon,
 } from "lucide-react";
 import { PAGE_TEMPLATES, TEMPLATE_CATEGORIES, type PageTemplate } from "@/lib/pageTemplates";
 import { SECTION_META } from "@/lib/sectionDefaults";
 import { createPage } from "@/lib/actions/content";
 import { AIWebsiteGenerator } from "./AIBuilderPanel";
+import { BrandSpinner } from "@/components/BrandLogo";
 
 const ICON: Record<string, LucideIcon> = {
   file: FileText, rocket: Rocket, info: Info, grid: LayoutGrid, images: Images, tag: Tag,
@@ -37,7 +38,7 @@ export function PageCreator({ open: openProp, onOpenChange }: { open?: boolean; 
   const [category, setCategory] = useState<"all" | PageTemplate["category"]>("all");
   const [selected, setSelected] = useState<PageTemplate>(PAGE_TEMPLATES[1]);
   const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
+  const [slugInput, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [showInNav, setShowInNav] = useState(true);
   const [published, setPublished] = useState(true);
@@ -52,29 +53,32 @@ export function PageCreator({ open: openProp, onOpenChange }: { open?: boolean; 
     [category],
   );
 
-  useEffect(() => {
-    if (!open) return;
-    setMode("template");
-    setStep(1);
-    setCategory("all");
-    setSelected(PAGE_TEMPLATES[1]);
-    setTitle("");
-    setSlug("");
-    setSlugTouched(false);
-    setShowInNav(true);
-    setPublished(true);
-    setNoindex(false);
-    setSeoTitle("");
-    setSeoDescription("");
-    setShowSeo(false);
-  }, [open]);
+  // Reset the form each time the dialog opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setMode("template");
+      setStep(1);
+      setCategory("all");
+      setSelected(PAGE_TEMPLATES[1]);
+      setTitle("");
+      setSlug("");
+      setSlugTouched(false);
+      setShowInNav(true);
+      setPublished(true);
+      setNoindex(false);
+      setSeoTitle("");
+      setSeoDescription("");
+      setShowSeo(false);
+    }
+  }
 
-  useEffect(() => {
-    if (!slugTouched) setSlug(slugify(title || selected.label));
-  }, [title, selected, slugTouched]);
+  // Until the user edits the slug, it follows the title.
+  const slug = slugTouched ? slugInput : slugify(title || selected.label);
 
   const submit = () => {
-    start(() => {
+    start(async () => {
       const fd = new FormData();
       fd.set("title", title.trim() || selected.label);
       fd.set("slug", slug.trim() || slugify(title || selected.label));
@@ -84,7 +88,8 @@ export function PageCreator({ open: openProp, onOpenChange }: { open?: boolean; 
       fd.set("noindex", noindex ? "on" : "off");
       fd.set("seoTitle", seoTitle.trim());
       fd.set("seoDescription", seoDescription.trim());
-      return createPage(fd);
+      const r = await createPage(fd);
+      if (r?.error) alert(r.error);
     });
   };
 
@@ -349,7 +354,7 @@ export function PageCreator({ open: openProp, onOpenChange }: { open?: boolean; 
                     onClick={submit}
                     className="inline-flex items-center gap-2 rounded-xl bg-lime-500 text-white text-sm font-semibold px-5 py-2.5 hover:bg-lime-600 disabled:opacity-60"
                   >
-                    {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    {pending ? <BrandSpinner className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                     {pending ? "Creating…" : "Create & edit"}
                   </button>
                 </>

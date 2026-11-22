@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAuthedSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { updatePageMeta, duplicatePage } from "@/lib/actions/content";
+import { updatePageMeta } from "@/lib/actions/content";
+import { DuplicatePageButton } from "@/components/admin/PageRowActions";
 import { SaveBar } from "@/components/admin/ui";
 import { VisualBuilder } from "@/components/admin/VisualBuilder";
 import { ArrowLeft, Copy, Settings2, ExternalLink } from "lucide-react";
@@ -84,11 +85,9 @@ export default async function PageEditor({ params }: Props) {
               </form>
             </div>
           </details>
-          <form action={duplicatePage.bind(null, page.id)}>
-            <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
-              <Copy className="w-3.5 h-3.5" /> Duplicate
-            </button>
-          </form>
+          <DuplicatePageButton id={page.id} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+            <Copy className="w-3.5 h-3.5" /> Duplicate
+          </DuplicatePageButton>
         </div>
       </div>
 

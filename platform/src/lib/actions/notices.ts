@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { releaseMediaIn } from "@/lib/usage";
 import { requireTenantId, getDemoSessionId } from "./guard";
 
 function s(fd: FormData, k: string) { return (fd.get(k)?.toString() ?? "").trim(); }
@@ -67,7 +68,9 @@ export async function deleteNotice(id: string) {
     const n = await db.notice.findFirst({ where: { id, tenantId } });
     if (!n || n.demoSessionId !== demoId) return;
   }
+  const notice = await db.notice.findFirst({ where: { id, tenantId } });
   await db.notice.deleteMany({ where: { id, tenantId } });
+  if (!demoId) await releaseMediaIn(tenantId, notice);
   revalidateNotices();
 }
 

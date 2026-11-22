@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSuperSession } from "@/lib/superAuth";
 import { SuperLoginForm } from "@/components/super/SuperLoginForm";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const metadata = { title: "Super Admin Login" };
 
@@ -9,6 +10,9 @@ export default async function SuperLoginPage() {
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
+        <div className="mb-6 flex justify-center">
+          <BrandLogo size={36} onDark id="spx-sl" />
+        </div>
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8">
           <SuperLoginForm />
         </div>

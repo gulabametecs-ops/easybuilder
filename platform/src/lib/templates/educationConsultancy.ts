@@ -15,9 +15,10 @@ export const educationConsultancy: TemplateDef = {
       heading: "#0b1f3a",
     },
     font: "Plus Jakarta Sans",
-    radius: "1rem",
+    radius: "0.75rem",
   },
   header: (biz) => ({
+    design: "modern",
     logoText: biz,
     logoImage: "",
     announcement: { show: true, text: "✈️ Fall & Spring intakes open for USA, UK, Canada, Australia & Germany — book a free profile evaluation", link: "/consultation" },
@@ -38,7 +39,7 @@ export const educationConsultancy: TemplateDef = {
     cta: { label: "Free Consultation", href: "/consultation" },
   }),
   footer: (biz) => ({
-    design: "modern",
+    design: "gradient",
     about: "Your trusted partner for admissions in India and abroad — honest counselling, strong applications and high visa success, from shortlist to send-off.",
     columns: [
       { title: "Quick Links", links: [
@@ -110,14 +111,14 @@ export const educationConsultancy: TemplateDef = {
             { icon: "check", title: "End-to-End Support", text: "" },
           ],
         } },
-        { type: "logos", content: { title: "Our students study at 200+ leading universities worldwide", items: ["Canada", "Australia", "United Kingdom", "Germany", "USA", "Ireland", "New Zealand", "Singapore"] } },
-        { type: "features", style: { background: "light" }, content: { items: [
-          { icon: "user-check", title: "Honest, Profile-Based Advice", text: "We recommend universities that match your profile and budget — not the ones that pay the highest commission." },
-          { icon: "edit", title: "Applications That Stand Out", text: "Story-driven SOPs, strong LORs and polished résumés reviewed by senior counsellors." },
-          { icon: "shield", title: "98% Visa Success", text: "Meticulous documentation, financial planning and mock visa interviews." },
-          { icon: "tag", title: "Scholarships & Loans", text: "Our students have secured ₹25+ crore in scholarships, plus education-loan help from partner banks." },
+        { type: "stats", style: { layout: "minimal" }, content: { items: [
+          { value: "5,000+", label: "Students Placed", icon: "users" },
+          { value: "98%", label: "Visa Success Rate", icon: "shield" },
+          { value: "15+", label: "Countries", icon: "plane" },
+          { value: "₹25 Cr+", label: "Scholarships Won", icon: "award" },
         ] } },
-        { type: "about", content: {
+        { type: "serviceCategories", style: { layout: "tiles", background: "light" }, content: { eyebrow: "OUR SERVICES", title: "Everything You Need,", titleHighlight: "Under One Roof", categories: ["Study Abroad", "Study in India", "Test Prep", "Visa & Documentation"] } },
+        { type: "about", style: { layout: "stacked" }, content: {
           eyebrow: "WHO WE ARE", title: "Trusted Guidance for", titleHighlight: "Life-Changing Decisions",
           body: [
             `Since 2014, ${biz} has helped thousands of Indian students get into top universities in India and abroad — with honest advice, careful planning and personal attention at every step.`,
@@ -127,41 +128,50 @@ export const educationConsultancy: TemplateDef = {
           points: ["Free profile evaluation", "University & course shortlisting", "SOP, LOR & résumé support", "IELTS / GRE coaching in-house", "Scholarship & loan assistance", "Visa filing & mock interviews"],
           buttonLabel: "About Us", buttonHref: "/about",
         } },
-        { type: "serviceCategories", content: { eyebrow: "OUR SERVICES", title: "Everything You Need,", titleHighlight: "Under One Roof", categories: ["Study Abroad", "Study in India", "Test Prep", "Visa & Documentation"] } },
-        { type: "stats", content: { items: [
-          { value: "5,000+", label: "Students Placed", icon: "users" },
-          { value: "98%", label: "Visa Success Rate", icon: "shield" },
-          { value: "15+", label: "Countries", icon: "plane" },
-          { value: "₹25 Cr+", label: "Scholarships Won", icon: "award" },
+        { type: "logos", content: { title: "Destinations our students fly to", items: ["Canada", "Australia", "United Kingdom", "Germany", "USA", "Ireland", "New Zealand", "Singapore"] } },
+        { type: "steps", style: { layout: "timeline", background: "light" }, content: { eyebrow: "PROCESS", title: "Your Journey in", titleHighlight: "5 Simple Steps", items: [
+          { title: "Free Counselling", text: "Profile evaluation, goals and budget — in office or on video call.", icon: "headset" },
+          { title: "Shortlist", text: "8–12 universities across ambitious, target and safe options.", icon: "clipboard" },
+          { title: "Apply", text: "Applications, SOP, LOR and scholarship essays.", icon: "edit" },
+          { title: "Visa", text: "Documentation, proof of funds, loan sanction and mock interviews.", icon: "shield" },
+          { title: "Fly!", text: "Forex, accommodation, pre-departure briefing and send-off.", icon: "plane" },
         ] } },
-        { type: "steps", style: { background: "light" }, content: { eyebrow: "PROCESS", title: "Your Journey in", titleHighlight: "5 Simple Steps", items: [
-          { title: "Free Counselling", text: "Profile evaluation, goals and budget", icon: "headset" },
-          { title: "Shortlist", text: "Universities and courses that fit you", icon: "clipboard" },
-          { title: "Apply", text: "Applications, SOP, LOR and scholarships", icon: "edit" },
-          { title: "Visa", text: "Documentation, funds and mock interviews", icon: "shield" },
-          { title: "Fly!", text: "Pre-departure briefing and send-off", icon: "plane" },
+        { type: "features", content: { items: [
+          { icon: "handshake", title: "Honest, Profile-Based Advice", text: "We recommend universities that match your profile and budget — not the ones that pay the highest commission." },
+          { icon: "edit", title: "Applications That Stand Out", text: "Story-driven SOPs, strong LORs and polished résumés reviewed by senior counsellors." },
+          { icon: "shield", title: "98% Visa Success", text: "Meticulous documentation, financial planning and mock visa interviews." },
+          { icon: "tag", title: "Scholarships & Loans", text: "Our students have secured ₹25+ crore in scholarships, plus education-loan help from partner banks." },
         ] } },
-        { type: "team", content: { eyebrow: "OUR EXPERTS", title: "Meet Your", titleHighlight: "Counsellors", members: [
-          { name: "Ms. Ayesha Siddiqui", role: "Senior Counsellor · USA & UK", image: "", note: "12 yrs · 1,500+ admits" },
-          { name: "Mr. Rohit Malhotra", role: "Canada & Australia Specialist", image: "", note: "ICEF Certified" },
-          { name: "Ms. Deepika Rao", role: "Visa & Documentation Head", image: "", note: "98% visa approvals" },
-          { name: "Mr. Varun Joshi", role: "Test Prep Head", image: "", note: "IELTS 8.5 · GRE 330" },
-        ] } },
-        { type: "testimonials", content: { eyebrow: "SUCCESS STORIES", title: "Students Who", titleHighlight: "Made It", items: [
+        { type: "imageBanner", content: { title: "Master's in Germany for under ₹10 lakh?", subtitle: "Public universities charge little or no tuition. We handle APS, blocked account, uni-assist and your visa — start 9 months before the intake.", buttonLabel: "Check Your Eligibility", buttonHref: "/consultation", image: "" } },
+        { type: "testimonials", style: { layout: "featured", background: "light" }, content: { eyebrow: "SUCCESS STORIES", title: "Students Who", titleHighlight: "Made It", items: [
           { name: "Harsh Vardhan", role: "MS Computer Science · USA", text: "My counsellor shortlisted universities I'd never have considered and helped me rewrite my SOP three times. Got 4 admits and my F-1 visa on the first attempt.", rating: 5 },
           { name: "Simran Kaur", role: "MSc Data Science · Canada", text: "From IELTS coaching to my study permit, everything was handled in one place. They were honest about costs and timelines — no surprises.", rating: 5 },
           { name: "Mr. Ramesh Iyer", role: "Parent · Daughter studying in London", text: "As parents we were anxious about the whole process. The team explained every step, helped with the education loan and even briefed us before she flew.", rating: 5 },
           { name: "Aman Gupta", role: "MS Mechanical · Germany", text: "Studying in Germany almost tuition-free felt impossible until I met them. APS, blocked account, visa — they guided me through all of it.", rating: 5 },
         ] } },
-        { type: "faq", style: { background: "light" }, content: { eyebrow: "FAQ", title: "Questions Students", titleHighlight: "Often Ask", items: [
+        { type: "team", content: { eyebrow: "OUR EXPERTS", title: "Meet Your", titleHighlight: "Counsellors", members: [
+          { name: "Ms. Ayesha Siddiqui", role: "Senior Counsellor · USA & UK", image: "", note: "12 yrs · 1,500+ admits" },
+          { name: "Mr. Rohit Malhotra", role: "Canada & Australia Specialist", image: "", note: "Certified education agent" },
+          { name: "Ms. Deepika Rao", role: "Visa & Documentation Head", image: "", note: "98% visa approvals" },
+          { name: "Mr. Varun Joshi", role: "Test Prep Head", image: "", note: "IELTS 8.5 · GRE 330" },
+        ] } },
+        { type: "countdown", style: { background: "dark" }, content: { eyebrow: "FALL 2027 INTAKE", title: "Priority Application", titleHighlight: "Deadline", subtitle: "Most US and Canadian universities close scholarship rounds by mid-January. Get your shortlist and SOP ready now.", targetDate: "2027-01-15T23:59:00", buttonLabel: "Start My Application", buttonHref: "/consultation" } },
+        { type: "downloads", style: { background: "light" }, content: { eyebrow: "FREE RESOURCES", title: "Guides &", titleHighlight: "Checklists", items: [
+          { title: "Study Abroad Cost Calculator", description: "Tuition + living costs by country, in rupees.", link: "", icon: "tag" },
+          { title: "Visa Document Checklist", description: "USA, UK, Canada and Australia — what to carry.", link: "", icon: "clipboard" },
+          { title: "SOP Writing Guide", description: "Structure, do's and don'ts with sample outlines.", link: "", icon: "edit" },
+          { title: "Intake Calendar 2027", description: "Application windows for every major country.", link: "", icon: "calendar" },
+        ] } },
+        { type: "faq", style: { layout: "split" }, content: { eyebrow: "FAQ", title: "Questions Students", titleHighlight: "Often Ask", intro: "Straight answers on costs, timelines, tests and visas. Your first counselling session is free.", items: [
           { q: "Is the first consultation really free?", a: "Yes. Your first session, including a full profile evaluation and country/course recommendations, is completely free with no obligation." },
           { q: "When should I start preparing to study abroad?", a: "Ideally 10–12 months before your intake. That leaves time for tests, applications, scholarships and the visa process." },
           { q: "Which country is best for me?", a: "It depends on your course, budget, academic profile and long-term goals. We compare options like the USA, UK, Canada, Australia and Germany side by side for you." },
           { q: "Do I need IELTS or GRE?", a: "Most universities need an English test (IELTS, TOEFL or PTE). GRE/GMAT depends on the course and university. We offer in-house coaching for all of them." },
           { q: "Can you help with scholarships and education loans?", a: "Yes. We identify scholarships you qualify for, help with applications and connect you with partner banks for education loans." },
           { q: "What is your visa success rate?", a: "Our students have a 98% visa success rate, thanks to careful documentation, financial planning and mock visa interviews." },
+          { q: "Do you charge a service fee?", a: "Counselling and shortlisting are free. A flat, written application-support fee applies only once you decide to proceed — no hidden charges." },
         ] } },
-        { type: "cta", content: { title: "Confused about your future?", highlight: "Book a Free Consultation", phones: ["9000000000"], buttonLabel: "Get Started", buttonHref: "/consultation" } },
+        { type: "cta", style: { layout: "split" }, content: { title: "Confused about your future?", highlight: "Book a Free Consultation", phones: ["9000000000"], buttonLabel: "Get Started", buttonHref: "/consultation" } },
       ],
     },
     {
@@ -178,6 +188,17 @@ export const educationConsultancy: TemplateDef = {
           { value: "15+", label: "Countries", icon: "map" },
           { value: "10+", label: "Years", icon: "star" },
         ] } },
+        { type: "visionMission", style: { background: "light" }, content: {
+          eyebrow: "WHAT DRIVES US",
+          visionTitle: "Our Vision", visionText: "Every capable Indian student should be able to reach the right university — whatever their city, background or budget.",
+          missionTitle: "Our Mission", missionText: "Honest, profile-first counselling and complete application support, from the first shortlist to the airport send-off.",
+          valuesTitle: "How We Work",
+          values: [
+            { icon: "handshake", title: "Honesty First", text: "We tell you when a university is out of reach — and what would get you there." },
+            { icon: "users", title: "One Counsellor", text: "The same person handles your file from start to finish." },
+            { icon: "tag", title: "Clear Fees", text: "Written fee quote up front. No surprise charges later." },
+          ],
+        } },
         { type: "cta", content: { title: "Ready to begin?", highlight: "Talk to a Counsellor", phones: ["9000000000"], buttonLabel: "Free Consultation", buttonHref: "/consultation" } },
       ],
     },
@@ -185,6 +206,10 @@ export const educationConsultancy: TemplateDef = {
       slug: "services", title: "Services", isSystem: true, order: 2,
       sections: [
         { type: "serviceCategories", content: { eyebrow: "", title: "Our", titleHighlight: "Services", categories: ["Study Abroad", "Study in India", "Test Prep", "Visa & Documentation"] } },
+        { type: "priceList", style: { background: "light" }, content: { eyebrow: "TRANSPARENT FEES", title: "Service", titleHighlight: "Charges", note: "Profile evaluation and shortlisting are always free. GST extra as applicable.", groups: [
+          { category: "Study Abroad", items: [ { name: "Application package (up to 6 universities)", price: "₹35,000", note: "SOP, LOR & application filing" }, { name: "Visa filing + mock interviews", price: "₹15,000", note: "" } ] },
+          { category: "Test Prep", items: [ { name: "IELTS (6 weeks)", price: "₹12,000", note: "Includes 8 full mocks" }, { name: "GRE (10 weeks)", price: "₹22,000", note: "" } ] },
+        ] } },
         { type: "cta", content: { title: "Need guidance?", highlight: "We're Here to Help", phones: ["9000000000"], buttonLabel: "Free Consultation", buttonHref: "/consultation" } },
       ],
     },

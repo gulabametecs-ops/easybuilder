@@ -175,6 +175,85 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
       });
     }
 
+    const causes = tpl.causes?.(biz) ?? [];
+    if (causes.length) {
+      const seen = new Set<string>();
+      await tx.cause.createMany({
+        data: causes.map((c, i) => {
+          let slug = c.slug || svcSlug(c.title);
+          while (seen.has(slug)) slug = `${svcSlug(c.title)}-${i}`;
+          seen.add(slug);
+          return {
+            tenantId: tenant.id,
+            slug,
+            title: c.title,
+            category: c.category,
+            summary: c.summary,
+            story: c.story,
+            goalAmount: c.goalAmount,
+            offlineRaised: c.offlineRaised ?? 0,
+            offlineDonors: c.offlineDonors ?? 0,
+            deadline: c.deadline ?? "",
+            urgent: !!c.urgent,
+            beneficiaries: c.beneficiaries ?? "",
+            location: c.location ?? "",
+            impactTiers: JSON.stringify(c.impactTiers ?? []),
+            updates: JSON.stringify(c.updates ?? []),
+            status: c.status ?? "active",
+            featured: !!c.featured,
+            order: i,
+          };
+        }),
+      });
+    }
+
+    const properties = tpl.properties?.(biz) ?? [];
+    if (properties.length) {
+      const seen = new Set<string>();
+      await tx.property.createMany({
+        data: properties.map((p, i) => {
+          let slug = p.slug || svcSlug(p.title);
+          while (seen.has(slug)) slug = `${svcSlug(p.title)}-${i}`;
+          seen.add(slug);
+          return {
+            tenantId: tenant.id,
+            slug,
+            title: p.title,
+            purpose: p.purpose,
+            propertyType: p.propertyType,
+            price: p.price,
+            priceNote: p.priceNote ?? "",
+            deposit: p.deposit ?? 0,
+            maintenance: p.maintenance ?? 0,
+            bhk: p.bhk ?? "",
+            areaSqft: p.areaSqft ?? 0,
+            furnishing: p.furnishing ?? "",
+            bathrooms: p.bathrooms ?? 0,
+            floor: p.floor ?? "",
+            facing: p.facing ?? "",
+            parking: p.parking ?? "",
+            availableFrom: p.availableFrom ?? "",
+            possession: p.possession ?? "",
+            rera: p.rera ?? "",
+            sharing: p.sharing ?? "",
+            foodIncluded: !!p.foodIncluded,
+            gender: p.gender ?? "",
+            locality: p.locality,
+            city: p.city,
+            address: p.address ?? "",
+            summary: p.summary,
+            description: p.description,
+            highlights: JSON.stringify(p.highlights ?? []),
+            amenities: JSON.stringify(p.amenities ?? []),
+            floorPlans: JSON.stringify((p.floorPlans ?? []).map((f) => ({ label: f.label, area: f.area ?? "", image: "" }))),
+            status: p.status ?? "available",
+            featured: !!p.featured,
+            order: i,
+          };
+        }),
+      });
+    }
+
     const events = tpl.events?.(biz) ?? [];
     if (events.length) {
       const seenSlugs = new Set<string>();
@@ -219,18 +298,15 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
       });
     }
 
-    // Legal pages (Terms & Privacy) — system pages, hidden from the nav but
-    // linked in the footer. Editable by the client via the Pages editor.
+    // Legal pages — system pages, hidden from the nav but linked in the footer.
+    // Editable by the client via the Pages editor. /privacy is not provisioned:
+    // the site route renders a full built-in notice (TenantPrivacy) unless the
+    // client creates its own page with slug "privacy".
     const legal: { slug: string; title: string; html: string }[] = [
       {
         slug: "terms",
         title: "Terms & Conditions",
         html: `<h2>Terms &amp; Conditions</h2><p>Welcome to ${biz}. By using our website and services, you agree to the following terms.</p><h3>Services</h3><p>We provide the services listed on this website. Pricing and availability may change without notice.</p><h3>Bookings & Payments</h3><p>Any quotes provided are estimates. Final charges are confirmed before work begins.</p><h3>Cancellations</h3><p>Please contact us in advance to reschedule or cancel a booking.</p><h3>Liability</h3><p>We take care in delivering quality service. Our liability is limited to the value of the service provided.</p><h3>Contact</h3><p>For any questions about these terms, please contact us using the details in the footer.</p>`,
-      },
-      {
-        slug: "privacy",
-        title: "Privacy Policy",
-        html: `<h2>Privacy Policy</h2><p>${biz} respects your privacy. This policy explains how we handle your information.</p><h3>Information we collect</h3><p>We collect the details you provide through our enquiry, quote and booking forms — such as your name, phone, email and message.</p><h3>How we use it</h3><p>We use your information only to respond to your enquiry and provide our services. We do not sell your data.</p><h3>Your rights</h3><p>You may request access to or deletion of your information at any time by contacting us.</p>`,
       },
     ];
     for (const [i, l] of legal.entries()) {

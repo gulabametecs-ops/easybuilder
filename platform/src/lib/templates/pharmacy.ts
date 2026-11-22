@@ -5,10 +5,10 @@ import type { TemplateDef } from "./types";
 export const pharmacy: TemplateDef = {
   theme: {
     colors: { primary: "#0d9488", primaryDark: "#0f766e", secondary: "#064e3b", accent: "#22c55e", dark: "#042f2e", light: "#f0fdfa", text: "#334155", heading: "#0f2a2a" },
-    font: "Manrope", radius: "0.9rem",
+    font: "Nunito", radius: "1.5rem",
   },
   header: (biz) => ({
-    design: "modern",
+    design: "bold",
     logoText: biz, logoImage: "",
     announcement: { show: true, text: "Free home delivery on orders above ₹499 · Upload your prescription & order in minutes", link: "/order" },
     topbar: { show: true, address: "Licensed Pharmacy · Open 8am – 11pm, 7 days", phones: ["9000000000"], email: "hello@example.com", social: { facebook: "#", instagram: "#", whatsapp: "#" } },
@@ -69,32 +69,41 @@ export const pharmacy: TemplateDef = {
           { icon: "user-check", title: "Licensed Pharmacist", text: "Each order is checked by a registered pharmacist before it leaves the store." },
           { icon: "truck", title: "Fast Home Delivery", text: "Same-day delivery across Your City. Free on orders above ₹499." },
           { icon: "tag", title: "Everyday Discounts", text: "Flat savings on medicines and more on generics and wellness products." },
-        ] } },
-        { type: "steps", style: { background: "light" }, content: { eyebrow: "ORDER IN 3 MINUTES", title: "How to", titleHighlight: "Order Medicines", items: [
+        ] }, style: { layout: "minimal", spacingTop: "sm" } },
+        { type: "serviceCategories", content: { eyebrow: "SHOP BY CATEGORY", title: "Everything for", titleHighlight: "Your Health", categories: ["Medicines", "Wellness & Personal Care", "Health Devices", "Health Services"] }, style: { layout: "list" } },
+        { type: "steps", style: { background: "light", layout: "cards" }, content: { eyebrow: "ORDER IN 3 MINUTES", title: "How to", titleHighlight: "Order Medicines", items: [
           { title: "Upload Prescription", text: "Share a photo of your prescription or list your medicines", icon: "edit" },
           { title: "Pharmacist Confirms", text: "We verify, check stock and call you with the final bill", icon: "user-check" },
           { title: "Pay Your Way", text: "UPI, card or cash on delivery", icon: "check" },
           { title: "Delivered Home", text: "Packed safely and delivered the same day", icon: "truck" },
         ] } },
-        { type: "serviceCategories", content: { eyebrow: "SHOP BY CATEGORY", title: "Everything for", titleHighlight: "Your Health", categories: ["Medicines", "Wellness & Personal Care", "Health Devices", "Health Services"] } },
-        { type: "about", content: { eyebrow: "WHY US", title: "Your Trusted", titleHighlight: "Neighbourhood Pharmacy", body: [`${biz} has served families in Your City with care and honesty for years. We stock thousands of medicines and health products so you rarely have to look elsewhere.`, "Our pharmacists take the time to explain dosage, interactions and generic alternatives — because good health starts with the right advice."], image: "", points: ["Registered pharmacist on every shift", "Cold-chain storage for insulin & vaccines", "Monthly refill reminders", "Generic options to cut your bill"], buttonLabel: "About Us", buttonHref: "/about" } },
-        { type: "pricingPlans", style: { background: "light" }, content: { eyebrow: "LAB TESTS AT HOME", title: "Popular Health", titleHighlight: "Checkup Packages", plans: [
+        { type: "imageBanner", content: { title: "Save up to 50% with Generic Medicines", subtitle: "Same salt, same strength, quality-approved — ask our pharmacist for a generic alternative to your prescribed brand.", buttonLabel: "Ask a Pharmacist", buttonHref: "/order", image: "" } },
+        { type: "about", content: { eyebrow: "WHY US", title: "Your Trusted", titleHighlight: "Neighbourhood Pharmacy", body: [`${biz} has served families in Your City with care and honesty for years. We stock thousands of medicines and health products so you rarely have to look elsewhere.`, "Our pharmacists take the time to explain dosage, interactions and generic alternatives — because good health starts with the right advice."], image: "", points: ["Registered pharmacist on every shift", "Cold-chain storage for insulin & vaccines", "Monthly refill reminders", "Generic options to cut your bill"], buttonLabel: "About Us", buttonHref: "/about" }, style: { layout: "centered" } },
+        { type: "priceList", style: { background: "light" }, content: { eyebrow: "THIS WEEK'S OFFERS", title: "Health Devices &", titleHighlight: "Wellness Deals", note: "Offer prices on select items while stocks last. Final price is confirmed by our pharmacist at the time of order.", groups: [
+          { category: "Health Devices", items: [ { name: "Digital BP Monitor", price: "₹1,499", note: "MRP ₹2,200" }, { name: "Glucometer + 25 Strips", price: "₹899", note: "Free demo" }, { name: "Pulse Oximeter", price: "₹699", note: "" } ] },
+          { category: "Wellness", items: [ { name: "Vitamin D3 60K (4 caps)", price: "₹129", note: "" }, { name: "Multivitamin (60 tabs)", price: "₹399", note: "" }, { name: "ORS Sachets (pack of 10)", price: "₹199", note: "" } ] },
+        ] } },
+        { type: "pricingPlans", content: { eyebrow: "LAB TESTS AT HOME", title: "Popular Health", titleHighlight: "Checkup Packages", plans: [
           { name: "Basic Wellness", price: "₹799", period: "per person", features: ["CBC (Complete Blood Count)", "Blood Sugar (Fasting)", "Lipid Profile", "Free home sample collection", "Reports in 24 hours"], featured: false, buttonLabel: "Book Test", buttonHref: "/lab-tests#book" },
           { name: "Full Body Checkup", price: "₹1,499", period: "per person", features: ["60+ parameters", "Liver, Kidney & Thyroid", "HbA1c & Vitamin D", "Free home sample collection", "Free doctor consultation"], featured: true, buttonLabel: "Book Test", buttonHref: "/lab-tests#book" },
           { name: "Senior Citizen Care", price: "₹2,299", period: "per person", features: ["80+ parameters", "Cardiac risk markers", "Vitamin B12 & D", "Urine routine", "Priority home collection"], featured: false, buttonLabel: "Book Test", buttonHref: "/lab-tests#book" },
         ] } },
-        { type: "stats", content: { items: [ { value: "25,000+", label: "Happy Customers", icon: "users" }, { value: "10,000+", label: "Products in Stock", icon: "package" }, { value: "60 min", label: "Avg. Local Delivery", icon: "truck" }, { value: "4.8★", label: "Customer Rating", icon: "star" } ] } },
+        { type: "stats", content: { items: [ { value: "25,000+", label: "Happy Customers", icon: "users" }, { value: "10,000+", label: "Products in Stock", icon: "package" }, { value: "60 min", label: "Avg. Local Delivery", icon: "truck" }, { value: "4.8★", label: "Customer Rating", icon: "star" } ] }, style: { layout: "minimal", background: "primary" } },
         { type: "testimonials", content: { eyebrow: "CUSTOMER STORIES", title: "Trusted by", titleHighlight: "Families Nearby", items: [
           { name: "Sunita Sharma", role: "Regular customer", text: "My father's diabetes and BP medicines arrive every month without me even asking. The refill reminder is a lifesaver.", rating: 5 },
           { name: "Rahul Mehta", role: "Home delivery", text: "Uploaded the prescription on WhatsApp at 9 pm and had the medicines within the hour. The pharmacist even called to explain the dosage.", rating: 5 },
           { name: "Farah Khan", role: "Lab test customer", text: "Booked the full body checkup — the technician came home at 7 am and reports were on my phone the same evening.", rating: 5 },
-        ] } },
-        { type: "faq", style: { background: "light" }, content: { eyebrow: "FAQ", title: "Common", titleHighlight: "Questions", items: [
+        ] }, style: { layout: "minimal" } },
+        { type: "openingHours", content: { eyebrow: "OPEN 7 DAYS", title: "Store", titleHighlight: "Timings", note: "Late-night emergency? Call us — our on-duty pharmacist will do their best to help.", days: [
+          { day: "Monday – Saturday", hours: "8:00 AM – 11:00 PM" }, { day: "Sunday", hours: "9:00 AM – 10:00 PM" }, { day: "Home delivery", hours: "Until 10:30 PM daily" }, { day: "Lab sample collection", hours: "6:30 AM – 11:00 AM" },
+        ] }, style: { background: "light" } },
+        { type: "faq", content: { eyebrow: "FAQ", title: "Common", titleHighlight: "Questions", items: [
           { q: "Do I need a prescription to order?", a: "Prescription medicines (Schedule H/H1) are dispensed only against a valid doctor's prescription. Wellness, OTC and personal care products can be ordered without one." },
           { q: "How fast is home delivery?", a: "Most orders within Your City are delivered the same day, often within 60 minutes. Delivery is free on orders above ₹499." },
           { q: "Are your medicines genuine?", a: "Yes. We buy only from authorised distributors, check every batch and expiry date, and store medicines as per manufacturer guidelines." },
           { q: "Do you offer discounts?", a: "We offer everyday discounts on medicines, extra savings on generics and special prices for monthly refills and senior citizens." },
           { q: "Can I book a lab test at home?", a: "Yes. Choose a package, pick a time slot and a trained phlebotomist will collect the sample from your home at no extra charge." },
+          { q: "Can I return a medicine?", a: "Unopened strips with intact batch details can be returned within 7 days with the bill. Cold-chain items like insulin and vaccines cannot be returned." },
         ] } },
         { type: "cta", content: { title: "Running low on medicines?", highlight: "Order Now — Delivered Today", phones: ["9000000000"], buttonLabel: "Upload Prescription", buttonHref: "/order" } },
       ],
@@ -102,13 +111,14 @@ export const pharmacy: TemplateDef = {
     { slug: "about", title: "About Us", isSystem: true, order: 1, sections: [
       { type: "about", content: { eyebrow: "OUR STORY", title: "Care You Can", titleHighlight: "Trust", body: [`${biz} began as a small neighbourhood chemist with one simple promise — the right medicine, at the right price, with honest advice.`, "Today we serve thousands of families across Your City with a fully licensed pharmacy, same-day delivery and home lab tests, while keeping the personal touch that made our customers trust us."], image: "", points: ["Drug Licence & GST registered", "Registered pharmacists on every shift", "Authorised distributor sourcing", "Cold-chain storage", "Transparent pricing", "Senior citizen priority"], buttonLabel: "Visit Our Store", buttonHref: "/store" } },
       { type: "stats", style: { background: "light" }, content: { items: [ { value: "15+", label: "Years of Service", icon: "award" }, { value: "25,000+", label: "Families Served", icon: "users" }, { value: "10,000+", label: "Products", icon: "package" }, { value: "5", label: "Pharmacists", icon: "user-check" } ] } },
+      { type: "logos", content: { title: "Sourced only from authorised distributors & licensed partners", items: ["Authorised Distributor 1", "Authorised Distributor 2", "NABL Partner Lab", "Cold-Chain Logistics Partner", "Ayurveda Brand Partner"] } },
       { type: "team", content: { eyebrow: "OUR TEAM", title: "Meet Our", titleHighlight: "Pharmacists", members: [
-        { name: "Full Name", role: "Chief Pharmacist", image: "", note: "B.Pharm · 15 yrs" },
-        { name: "Full Name", role: "Pharmacist", image: "", note: "D.Pharm · 8 yrs" },
-        { name: "Full Name", role: "Pharmacist", image: "", note: "M.Pharm · 5 yrs" },
-        { name: "Full Name", role: "Delivery & Customer Care", image: "", note: "Always a call away" },
+        { name: "Ramesh Gupta", role: "Chief Pharmacist", image: "", note: "B.Pharm · 15 yrs" },
+        { name: "Priya Nair", role: "Pharmacist", image: "", note: "D.Pharm · 8 yrs" },
+        { name: "Sameer Ansari", role: "Pharmacist", image: "", note: "M.Pharm · 5 yrs" },
+        { name: "Deepak Yadav", role: "Delivery & Customer Care", image: "", note: "Always a call away" },
       ] } },
-      { type: "gallery", style: { background: "light" }, content: { eyebrow: "INSIDE OUR STORE", title: "Take a", titleHighlight: "Look Around" } },
+      { type: "gallery", style: { background: "light", layout: "strip" }, content: { eyebrow: "INSIDE OUR STORE", title: "Take a", titleHighlight: "Look Around" } },
       { type: "cta", content: { title: "Questions about your medicines?", highlight: "Talk to a Pharmacist", phones: ["9000000000"], buttonLabel: "Contact Us", buttonHref: "/contact" } },
     ] },
     { slug: "products", title: "Products", isSystem: true, order: 2, sections: [

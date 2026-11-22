@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Standard SaaS — Websites for Home-Service Businesses",
+  title: "SitePixl — Websites for Home-Service Businesses",
   description:
     "A complete website + admin platform for home-service businesses. Launch your site, customize your theme, and manage leads and appointments.",
 };

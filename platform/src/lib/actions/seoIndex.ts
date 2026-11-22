@@ -31,7 +31,13 @@ export async function submitToIndexNow(_prev: IndexState, _formData: FormData): 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ host: hostname, key, keyLocation: `${baseUrl}/api/indexnow-key`, urlList }),
     });
-    if (res.ok || res.status === 202) return { ok: true, message: `🚀 Submitted ${urlList.length} page(s) to search engines. Bing & partners index within hours; Google via your sitemap.` };
+    if (res.ok || res.status === 202) {
+      const row = await db.siteConfig.findUnique({ where: { tenantId }, select: { seo: true } });
+      let seo: Record<string, unknown> = {};
+      try { seo = JSON.parse(row?.seo || "{}"); } catch { /* start fresh */ }
+      await db.siteConfig.update({ where: { tenantId }, data: { seo: JSON.stringify({ ...seo, indexNowAt: new Date().toISOString() }) } });
+      return { ok: true, message: `🚀 Submitted ${urlList.length} page(s) to search engines. Bing & partners index within hours; Google via your sitemap.` };
+    }
     return { ok: false, message: `Search engines responded ${res.status}. Make sure your domain is live and the key file is reachable.` };
   } catch {
     return { ok: false, message: "Couldn't reach the indexing service right now. Please try again shortly." };

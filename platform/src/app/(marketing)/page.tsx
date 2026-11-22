@@ -1,29 +1,79 @@
-import Link from "next/link";
 import {
-  Palette, LayoutDashboard, Inbox, Globe, Rocket, Wrench, ArrowRight, Star, ShieldCheck,
-  FileStack, Sparkles, Clock, Headphones, Wand2,
+  ArrowRight, Palette, Star, ShieldCheck, Sparkles, Clock, Headphones, Wand2, MessageCircle, Phone, Mail,
+  CalendarCheck, LayoutGrid, Building2, CreditCard, BarChart3, MousePointerClick, Rocket, BellRing,
+  Zap, LayoutDashboard, Search, Lock, Receipt,
 } from "lucide-react";
 import { VERTICALS, verticalsByCategory } from "@/lib/verticals";
 import { DESIGNS } from "@/lib/designs";
-import { SectorExplorer } from "@/components/marketing/SectorExplorer";
-import { DURATIONS, priceFor, formatINR, resolveTiers } from "@/lib/plans";
+import { IndustryGrid } from "@/components/marketing/HomeSections";
+import { priceFor, formatINR, resolveTiers, resolveDurations } from "@/lib/plans";
 import { getPlatformConfig } from "@/lib/platformConfig";
 import { stockImg } from "@/lib/img";
 import { DemoForm } from "@/components/marketing/DemoForm";
-import { VerticalIcon } from "@/components/marketing/VerticalIcon";
 import { PricingSection } from "@/components/marketing/PricingSection";
 import { MarketingHero } from "@/components/marketing/MarketingHero";
 import { MarketingSection } from "@/components/marketing/MarketingSection";
 import { SectionHeader } from "@/components/marketing/SectionHeader";
 import { mkt } from "@/lib/marketingTheme";
+import { getTemplate } from "@/lib/templates";
+import type { HeroShowcase } from "@/components/marketing/MarketingHero";
+import { sectorPreview } from "@/lib/sectorPreview";
+import { DEMO_PHOTOS } from "@/lib/demoPhotoLibrary";
 
 const liveVerticals = VERTICALS.filter((v) => v.status === "live");
+
+// Hero mad-lib: "I run a <word> in <city>." → preview of <vertical> in <design>.
+const SHOWCASE: { word: string; article: "a" | "an"; city: string; brand: string; vertical: string; design: string; img: string }[] = [
+  { word: "gym", article: "a", city: "Jaipur", brand: "Fitness", vertical: "gym-fitness", design: "bold", img: "gym fitness training" },
+  { word: "school", article: "a", city: "Indore", brand: "Public School", vertical: "school", design: "classic", img: "school campus students" },
+  { word: "clinic", article: "a", city: "Mumbai", brand: "Care Clinic", vertical: "hospital-clinic", design: "modern", img: "doctor clinic" },
+  { word: "restaurant", article: "a", city: "Delhi", brand: "Kitchen", vertical: "restaurant-hotel", design: "elegant", img: "restaurant fine dining" },
+  { word: "salon", article: "a", city: "Bengaluru", brand: "Salon & Spa", vertical: "salon-spa", design: "elegant", img: "salon beauty" },
+  { word: "coaching institute", article: "a", city: "Kota", brand: "Academy", vertical: "coaching", design: "modern", img: "students classroom coaching" },
+  { word: "café", article: "a", city: "Goa", brand: "Café & Bakery", vertical: "cafe-bakery", design: "minimal", img: "cafe bakery coffee" },
+  { word: "dental clinic", article: "a", city: "Chennai", brand: "Smiles", vertical: "dental-clinic", design: "modern", img: "dental dentist" },
+  { word: "NGO", article: "an", city: "Pune", brand: "Foundation", vertical: "ngo-charity", design: "minimal", img: "charity children volunteers" },
+  { word: "wedding business", article: "a", city: "Udaipur", brand: "Weddings", vertical: "wedding-planner", design: "elegant", img: "wedding" },
+];
+function buildShowcase(): HeroShowcase[] {
+  return SHOWCASE.flatMap(({ word, article, city, brand, vertical, design: designId, img }) => {
+    const v = VERTICALS.find((x) => x.id === vertical);
+    const d = DESIGNS.find((x) => x.id === designId);
+    if (!v || !d) return [];
+    const design = {
+      id: d.id, name: d.name, blurb: d.blurb, tagline: d.tagline, font: d.font, header: d.header,
+      hero: d.hero ?? null, colors: d.palette(getTemplate(v.id).theme.colors),
+    };
+    const sector = {
+      id: v.id, name: v.name, tagline: v.tagline, icon: v.icon, status: v.status, category: "",
+      accent: v.accent, ...sectorPreview(v.id), description: v.description, designs: [design],
+      image: sectorPreview(v.id).photos[0] ?? stockImg(img, 1280, 720),
+    };
+    return [{ word, article, city, brand, sector, design }];
+  });
+}
 
 const STATS = [
   { v: `${liveVerticals.length}+`, l: "industries ready" },
   { v: `${DESIGNS.length}`, l: "design styles each" },
   { v: "5 min", l: "to go live" },
 ];
+// Category cards use a hand-checked photo from a representative sector's demo library.
+const CATEGORY_REP: Record<string, string> = {
+  "Schools & Coaching": "school",
+  "Home & Local Services": "home-services",
+  "Food & Hospitality": "restaurant-hotel",
+  Healthcare: "hospital-clinic",
+  "Trade & Manufacturing": "manufacturing",
+  "Real Estate & Property": "real-estate-broker",
+  "Fitness & Wellness": "gym-fitness",
+  "Community & Non-profit": "ngo-charity",
+  "Events & Training": "events-training",
+};
+function categoryPhoto(category: string): string | null {
+  const id = DEMO_PHOTOS[CATEGORY_REP[category] ?? ""]?.[0]?.id;
+  return id ? `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=720&h=420&q=80` : null;
+}
 const CATEGORY_IMAGES: Record<string, string> = {
   "Schools & Coaching": stockImg("classroom students", 640, 360),
   "Home & Local Services": stockImg("homeservice electrician", 640, 360),
@@ -31,41 +81,31 @@ const CATEGORY_IMAGES: Record<string, string> = {
   Healthcare: stockImg("doctor hospital", 640, 360),
   "Trade & Manufacturing": stockImg("manufacturing warehouse", 640, 360),
 };
-// Grouped so the section reads as three clear jobs instead of nine identical boxes.
-const FEATURE_GROUPS = [
-  {
-    title: "Build your site",
-    text: "Launch a complete website without a designer.",
-    items: [
-      { icon: FileStack, title: "30+ ready sections", text: "Hero, services, gallery, pricing, forms and more." },
-      { icon: Palette, title: "5 design styles", text: "Plus your own logo, colours and fonts." },
-      { icon: Sparkles, title: "AI website builder", text: "Describe your business, get a full draft." },
-    ],
-  },
-  {
-    title: "Run your business",
-    text: "One admin panel for everything after launch.",
-    items: [
-      { icon: Inbox, title: "Leads & bookings inbox", text: "Every enquiry tracked with status." },
-      { icon: LayoutDashboard, title: "Full admin panel", text: "Pages, services, gallery, billing and team." },
-      { icon: Wrench, title: "Ready sector content", text: "Services and FAQs pre-written for you." },
-    ],
-  },
-  {
-    title: "Grow online",
-    text: "Get found on Google and look professional.",
-    items: [
-      { icon: Rocket, title: "SEO & marketing", text: "Meta tags, sitemap and instant indexing." },
-      { icon: Globe, title: "Your own domain", text: "Free subdomain, custom domain anytime." },
-      { icon: ShieldCheck, title: "Secure by default", text: "Isolated data — your leads stay yours." },
-    ],
-  },
+// Eight features, one short line each — every plan includes them.
+const FEATURES = [
+  { icon: LayoutGrid, title: `${liveVerticals.length}+ ready industries`, text: "Pages and content pre-written for your business." },
+  { icon: Palette, title: "5 design styles", text: "Change the whole look in one click." },
+  { icon: Sparkles, title: "AI website builder", text: "Describe it, then edit by chat." },
+  { icon: MessageCircle, title: "Leads on WhatsApp", text: "Every enquiry in your inbox and WhatsApp." },
+  { icon: Building2, title: "Sector tools", text: "Listings, causes, events, notices and results." },
+  { icon: CreditCard, title: "Donations & invoices", text: "Razorpay/UPI donations and GST invoices." },
+  { icon: BarChart3, title: "SEO & visitor stats", text: "Found on Google, with page-view stats." },
+  { icon: ShieldCheck, title: "Domain & security", text: "Free SSL, custom domain, private data." },
+];
+// Strip under the hero: what every plan includes.
+const INCLUDED = [
+  { icon: Zap, t: "Live in 5 min", d: "No coding needed" },
+  { icon: LayoutDashboard, t: "Admin panel", d: "Edit it yourself" },
+  { icon: MessageCircle, t: "WhatsApp leads", d: "Instant enquiries" },
+  { icon: Search, t: "Google SEO", d: "Built in" },
+  { icon: Lock, t: "Hosting & SSL", d: "Free & secure" },
+  { icon: Receipt, t: "GST invoice", d: "For every plan" },
 ];
 const STEPS = [
-  { t: "Pick sector & design", d: "Choose your industry, one of 5 styles and a plan." },
-  { t: "Make it yours", d: "Logo, colours, fonts and content from your admin — no code." },
-  { t: "Go live instantly", d: "Your site and admin panel are created the moment you pay." },
-  { t: "Get leads & bookings", d: "Enquiries and appointments land straight in your inbox." },
+  { icon: MousePointerClick, t: "Pick your industry", d: "Choose a sector, a design and a plan." },
+  { icon: Palette, t: "Make it yours", d: "Logo, colours and content — no code." },
+  { icon: Rocket, t: "Go live instantly", d: "Site + admin panel ready on payment." },
+  { icon: BellRing, t: "Get leads", d: "Enquiries land in your inbox & WhatsApp." },
 ];
 const TESTIMONIALS = [
   { n: "Dr. Anita S.", r: "Clinic owner · Mumbai", t: "Patients now book appointments online and the admin panel is genuinely easy to use." },
@@ -77,11 +117,15 @@ const FAQS = [
   { q: "What are the 5 design styles?", a: "Every sector template comes in Original, Modern, Bold, Elegant and Minimal. Each changes the colours, fonts, header, footer and layout. Preview all five on the live demos page and pick one at checkout." },
   { q: "Can I try it before I pay?", a: "Yes — every sector has a live demo with the full website and admin panel. Verify once with OTP and switch between sectors freely." },
   { q: "How fast does my website go live?", a: "Instantly. The moment your payment succeeds, your complete website and admin panel are created automatically." },
-  { q: "Can I use my own domain?", a: "Yes. You start on a free subdomain and can connect your own custom domain anytime on the Premium plan." },
+  { q: "Can I use my own domain?", a: "Yes. You start on a free subdomain and can connect your own custom domain anytime on the Professional or Premium plan." },
   { q: "How do leads and appointments work?", a: "Every quote, contact and booking form on your site saves directly to your admin panel, where you can track status, call the customer and mark it done." },
   { q: "What does the AI builder do?", a: "Describe your business in plain words and it plans the pages and writes the content. You see a live preview, refine it by chatting, and can buy that exact site." },
   { q: "What if I want to cancel or get a refund?", a: "You can cancel anytime — a time-based plan simply won't renew. We also offer a 7-day refund window on your first purchase (see Terms)." },
 ];
+
+function Eyebrow({ children }: { children: string }) {
+  return <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--mkt-accent-text)]">{children}</span>;
+}
 
 function Stars() {
   return (
@@ -96,7 +140,7 @@ function Stars() {
 function Initials({ name, big }: { name: string; big?: boolean }) {
   const initials = name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2);
   return (
-    <span className={`${big ? "h-12 w-12 text-base" : "h-10 w-10 text-sm"} flex shrink-0 items-center justify-center rounded-full bg-[var(--mkt-ink)] font-bold text-white`}>
+    <span className={`${big ? "h-12 w-12 text-base" : "h-10 w-10 text-sm"} flex shrink-0 items-center justify-center rounded-full mkt-brand-grad font-bold`}>
       {initials}
     </span>
   );
@@ -105,31 +149,29 @@ function Initials({ name, big }: { name: string; big?: boolean }) {
 export default async function Landing() {
   const cfg = await getPlatformConfig();
   const tiers = resolveTiers(cfg.planOverrides);
-  const startPrice = formatINR(Math.min(...tiers.map((t) => priceFor(t, DURATIONS[0]))));
+  const durations = resolveDurations(cfg.planOverrides);
+  const startPrice = formatINR(Math.min(...tiers.map((t) => priceFor(t, durations[0]))));
 
 
   return (
     <main>
-      <MarketingHero startPrice={startPrice} />
+      <MarketingHero startPrice={startPrice} showcase={buildShowcase()} />
 
-      {/* Industry strip — quiet, logo-cloud style */}
-      <div className="border-y border-[var(--mkt-border)] bg-[var(--mkt-surface)]/60 py-6 overflow-hidden" aria-label="Industries with ready templates">
-        <div className="mkt-marquee-mask">
-          <div className="mkt-marquee flex w-max items-center gap-10">
-            {[...liveVerticals, ...liveVerticals].map((v, i) => (
-              <Link
-                key={`${v.id}-${i}`}
-                href={`/demos?vertical=${v.id}`}
-                tabIndex={i >= liveVerticals.length ? -1 : undefined}
-                aria-hidden={i >= liveVerticals.length ? true : undefined}
-                className="group inline-flex shrink-0 items-center gap-2 text-[15px] font-semibold text-[var(--mkt-text-muted)] transition-colors hover:text-[var(--mkt-text)]"
-              >
-                <VerticalIcon name={v.icon} className="h-4 w-4 opacity-70 transition group-hover:opacity-100 group-hover:text-[var(--mkt-accent)]" />
-                {v.name.replace(/\s*\(.*$/, "").split(" / ")[0]}
-              </Link>
-            ))}
-          </div>
-        </div>
+      {/* Included-in-every-plan card, floating over the hero's bottom edge */}
+      <div className={`${mkt.container} relative z-10 -mt-6 sm:-mt-8`}>
+        <ul className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-border)] shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)] sm:grid-cols-3 lg:grid-cols-6">
+          {INCLUDED.map((x) => (
+            <li key={x.t} className="group flex items-center gap-2.5 bg-[var(--mkt-surface)] px-3.5 py-3.5 transition-colors hover:bg-[var(--mkt-surface-muted)]">
+              <span className="mkt-brand-grad flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-md shadow-[var(--mkt-brand)]/20 transition-transform duration-300 group-hover:scale-105">
+                <x.icon className="h-4 w-4" strokeWidth={2.2} />
+              </span>
+              <span className="min-w-0 leading-tight">
+                <span className="block text-[13px] font-semibold text-[var(--mkt-text)]">{x.t}</span>
+                <span className={`mt-0.5 block text-[11.5px] ${mkt.muted}`}>{x.d}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* Sectors */}
@@ -138,6 +180,7 @@ export default async function Landing() {
           <SectionHeader
             align="left"
             className="!mb-0"
+            eyebrow={<Eyebrow>Industries</Eyebrow>}
             title="A ready website for your industry"
             description="Pick a category, open a sector and try its live demo — or start with it right away."
           />
@@ -152,20 +195,11 @@ export default async function Landing() {
           </dl>
         </div>
 
-        <SectorExplorer
+        <IndustryGrid
           categories={verticalsByCategory().map((g) => ({
             name: g.category,
-            image: CATEGORY_IMAGES[g.category] ?? stockImg(`${g.category} business`, 640, 360),
-            count: g.items.length,
-            sectors: g.items.map((v) => ({
-              id: v.id,
-              name: v.name,
-              tagline: v.tagline,
-              icon: v.icon,
-              status: v.status,
-              image: stockImg(v.name, 640, 360),
-              description: v.description,
-            })),
+            image: categoryPhoto(g.category) ?? CATEGORY_IMAGES[g.category] ?? stockImg(`${g.category} business`, 640, 360),
+            sectors: g.items.map((v) => ({ id: v.id, name: v.name, icon: v.icon })),
           }))}
         />
       </MarketingSection>
@@ -173,45 +207,40 @@ export default async function Landing() {
       {/* Features */}
       <MarketingSection id="features" variant="alt">
         <SectionHeader
+          eyebrow={<Eyebrow>Platform</Eyebrow>}
           title="More than just a website"
-          description="Every plan includes the tools to build your site, run your business and grow online."
+          description="Everything a local business needs to get online, win enquiries and get paid."
         />
-        <div className="grid gap-5 lg:grid-cols-3">
-          {FEATURE_GROUPS.map((g, gi) => (
-            <div key={g.title} className={`flex flex-col p-6 sm:p-7 ${mkt.card} ${mkt.cardHover}`}>
-              <span className="text-xs font-bold text-[var(--mkt-accent-text)]">0{gi + 1}</span>
-              <h3 className="mt-2 text-lg font-bold text-[var(--mkt-text)]">{g.title}</h3>
-              <p className={`mt-1 text-sm ${mkt.muted}`}>{g.text}</p>
-              <ul className="mt-6 space-y-5 border-t border-[var(--mkt-border)] pt-6">
-                {g.items.map((f) => (
-                  <li key={f.title} className="flex gap-3.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--mkt-accent-soft)]">
-                      <f.icon className="h-[18px] w-[18px] text-[var(--mkt-accent-text)]" strokeWidth={2.25} />
-                    </span>
-                    <span>
-                      <span className="block text-[15px] font-semibold text-[var(--mkt-text)]">{f.title}</span>
-                      <span className={`mt-0.5 block text-sm leading-relaxed ${mkt.muted}`}>{f.text}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+        {/* Simple feature grid: 2 rows × 4, hairline dividers, no boxes */}
+        <ul className="grid overflow-hidden rounded-3xl border border-[var(--mkt-border)] bg-[var(--mkt-border)] [gap:1px] sm:grid-cols-2 lg:grid-cols-4">
+          {FEATURES.map((f) => (
+            <li key={f.title} className="group bg-[var(--mkt-surface)] p-6 transition-colors hover:bg-[var(--mkt-surface-muted)]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--mkt-accent-soft)] text-[var(--mkt-brand)] transition-transform duration-300 group-hover:-translate-y-0.5">
+                <f.icon className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <h3 className="mt-4 text-[15px] font-semibold text-[var(--mkt-text)]">{f.title}</h3>
+              <p className={`mt-1 text-[13px] leading-relaxed ${mkt.muted}`}>{f.text}</p>
+            </li>
           ))}
-        </div>
+        </ul>
       </MarketingSection>
 
       {/* How it works */}
       <MarketingSection id="how" variant="default">
-        <SectionHeader title="Live in four simple steps" description="From choosing a sector to your first enquiry — no code, no waiting." />
-        <ol className="relative grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <span className="pointer-events-none absolute left-[12%] right-[12%] top-9 hidden h-px bg-gradient-to-r from-transparent via-[var(--mkt-accent)]/35 to-transparent lg:block" aria-hidden />
+        <SectionHeader eyebrow={<Eyebrow>How it works</Eyebrow>} title="Live in four simple steps" />
+        <ol className="relative mt-2 grid gap-8 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+          {/* dashed connector through the icon centres */}
+          <span className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-7 hidden border-t-2 border-dashed border-[var(--mkt-border-strong)] lg:block" aria-hidden />
           {STEPS.map((s, i) => (
-            <li key={s.t} className={`relative overflow-hidden p-6 sm:p-7 ${mkt.card} ${mkt.cardHover}`}>
-              <span className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--mkt-accent)] text-sm font-bold text-[var(--mkt-accent-on)] shadow-md shadow-[var(--mkt-accent)]/30">
-                {i + 1}
+            <li key={s.t} className="group relative flex flex-col items-center text-center">
+              <span className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl mkt-brand-grad shadow-lg shadow-[var(--mkt-brand)]/25 ring-8 ring-[var(--mkt-bg)] transition-transform duration-300 group-hover:-translate-y-1">
+                <s.icon className="h-6 w-6" strokeWidth={2} />
+                <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mkt-text)] text-[11px] font-bold text-[var(--mkt-bg)] ring-2 ring-[var(--mkt-bg)]">
+                  {i + 1}
+                </span>
               </span>
-              <h3 className="relative mt-5 text-lg font-semibold text-[var(--mkt-text)]">{s.t}</h3>
-              <p className={`relative mt-2 text-sm leading-relaxed ${mkt.muted}`}>{s.d}</p>
+              <h3 className="mt-4 text-[15px] font-semibold text-[var(--mkt-text)]">{s.t}</h3>
+              <p className={`mt-1 max-w-[17rem] text-[13px] leading-relaxed ${mkt.muted}`}>{s.d}</p>
             </li>
           ))}
         </ol>
@@ -219,7 +248,7 @@ export default async function Landing() {
 
       {/* Testimonials */}
       <MarketingSection variant="alt">
-        <SectionHeader title="Loved by business owners" description="Clinics, schools, gyms and service businesses run their websites on StandardSaaS." />
+        <SectionHeader eyebrow={<Eyebrow>Customers</Eyebrow>} title="Loved by business owners" description="Clinics, schools, gyms and service businesses run their websites on SitePixl." />
         <div className="grid gap-5 md:grid-cols-3">
           {TESTIMONIALS.map((t) => (
             <figure key={t.n} className={`flex flex-col p-6 sm:p-7 ${mkt.card}`}>
@@ -237,7 +266,7 @@ export default async function Landing() {
         </div>
       </MarketingSection>
 
-      <PricingSection tiers={tiers} />
+      <PricingSection tiers={tiers} durations={durations} />
 
       {/* FAQ */}
       <MarketingSection id="faq" variant="alt" container="narrow">
@@ -270,20 +299,28 @@ export default async function Landing() {
       {/* Talk to us — guided demo request */}
       <MarketingSection id="contact" variant="default">
         <div className="grid items-start gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
-          <div className="lg:pt-4">
-            <h2 className={mkt.h2}>Prefer a guided walkthrough?</h2>
-            <p className={`mt-4 text-[15px] leading-relaxed ${mkt.muted}`}>
+          <div className="lg:pt-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1 text-xs font-semibold text-[var(--mkt-text-secondary)] shadow-sm">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Free · No obligation
+            </span>
+            <h2 className={`mt-4 ${mkt.h2}`}>
+              Prefer a <span className="mkt-gradient-text">guided walkthrough?</span>
+            </h2>
+            <p className={`mt-4 max-w-md text-[15px] leading-relaxed ${mkt.muted}`}>
               Tell us about your business and we&apos;ll show you the right sector, design and plan — and help you get set up.
             </p>
-            <ul className="mt-8 space-y-5">
+            <ul className="mt-8 space-y-3">
               {[
                 { icon: Clock, t: "Reply within 24 hours", d: "On call, WhatsApp or email — your choice." },
                 { icon: Wand2, t: "Right design for your brand", d: "We help you pick the style that fits." },
                 { icon: Headphones, t: "Hands-on setup help", d: "Content, domain and go-live, guided." },
               ].map(({ icon: Icon, t, d }) => (
-                <li key={t} className="flex gap-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--mkt-accent-soft)]">
-                    <Icon className="h-5 w-5 text-[var(--mkt-accent-text)]" />
+                <li
+                  key={t}
+                  className="flex items-center gap-4 rounded-2xl border border-[var(--mkt-border)] bg-[var(--mkt-surface)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[var(--mkt-brand)]/40 hover:shadow-md"
+                >
+                  <span className="mkt-brand-grad flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-md">
+                    <Icon className="h-5 w-5" />
                   </span>
                   <span>
                     <span className="block font-semibold text-[var(--mkt-text)]">{t}</span>
@@ -292,32 +329,56 @@ export default async function Landing() {
                 </li>
               ))}
             </ul>
+            {(cfg.supportPhone || cfg.supportEmail) && (
+              <div className="mt-6">
+                <p className={`text-xs font-semibold uppercase tracking-wider ${mkt.muted}`}>Or reach us directly</p>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {cfg.supportPhone && (
+                    <a
+                      href={`https://wa.me/${cfg.supportPhone.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full bg-[#25d366] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105"
+                    >
+                      <MessageCircle className="h-4 w-4" /> WhatsApp
+                    </a>
+                  )}
+                  {cfg.supportPhone && (
+                    <a href={`tel:${cfg.supportPhone.replace(/\s+/g, "")}`} className={`${mkt.btnPill} px-4 py-2 text-sm`}>
+                      <Phone className="h-4 w-4" /> {cfg.supportPhone}
+                    </a>
+                  )}
+                  {cfg.supportEmail && (
+                    <a href={`mailto:${cfg.supportEmail}`} className={`${mkt.btnPill} px-4 py-2 text-sm`}>
+                      <Mail className="h-4 w-4" /> Email us
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          <div className={`${mkt.card} p-6 sm:p-8 shadow-2xl`}>
-            <h3 className="text-lg font-bold text-[var(--mkt-text)]">Request a guided demo</h3>
-            <p className={`mt-1 mb-6 text-sm ${mkt.muted}`}>Takes 30 seconds. No payment needed.</p>
-            <DemoForm sectors={liveVerticals.map((v) => ({ id: v.id, name: v.name }))} />
+
+          <div className="relative">
+            <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-br from-[var(--mkt-brand)]/15 via-transparent to-[#7c3aed]/15 blur-2xl" aria-hidden />
+            <div className={`${mkt.card} relative overflow-hidden p-6 shadow-2xl sm:p-8`}>
+              <span className="mkt-brand-grad absolute inset-x-0 top-0 h-1" aria-hidden />
+              <div className="mb-6 flex items-start gap-3.5">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--mkt-accent-soft)] text-[var(--mkt-brand)] ring-1 ring-[var(--mkt-border)]">
+                  <CalendarCheck className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-bold text-[var(--mkt-text)]">Request a guided demo</h3>
+                  <p className={`mt-0.5 text-sm ${mkt.muted}`}>Takes 30 seconds. No payment needed.</p>
+                </div>
+                <span className="hidden shrink-0 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-700 sm:inline dark:text-emerald-400">
+                  FREE
+                </span>
+              </div>
+              <DemoForm sectors={liveVerticals.map((v) => ({ id: v.id, name: v.name }))} />
+            </div>
           </div>
         </div>
       </MarketingSection>
-
-      <section className="relative overflow-hidden bg-[var(--mkt-ink)] text-white">
-        <div className={`relative ${mkt.container} flex flex-col items-start gap-6 py-16 sm:py-20 lg:flex-row lg:items-center lg:justify-between`}>
-          <div className="max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--mkt-accent-2)]">Ready when you are</p>
-            <h2 className="font-display mt-3 text-3xl sm:text-4xl">Your industry already has a site. Launch yours today.</h2>
-            <p className="mt-3 text-sm leading-relaxed text-white/65 sm:text-base">Pick a ready template, or describe the business and let AI draft every page.</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/subscribe" className={`${mkt.btnPrimary} ${mkt.btnPrimaryLg} bg-[var(--mkt-accent-on)] text-[var(--mkt-ink)] hover:bg-white`}>
-              Get started <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/ai-builder" className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10">
-              <Wand2 className="h-4 w-4" /> Build with AI
-            </Link>
-          </div>
-        </div>
-      </section>
 
     </main>
   );

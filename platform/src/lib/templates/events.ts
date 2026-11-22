@@ -5,7 +5,7 @@ import type { TemplateDef } from "./types";
 export const events: TemplateDef = {
   theme: {
     colors: { primary: "#6d28d9", primaryDark: "#5b21b6", secondary: "#1e1b4b", accent: "#fb7185", dark: "#140f2e", light: "#f5f3ff", text: "#3f3d56", heading: "#1e1b4b" },
-    font: "Plus Jakarta Sans", radius: "1rem",
+    font: "Plus Jakarta Sans", radius: "0.75rem",
   },
   header: (biz) => ({
     design: "bold",
@@ -64,10 +64,17 @@ export const events: TemplateDef = {
           primaryBtn: { label: "Register Now", href: "/register" }, secondaryBtn: { label: "Browse Events", href: "/events" },
           features: [ { icon: "calendar", title: "Weekly Live Events", text: "" }, { icon: "users", title: "Expert Speakers", text: "" }, { icon: "award", title: "Certificates", text: "" }, { icon: "handshake", title: "Networking", text: "" } ],
         } },
-        { type: "logos", content: { title: "Professionals from leading companies attend our events", items: ["TechCorp", "FinServe", "RetailOne", "BuildWell", "MediCare Plus", "EduNext"] } },
         { type: "countdown", style: { background: "dark" }, content: { eyebrow: "FLAGSHIP EVENT", title: "Growth Summit", titleHighlight: "2026", subtitle: "12 December · Your City Convention Centre · 20+ speakers, 8 sessions, 500+ attendees. Early-bird passes save 30%.", targetDate: "2026-12-12T09:30", buttonLabel: "Grab Your Pass", buttonHref: "/tickets" } },
-        { type: "serviceCategories", content: { eyebrow: "UPCOMING", title: "Upcoming", titleHighlight: "Events", categories: ["Webinars", "Seminars & Conferences", "Workshops"] } },
-        { type: "features", style: { background: "light" }, content: { items: [
+        { type: "logos", content: { title: "Professionals from 300+ companies attend our events", items: ["TechCorp", "FinServe", "RetailOne", "BuildWell", "MediCare Plus", "EduNext", "AgriGrow", "LogiMove"] } },
+        { type: "serviceCategories", style: { layout: "list" }, content: { eyebrow: "UPCOMING", title: "This Season's", titleHighlight: "Events", categories: ["Webinars", "Seminars & Conferences", "Workshops"] } },
+        { type: "stats", style: { layout: "band", background: "primary" }, content: { items: [ { value: "250+", label: "Events Hosted", icon: "calendar" }, { value: "40,000+", label: "Attendees", icon: "users" }, { value: "120+", label: "Expert Speakers", icon: "star" }, { value: "4.8/5", label: "Avg. Rating", icon: "thumbs-up" } ] } },
+        { type: "team", content: { eyebrow: "SPEAKERS", title: "Learn from", titleHighlight: "Top Speakers", members: [
+          { name: "Raghav Bhatia", role: "Founder & CEO, D2C startup", image: "", note: "Keynote · Scaling to ₹100 Cr" },
+          { name: "Sunita Menon", role: "Head of Marketing, consumer brand", image: "", note: "Digital Marketing" },
+          { name: "CA Abhishek Jain", role: "Chartered Accountant & Investor", image: "", note: "Personal Finance" },
+          { name: "Farah Khan Mirza", role: "Leadership & Speaking Coach", image: "", note: "Public Speaking" },
+        ] } },
+        { type: "features", style: { layout: "split", background: "light" }, content: { ...{ eyebrow: "WHY ATTEND", title: "Every Event,", titleHighlight: "Worth Your Time" }, items: [
           { icon: "users", title: "Industry Experts", text: "Speakers who practise what they teach — founders, CXOs and specialists." },
           { icon: "headset", title: "Live & Interactive", text: "Real-time Q&A, polls and breakout discussions, online or on-site." },
           { icon: "award", title: "Certificates", text: "Earn a verifiable participation certificate for every event." },
@@ -75,32 +82,34 @@ export const events: TemplateDef = {
           { icon: "handshake", title: "Networking", text: "Meet peers, mentors and potential partners at every event." },
           { icon: "tag", title: "Affordable Access", text: "Free webinars every month and early-bird pricing on all passes." },
         ] } },
-        { type: "team", content: { eyebrow: "SPEAKERS", title: "Learn from", titleHighlight: "Top Speakers", members: [
-          { name: "Speaker Name", role: "Founder & CEO, Growth Startup", image: "", note: "Keynote · Scaling to ₹100 Cr" },
-          { name: "Speaker Name", role: "Head of Marketing, Consumer Brand", image: "", note: "Digital Marketing" },
-          { name: "Speaker Name", role: "Chartered Accountant & Investor", image: "", note: "Personal Finance" },
-          { name: "Speaker Name", role: "Leadership Coach", image: "", note: "Public Speaking" },
+        { type: "steps", style: { layout: "timeline" }, content: { eyebrow: "SUMMIT DAY", title: "12 December at a", titleHighlight: "Glance", items: [
+          { title: "9:30 AM · Check-in & Breakfast", text: "Collect your badge and welcome kit", icon: "check" },
+          { title: "10:30 AM · Opening Keynote", text: "Scaling a business in the new India", icon: "star" },
+          { title: "11:30 AM · Founders' Panel", text: "Marketing, funding & talent in 2027", icon: "users" },
+          { title: "1:00 PM · Networking Lunch", text: "Speed-networking tables by industry", icon: "utensils" },
+          { title: "2:30 PM · Masterclass Tracks", text: "Growth, finance and AI — pick one", icon: "book-open" },
+          { title: "5:30 PM · Awards & High Tea", text: "Certificates and evening networking", icon: "award" },
         ] } },
-        { type: "steps", style: { background: "light" }, content: { eyebrow: "HOW IT WORKS", title: "Book Your Seat in", titleHighlight: "4 Easy Steps", items: [
-          { title: "Pick an Event", text: "Browse webinars, workshops and conferences", icon: "calendar" },
-          { title: "Choose Your Pass", text: "Free, Standard or VIP — whatever fits", icon: "tag" },
-          { title: "Register Online", text: "Reserve your seat or slot in a minute", icon: "edit" },
-          { title: "Attend & Grow", text: "Join live, get certified, stay connected", icon: "award" },
+        { type: "pricingPlans", style: { background: "light" }, content: { eyebrow: "PASSES", title: "Pick Your", titleHighlight: "Pass", plans: [
+          { name: "Free Webinar", price: "₹0", period: "per session", features: ["Live online access", "Q&A with the speaker", "Participation certificate", "Replay for 48 hours"], featured: false, buttonLabel: "Register Free", buttonHref: "/register" },
+          { name: "Standard Pass", price: "₹2,499", period: "per person", features: ["Full-day summit access", "All keynotes & panels", "Lunch & refreshments", "Recordings & slides", "Certificate"], featured: true, buttonLabel: "Book Standard", buttonHref: "/tickets" },
+          { name: "VIP / Corporate", price: "₹7,999", period: "per person", features: ["Front-row seating", "Speaker meet & greet", "Exclusive masterclass", "VIP networking dinner", "Group of 5+ gets 15% off"], featured: false, buttonLabel: "Book VIP", buttonHref: "/tickets" },
         ] } },
-        { type: "stats", content: { items: [ { value: "250+", label: "Events Hosted", icon: "calendar" }, { value: "40,000+", label: "Attendees", icon: "users" }, { value: "120+", label: "Expert Speakers", icon: "star" }, { value: "4.8/5", label: "Avg. Rating", icon: "thumbs-up" } ] } },
-        { type: "testimonials", style: { background: "light" }, content: { eyebrow: "ATTENDEE STORIES", title: "What Attendees", titleHighlight: "Say", items: [
+        { type: "testimonials", style: { layout: "dark", background: "dark" }, content: { eyebrow: "ATTENDEE STORIES", title: "What Attendees", titleHighlight: "Say", items: [
           { name: "Neha Kapoor", role: "Marketing Manager · Growth Summit", text: "Best-organised conference I've attended in years. Every session was practical and the networking alone was worth the pass.", rating: 5 },
           { name: "Vikram Iyer", role: "Founder · Startup Funding Seminar", text: "I left with three investor contacts and a much sharper pitch deck. The pitch clinic was fantastic.", rating: 5 },
           { name: "Ananya Rao", role: "L&D Head · Corporate Training", text: "We trained 60 managers with their leadership program. Custom content, great trainers and measurable results.", rating: 5 },
         ] } },
-        { type: "faq", content: { eyebrow: "FAQ", title: "Before You", titleHighlight: "Register", items: [
+        { type: "gallery", style: { layout: "strip" }, content: { eyebrow: "HIGHLIGHTS", title: "Moments From", titleHighlight: "Past Events" } },
+        { type: "faq", style: { layout: "split", background: "light" }, content: { ...{ intro: "Joining links, certificates, refunds and group bookings — all in one place." }, eyebrow: "FAQ", title: "Before You", titleHighlight: "Register", items: [
           { q: "How do I join an online webinar?", a: "After registering you'll receive a confirmation with the joining link on email and WhatsApp, plus a reminder 1 hour before the session." },
           { q: "Will I get a certificate?", a: "Yes. All attendees who join the live session receive a digital participation certificate. Workshops include a completion certificate." },
           { q: "Are recordings available?", a: "Standard and VIP pass holders get access to recordings and slides. Free webinar replays are available for a limited time." },
           { q: "Can I get a refund or transfer my pass?", a: "Passes can be transferred to a colleague at no cost. Refunds are available up to 7 days before paid events." },
           { q: "Do you offer group or corporate bookings?", a: "Yes — groups of 5+ get special pricing, and we design custom in-house training programs for companies." },
+          { q: "Is there parking and food at offline events?", a: "Yes. Venues have paid parking, and all full-day passes include breakfast, lunch and high tea with veg and Jain options." },
         ] } },
-        { type: "cta", content: { title: "Seats fill up fast", highlight: "Reserve Yours Today", phones: ["9000000000"], buttonLabel: "Register Now", buttonHref: "/register" } },
+        { type: "cta", style: { layout: "minimal" }, content: { title: "Seats fill up fast", highlight: "Reserve Yours Today", phones: ["9000000000"], buttonLabel: "Register Now", buttonHref: "/register" } },
       ],
     },
     { slug: "events", title: "Upcoming Events", isSystem: true, order: 1, sections: [
@@ -114,14 +123,19 @@ export const events: TemplateDef = {
     ] },
     { slug: "speakers", title: "Speakers", isSystem: true, order: 2, sections: [
       { type: "team", content: { eyebrow: "", title: "Our", titleHighlight: "Speakers & Trainers", members: [
-        { name: "Speaker Name", role: "Founder & CEO, Growth Startup", image: "", note: "Keynote · Growth Summit" },
-        { name: "Speaker Name", role: "Head of Marketing, Consumer Brand", image: "", note: "Digital Marketing" },
-        { name: "Speaker Name", role: "Chartered Accountant & Investor", image: "", note: "Personal Finance" },
-        { name: "Speaker Name", role: "Leadership Coach", image: "", note: "Public Speaking" },
-        { name: "Speaker Name", role: "Data Science Lead", image: "", note: "Analytics & AI" },
-        { name: "Speaker Name", role: "Angel Investor", image: "", note: "Startup Funding" },
-        { name: "Speaker Name", role: "CHRO, IT Services", image: "", note: "HR & Culture" },
-        { name: "Speaker Name", role: "Sales Director", image: "", note: "Negotiation" },
+        { name: "Raghav Bhatia", role: "Founder & CEO, Growth Startup", image: "", note: "Keynote · Growth Summit" },
+        { name: "Sunita Menon", role: "Head of Marketing, Consumer Brand", image: "", note: "Digital Marketing" },
+        { name: "CA Abhishek Jain", role: "Chartered Accountant & Investor", image: "", note: "Personal Finance" },
+        { name: "Farah Khan Mirza", role: "Leadership Coach", image: "", note: "Public Speaking" },
+        { name: "Dr. Kiran Rao", role: "Data Science Lead", image: "", note: "Analytics & AI" },
+        { name: "Manish Agarwal", role: "Angel Investor", image: "", note: "Startup Funding" },
+        { name: "Lavanya Krishnan", role: "CHRO, IT Services", image: "", note: "HR & Culture" },
+        { name: "Gurpreet Sandhu", role: "Sales Director", image: "", note: "Negotiation" },
+      ] } },
+      { type: "faq", style: { layout: "split", background: "light" }, content: { ...{ intro: "Have a talk that changes how people work? Here's how speaking with us works." }, eyebrow: "FOR SPEAKERS", title: "Speaking", titleHighlight: "With Us", items: [
+        { q: "How are speakers selected?", a: "We look for practitioners with real results and a clear, practical talk. Share a 2-minute video and your topic outline." },
+        { q: "Are speakers paid?", a: "Keynote and workshop speakers receive an honorarium plus travel; webinar speakers get promotion, recordings and leads." },
+        { q: "Can I run a paid workshop on your platform?", a: "Yes. We handle marketing, ticketing and hosting on a revenue-share basis." },
       ] } },
       { type: "cta", content: { title: "Want to speak at our events?", highlight: "Apply as a Speaker", phones: ["9000000000"], buttonLabel: "Get in Touch", buttonHref: "/contact" } },
     ] },
@@ -173,12 +187,21 @@ export const events: TemplateDef = {
     ] },
     { slug: "past-events", title: "Past Events", isSystem: true, order: 7, sections: [
       { type: "gallery", content: { eyebrow: "HIGHLIGHTS", title: "Past", titleHighlight: "Events" } },
-      { type: "video", style: { background: "light" }, content: { eyebrow: "WATCH", title: "Growth Summit 2025", titleHighlight: "Recap", url: "", caption: "500+ attendees, 20 speakers and one unforgettable day." } },
+      { type: "testimonials", style: { background: "light" }, content: { eyebrow: "GROWTH SUMMIT 2025", title: "What Attendees", titleHighlight: "Said", items: [
+        { name: "Ananya Rao", role: "Founder, D2C brand", text: "Twenty speakers, zero fluff. I left with three partnerships and a full notebook.", rating: 5 },
+        { name: "Vikram Shah", role: "Head of Sales", text: "Smooth check-in, great networking lounges and sessions that started on time.", rating: 5 },
+        { name: "Priya Menon", role: "Marketing Manager", text: "The workshops alone were worth the pass. Already registered for the next edition.", rating: 5 },
+      ] } },
       { type: "stats", content: { items: [ { value: "250+", label: "Events Hosted", icon: "calendar" }, { value: "40,000+", label: "Attendees", icon: "users" }, { value: "60+", label: "Corporate Clients", icon: "handshake" }, { value: "4.8/5", label: "Avg. Rating", icon: "star" } ] } },
       { type: "cta", content: { title: "Be part of the next one", highlight: "See Upcoming Events", phones: ["9000000000"], buttonLabel: "Upcoming Events", buttonHref: "/events" } },
     ] },
     { slug: "about", title: "About Us", isSystem: true, order: 8, sections: [
       { type: "about", content: { eyebrow: "ABOUT US", title: "Events That", titleHighlight: "Create Impact", body: [`${biz} curates learning experiences for ambitious professionals and teams — free webinars, focused workshops and flagship conferences.`, "We work with practitioners, not just presenters, so every session leaves you with ideas you can use the very next day."], image: "", points: ["250+ events delivered", "Online, offline & hybrid", "Expert speaker network", "End-to-end event management"], buttonLabel: "Upcoming Events", buttonHref: "/events" } },
+      { type: "stats", style: { layout: "cards", background: "light" }, content: { items: [ { value: "8 yrs", label: "Running Events", icon: "calendar" }, { value: "60+", label: "Corporate Clients", icon: "handshake" }, { value: "14", label: "Cities Covered", icon: "map-pin" }, { value: "92%", label: "Would Recommend", icon: "thumbs-up" } ] } },
+      { type: "testimonials", style: { layout: "minimal" }, content: { eyebrow: "PARTNERS", title: "Why Teams", titleHighlight: "Work With Us", items: [
+        { name: "Rahul Desai", role: "Co-founder, SaaS startup", text: "We co-hosted a founders' meetup with them — 300 sign-ups, zero chaos, and a guest list that actually showed up.", rating: 5 },
+        { name: "Priyanka Ghosh", role: "HR Business Partner", text: "Our POSH and first-time-manager programs were delivered across three cities without a single hiccup.", rating: 5 },
+      ] } },
       { type: "cta", content: { title: "Join our next event", highlight: "Register Now", phones: ["9000000000"], buttonLabel: "Register Now", buttonHref: "/register" } },
     ] },
     { slug: "contact", title: "Contact", isSystem: true, order: 9, sections: [

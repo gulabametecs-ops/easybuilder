@@ -45,9 +45,13 @@ export default async function SettingsPage() {
       where: { tenantId: tenant.id },
       orderBy: { createdAt: "desc" },
       take: 20,
-      select: { id: true, name: true, amount: true, status: true, createdAt: true },
+      select: { id: true, name: true, amount: true, status: true, causeId: true, createdAt: true },
     }),
   ]);
+  const causeIds = [...new Set(donations.map((d) => d.causeId).filter(Boolean))];
+  const causeTitles = new Map(
+    causeIds.length ? (await db.cause.findMany({ where: { tenantId: tenant.id, id: { in: causeIds } }, select: { id: true, title: true } })).map((c) => [c.id, c.title]) : [],
+  );
   const limit = serviceLimitForPlan(tenant.plan, cfg.planOverrides);
   const expiry = tenant.subscriptionEndsAt
     ? new Date(tenant.subscriptionEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
@@ -87,6 +91,7 @@ export default async function SettingsPage() {
           name: d.name,
           amount: d.amount,
           status: d.status,
+          cause: causeTitles.get(d.causeId) ?? "",
           createdAt: d.createdAt.toISOString(),
         }))}
         leads={leads.map((l) => ({

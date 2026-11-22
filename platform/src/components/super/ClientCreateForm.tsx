@@ -52,7 +52,7 @@ export function ClientCreateForm() {
             <option value="6">6 Months</option>
             <option value="12">1 Year</option>
             <option value="24">2 Years</option>
-            <option value="lifetime">Lifetime</option>
+            <option value="36">3 Years</option>
           </select>
         </label>
       </div>

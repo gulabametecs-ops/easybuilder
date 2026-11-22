@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import type { DemoDesign, DemoSector } from "./DemosExplorer";
 
 const COPY: Record<string, { nav: string[]; cta: string; hero: string; sub: string; cards: string[] }> = {
@@ -116,15 +119,15 @@ const COPY: Record<string, { nav: string[]; cta: string; hero: string; sub: stri
 };
 
 function copyFor(sector: DemoSector) {
-  return (
-    COPY[sector.id] ?? {
-      nav: ["About", "Services", "Gallery", "Contact"],
-      cta: "Get in touch",
-      hero: sector.name,
-      sub: sector.tagline,
-      cards: ["Quality work", "Fair prices", "Easy booking"],
-    }
-  );
+  const base = COPY[sector.id] ?? {
+    nav: ["About", "Services", "Gallery", "Contact"],
+    cta: "Get in touch",
+    hero: sector.name,
+    sub: sector.tagline,
+    cards: ["Quality work", "Fair prices", "Easy booking"],
+  };
+  // Cards show the business's real first services when we know them.
+  return sector.services?.length === 3 ? { ...base, cards: sector.services } : base;
 }
 
 const DESKTOP_W = 1280;
@@ -134,18 +137,31 @@ const DESKTOP_H = 800;
 export function DemoConceptPreview({
   sector,
   design,
+  bare = false,
 }: {
   sector: DemoSector;
   design: DemoDesign;
+  /** Hide the "Desktop preview · X look" caption. */
+  bare?: boolean;
 }) {
   const c = design.colors;
   const copy = copyFor(sector);
+  // Scale the 1280px mock to the frame width. (CSS scale() can't take cqw: length ÷ number isn't a number.)
+  const box = useRef<HTMLDivElement>(null);
+  const [k, setK] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setK(e.contentRect.width / DESKTOP_W));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const darkHeader = design.header === "bold";
   const centered = design.header === "centered";
   const minimal = design.header === "minimal";
   const modern = design.header === "modern";
-  const heroDark = design.hero === "gradient" || !design.hero;
-  const ink = heroDark ? "#fff" : c.heading;
+  const heroCentered = centered || design.hero === "centered" || design.hero === "minimal";
+  const heroImg = sector.photos?.[0] || sector.image;
   const heroBg =
     design.hero === "gradient"
       ? `linear-gradient(135deg, ${c.dark} 0%, ${c.secondary} 55%, ${c.primary} 100%)`
@@ -161,16 +177,17 @@ export function DemoConceptPreview({
           containerType: "inline-size",
         }}
       >
-        <div className="relative w-full overflow-hidden rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.45)] ring-1 ring-white/20" style={{ height: `calc(${DESKTOP_H} / ${DESKTOP_W} * 100cqw)` }}>
+        <div ref={box} className="relative w-full overflow-hidden rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.45)] ring-1 ring-white/20" style={{ height: `calc(${DESKTOP_H} / ${DESKTOP_W} * 100cqw)` }}>
           <div
             className="absolute left-0 top-0 origin-top-left bg-white"
             style={{
               width: DESKTOP_W,
               height: DESKTOP_H,
-              transform: `scale(calc(100cqw / ${DESKTOP_W}))`,
+              transform: `scale(${k})`,
+              visibility: k ? "visible" : "hidden",
             }}
           >
-            <DesktopChrome host={`${sector.name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.yoursite.in`} />
+            <DesktopChrome host={`${sector.name.toLowerCase().replace(/[^a-z0-9]+/g, "")}.sitepixl.com`} />
 
             <header
               className="flex h-[72px] items-center justify-between gap-6 px-10"
@@ -196,55 +213,65 @@ export function DemoConceptPreview({
               )}
             </header>
 
-            <div className="relative" style={{ height: 520, background: heroBg }}>
+            <div className="relative overflow-hidden" style={{ height: 488, background: heroBg }}>
               {design.hero === "split" ? (
                 <div className="grid h-full grid-cols-2">
                   <HeroCopy copy={copy} ink={c.heading} cta={c.primary} />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sector.image} alt="" className="h-full w-full object-cover" />
+                  <img src={heroImg} alt="" className="h-full w-full object-cover" />
                 </div>
               ) : (
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sector.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={heroImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                  {/* premium scrim: a deep brand-tinted gradient keeps the photo vivid and the text crisp */}
                   <div
                     className="absolute inset-0"
                     style={{
-                      background: heroDark
-                        ? `linear-gradient(90deg, ${c.dark}ee 12%, ${c.dark}88 48%, transparent 78%)`
-                        : `linear-gradient(90deg, ${c.light}f2 8%, ${c.light}cc 42%, transparent 75%)`,
+                      background: heroCentered
+                        ? `linear-gradient(180deg, ${c.dark}55 0%, ${c.dark}99 55%, ${c.dark}d9 100%)`
+                        : `linear-gradient(90deg, ${c.dark}f0 0%, ${c.dark}b3 40%, ${c.dark}33 72%, transparent 100%)`,
                     }}
                   />
-                  <HeroCopy
-                    copy={copy}
-                    ink={ink}
-                    cta={c.primary}
-                    centered={centered || design.hero === "centered" || design.hero === "minimal"}
-                  />
+                  <HeroCopy copy={copy} ink="#fff" cta={c.primary} badge={sector.tagline} centered={heroCentered} />
                 </>
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-5 px-10 py-7" style={{ background: c.light, height: 172 }}>
-              {copy.cards.map((card, i) => (
-                <div
-                  key={card}
-                  className="flex items-center gap-4 rounded-2xl bg-white px-5 py-4 shadow-sm"
-                  style={{ boxShadow: "0 1px 2px rgba(15,23,42,0.06), 0 0 0 1px rgba(15,23,42,0.04)" }}
-                >
-                  <span className="h-10 w-10 shrink-0 rounded-xl" style={{ background: i === 1 ? c.accent : c.primary, opacity: 0.9 }} />
-                  <span className="text-[17px] font-semibold" style={{ color: c.heading }}>
-                    {card}
-                  </span>
-                </div>
-              ))}
+            <div className="grid grid-cols-3 gap-5 px-10 py-6" style={{ background: c.light, height: 204 }}>
+              {copy.cards.map((card, i) => {
+                const photo = sector.photos?.[i + 1];
+                return (
+                  <div
+                    key={card}
+                    className="flex overflow-hidden rounded-2xl bg-white"
+                    style={{ boxShadow: "0 1px 2px rgba(15,23,42,0.06), 0 0 0 1px rgba(15,23,42,0.05), 0 12px 28px -14px rgba(15,23,42,0.25)" }}
+                  >
+                    {photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={photo} alt="" className="h-full w-[42%] shrink-0 object-cover" />
+                    ) : (
+                      <span className="h-full w-[42%] shrink-0" style={{ background: `linear-gradient(135deg, ${i === 1 ? c.accent : c.primary}, ${c.dark})` }} />
+                    )}
+                    <div className="flex min-w-0 flex-col justify-center gap-2 px-5">
+                      <span className="h-1 w-8 rounded-full" style={{ background: i === 1 ? c.accent : c.primary }} />
+                      <span className="text-[18px] font-bold leading-snug" style={{ color: c.heading, fontFamily: "var(--font-mkt-display), inherit" }}>
+                        {card}
+                      </span>
+                      <span className="text-[13px] font-semibold" style={{ color: c.primary }}>
+                        View details →
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
-      <p className="mt-3 text-center text-[11px] font-medium tracking-wide text-white/45">
+      {!bare && <p className="mt-3 text-center text-[11px] font-medium tracking-wide text-[var(--mkt-text-muted)]">
         Desktop preview · {design.name} look
-      </p>
+      </p>}
     </div>
   );
 }
@@ -314,23 +341,34 @@ function HeroCopy({
   copy,
   ink,
   cta,
+  badge,
   centered,
 }: {
   copy: { hero: string; sub: string; cta: string };
   ink: string;
   cta: string;
+  badge?: string;
   centered?: boolean;
 }) {
   return (
-    <div className={`relative flex h-full max-w-[640px] flex-col justify-center gap-5 px-12 ${centered ? "mx-auto items-center text-center" : "items-start"}`}>
-      <p className="text-[40px] font-bold leading-[1.15] tracking-tight" style={{ color: ink }}>
+    <div className={`relative flex h-full max-w-[680px] flex-col justify-center gap-5 px-14 ${centered ? "mx-auto items-center text-center" : "items-start"}`}>
+      {badge && (
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur">
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: cta }} />
+          {badge}
+        </span>
+      )}
+      <p className="text-[46px] font-extrabold leading-[1.08] tracking-[-0.02em]" style={{ color: ink, fontFamily: "var(--font-mkt-display), inherit", textShadow: "0 2px 24px rgba(0,0,0,0.25)" }}>
         {copy.hero}
       </p>
-      <p className="max-w-[480px] text-[18px] leading-relaxed" style={{ color: ink, opacity: 0.82 }}>
+      <p className="max-w-[500px] text-[18px] leading-relaxed" style={{ color: ink, opacity: 0.85 }}>
         {copy.sub}
       </p>
-      <span className="mt-1 rounded-full px-6 py-2.5 text-[15px] font-semibold text-white" style={{ background: cta }}>
-        {copy.cta}
+      <span className="mt-1 flex gap-3">
+        <span className="rounded-full px-7 py-3 text-[15px] font-semibold text-white shadow-lg" style={{ background: cta, boxShadow: `0 10px 30px -10px ${cta}` }}>
+          {copy.cta}
+        </span>
+        <span className="rounded-full border border-white/40 px-7 py-3 text-[15px] font-semibold text-white backdrop-blur">Call now</span>
       </span>
     </div>
   );

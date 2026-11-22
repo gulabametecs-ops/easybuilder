@@ -63,6 +63,7 @@ export function ResultsManager({ exams, config, resultUrl }: { exams: Exam[]; co
     <div className={pending ? "opacity-70 pointer-events-none" : ""}>
       <AdminSplitShell
         title="Results"
+        subtitle="Upload exam marks — students check results by roll number."
         titleIcon={<ScrollText className="w-4 h-4 text-lime-600 shrink-0" />}
         countLabel={`${exams.length} exams`}
         previewSrc={`/result?__edit=1&_r=${tick}`}

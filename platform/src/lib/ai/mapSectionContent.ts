@@ -76,3 +76,68 @@ export function normalizeSectionContent(
 
   return out;
 }
+
+// ─── List sections: the model invents its own field names ("menu", "dishes", "cost"…).
+// Map them onto the real shapes so the site never falls back to "Item ₹0" placeholders.
+
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const rec = (v: unknown): Record<string, unknown> => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
+
+function toPrice(v: unknown): string {
+  if (typeof v === "number" && Number.isFinite(v)) return `₹${v.toLocaleString("en-IN")}`;
+  const t = str(v);
+  return /^\d[\d,]*(\.\d+)?$/.test(t) ? `₹${t}` : t;
+}
+
+function priceItem(v: unknown): { name: string; price: string; note: string } | null {
+  if (typeof v === "string") return v.trim() ? { name: v.trim(), price: "", note: "" } : null;
+  const o = rec(v);
+  const name = str(o.name ?? o.title ?? o.item ?? o.dish ?? o.label ?? o.product);
+  if (!name) return null;
+  return { name, price: toPrice(o.price ?? o.cost ?? o.amount ?? o.rate ?? o.fee), note: str(o.note ?? o.description ?? o.desc ?? o.details) };
+}
+
+const ITEM_KEYS = ["items", "list", "dishes", "products", "entries", "menuItems", "prices"] as const;
+const itemsOf = (o: Record<string, unknown>) => arr(ITEM_KEYS.map((k) => o[k]).find(Array.isArray));
+
+/** Coerce AI list-section content (priceList, faq) into the shapes the site renders. */
+export function coerceListContent(type: string, content?: Record<string, unknown>): Record<string, unknown> | undefined {
+  if (!content) return content;
+  const out: Record<string, unknown> = { ...content };
+  const heading = str(content.heading ?? content.headline);
+  if (heading && !str(content.title)) {
+    const split = splitHeading(heading);
+    out.title = split.top;
+    if (split.highlight && !str(content.titleHighlight)) out.titleHighlight = split.highlight;
+  }
+
+  if (type === "priceList") {
+    const rawGroups = arr(content.groups ?? content.categories ?? content.menu ?? content.sections);
+    let groups = rawGroups
+      .map((g) => {
+        const o = rec(g);
+        const items = itemsOf(o).map(priceItem).filter((i): i is NonNullable<typeof i> => !!i);
+        return { category: str(o.category ?? o.name ?? o.title ?? o.label) || "Menu", items };
+      })
+      .filter((g) => g.items.length);
+    if (!groups.length) {
+      const flat = itemsOf(content).map(priceItem).filter((i): i is NonNullable<typeof i> => !!i);
+      if (flat.length) groups = [{ category: str(content.category) || "Menu", items: flat }];
+    }
+    if (groups.length) out.groups = groups;
+    else delete out.groups;
+  }
+
+  if (type === "faq") {
+    const items = arr(content.items ?? content.faqs ?? content.questions)
+      .map((v) => {
+        const o = rec(v);
+        const q = str(o.q ?? o.question ?? o.title);
+        const a = str(o.a ?? o.answer ?? o.text);
+        return q && a ? { q, a } : null;
+      })
+      .filter(Boolean);
+    if (items.length) out.items = items;
+  }
+  return out;
+}

@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
-import { deletePage } from "@/lib/actions/content";
+import { deletePage, duplicatePage } from "@/lib/actions/content";
 
 export function DeletePageButton({ id }: { id: string }) {
   const [pending, start] = useTransition();
@@ -14,6 +14,22 @@ export function DeletePageButton({ id }: { id: string }) {
       title="Delete page"
     >
       <Trash2 className="w-4 h-4" />
+    </button>
+  );
+}
+
+// Duplicate; shows the plan-limit message instead of failing silently.
+export function DuplicatePageButton({ id, className, title, children }: { id: string; className: string; title?: string; children: ReactNode }) {
+  const [pending, start] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      title={title}
+      className={className}
+      onClick={() => start(async () => { const r = await duplicatePage(id); if (r?.error) alert(r.error); })}
+    >
+      {children}
     </button>
   );
 }

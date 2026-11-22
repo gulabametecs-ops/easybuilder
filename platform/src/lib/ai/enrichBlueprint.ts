@@ -1,5 +1,6 @@
 import type { WebsiteBlueprint } from "./blueprintSchema";
 import { canonicalPageSlug, completeHomePage } from "./completeHome";
+import { dedupePages } from "./dedupePages";
 
 type PageSeed = { name: string; slug: string; pageTemplateId: string };
 
@@ -208,7 +209,8 @@ function mergePages(existing: WebsiteBlueprint["pages"], seeds: PageSeed[]): Web
     merged.unshift(home);
   }
 
-  return merged.slice(0, 10);
+  // Seeds come after the AI's pages, so dedupe keeps the AI page over a synonym seed (e.g. "booking" vs "reservations").
+  return dedupePages(merged).slice(0, 10);
 }
 
 function mergeQuestions(existing: string[] | undefined, extra: string[]): string[] {
@@ -257,7 +259,6 @@ function groupThinServices(services: WebsiteBlueprint["services"]): WebsiteBluep
 
 export function enrichBlueprint(blueprint: WebsiteBlueprint, prompt: string): WebsiteBlueprint {
   blueprint = { ...blueprint, services: groupThinServices(blueprint.services) };
-  const corpus = `${prompt} ${blueprint.website.type ?? ""} ${blueprint.website.description ?? ""} ${blueprint.website.name}`;
   const playbook =
     detectPlaybook(`${prompt} ${blueprint.website.type ?? ""} ${blueprint.website.name}`) ??
     detectPlaybook(blueprint.website.description ?? "");

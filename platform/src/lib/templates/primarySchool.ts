@@ -4,9 +4,10 @@ import type { TemplateDef } from "./types";
 export const primarySchool: TemplateDef = {
   theme: {
     colors: { primary: "#0ea5e9", primaryDark: "#0369a1", secondary: "#0c2d48", accent: "#22c55e", dark: "#0a1f33", light: "#f0f9ff", text: "#334155", heading: "#0c2d48" },
-    font: "Plus Jakarta Sans", radius: "1.1rem",
+    font: "Baloo 2", radius: "1.1rem",
   },
   header: (biz) => ({
+    design: "classic",
     logoText: biz, logoImage: "",
     announcement: { show: true, text: "📚 Admissions open for Classes 1–5 · Book a campus tour this week", link: "/admission" },
     topbar: { show: true, address: "Strong foundations for bright futures", phones: ["9000000000"], email: "info@example.com", social: { facebook: "#", instagram: "#", whatsapp: "#" } },
@@ -46,54 +47,62 @@ export const primarySchool: TemplateDef = {
       slug: "home", title: "Home", isSystem: true, order: 0,
       sections: [
         { type: "hero", content: {
-          variant: "split", customHtml: "",
+          variant: "centered", customHtml: "",
           badge: "CLASSES 1 – 5 · ADMISSIONS OPEN", titleTop: "Where Curious Kids Become", titleHighlight: "Confident Learners",
           subtitle: "", description: `${biz} combines concept-based academics, small classes and a rich activity programme — so your child understands what they learn, loves coming to school and grows with strong values.`, image: "",
           primaryBtn: { label: "Apply for Admission", href: "/admission" }, secondaryBtn: { label: "Explore Academics", href: "/academics" },
           features: [ { icon: "book", title: "Concept-Based Learning", text: "" }, { icon: "users", title: "Max 25 per Class", text: "" }, { icon: "shield", title: "CCTV-Secured Campus", text: "" }, { icon: "star", title: "20+ Activities", text: "" } ],
         } },
-        { type: "features", style: { background: "light" }, content: { items: [
+        { type: "about", content: { eyebrow: "ABOUT US", title: "A School Where Children Love to", titleHighlight: "Learn", body: [`${biz} was built on a simple belief — young children learn best when they feel safe, valued and curious. Our classrooms are bright, our teachers are warm and our lessons are hands-on.`, "We keep parents closely involved with regular updates, open-door meetings and a clear view of their child's progress."], image: "", points: ["Experienced, B.Ed-qualified teachers", "Activity & project-based learning", "No heavy school bags policy", "Monthly parent updates", "Reading & maths labs", "Discipline with kindness"], buttonLabel: "About Us", buttonHref: "/about" } },
+        { type: "stats", style: { layout: "minimal", background: "light" }, content: { items: [ { value: "1,200+", label: "Happy Students", icon: "users" }, { value: "20+", label: "Years of Trust", icon: "star" }, { value: "50+", label: "Qualified Teachers", icon: "graduation" }, { value: "1:20", label: "Teacher–Student Ratio", icon: "check" } ] } },
+        { type: "serviceCategories", content: { eyebrow: "ACADEMICS", title: "What Your Child Will", titleHighlight: "Learn", categories: ["Academics (Classes 1–5)", "Co-curricular"] } },
+        { type: "toppers", style: { background: "dark" }, content: { eyebrow: "OLYMPIAD & CONTEST STARS 2025–26", title: "Little Champions,", titleHighlight: "Big Wins", items: [
+          { name: "Advika Joshi", exam: "Class 5 · National Maths Olympiad", score: "Gold Medal", rank: "1", image: "" },
+          { name: "Reyansh Kapoor", exam: "Class 4 · Science Olympiad", score: "Zonal Rank 3", rank: "3", image: "" },
+          { name: "Mahira Shaikh", exam: "Class 3 · Inter-school Spell Bee", score: "Winner", rank: "1", image: "" },
+          { name: "Atharv Patil", exam: "Class 5 · District Skating", score: "Silver", rank: "2", image: "" },
+        ] } },
+        { type: "features", style: { layout: "numbered" }, content: { items: [
           { icon: "book", title: "Understand, Don't Memorise", text: "Activity-based lessons, projects and experiments that make concepts clear and lasting." },
           { icon: "users", title: "Every Child Is Seen", text: "Small classes and a class teacher who tracks each child's reading, maths and confidence." },
           { icon: "shield", title: "Safe & Caring Campus", text: "CCTV, verified staff, a nurse on campus and GPS-tracked buses with lady attendants." },
           { icon: "star", title: "All-Round Growth", text: "Sports, arts, music, coding and values education woven into every week." },
         ] } },
-        { type: "about", content: { eyebrow: "ABOUT US", title: "A School Where Children Love to", titleHighlight: "Learn", body: [`${biz} was built on a simple belief — young children learn best when they feel safe, valued and curious. Our classrooms are bright, our teachers are warm and our lessons are hands-on.`, "We keep parents closely involved with regular updates, open-door meetings and a clear view of their child's progress."], image: "", points: ["Experienced, B.Ed-qualified teachers", "Activity & project-based learning", "No heavy school bags policy", "Monthly parent updates", "Reading & maths labs", "Discipline with kindness"], buttonLabel: "About Us", buttonHref: "/about" } },
-        { type: "serviceCategories", content: { eyebrow: "ACADEMICS", title: "What Your Child Will", titleHighlight: "Learn", categories: ["Academics (Classes 1–5)", "Co-curricular"] } },
-        { type: "stats", content: { items: [ { value: "1,200+", label: "Happy Students", icon: "users" }, { value: "20+", label: "Years of Trust", icon: "star" }, { value: "50+", label: "Qualified Teachers", icon: "graduation" }, { value: "1:20", label: "Teacher–Student Ratio", icon: "check" } ] } },
-        { type: "steps", style: { background: "light" }, content: { eyebrow: "ADMISSION", title: "Simple, Stress-Free", titleHighlight: "Admission", items: [
+        { type: "noticeBoard", style: { background: "light" }, content: { eyebrow: "STAY UPDATED", title: "Latest from", titleHighlight: "School", limit: 4, notices: [
+          { date: "12 Nov", title: "Children's Day assembly & fun fair on 14th November", category: "Event", link: "", isNew: true },
+          { date: "06 Nov", title: "Admissions open for Classes 1–5 (2027–28) — apply now", category: "Admission", link: "/admission", isNew: true },
+          { date: "30 Oct", title: "Term-1 report cards & PTM on Saturday, 21st November", category: "Exam", link: "/notices", isNew: false },
+          { date: "20 Oct", title: "Annual Sports Day — 19th December, parents invited", category: "Event", link: "", isNew: false },
+        ] } },
+        { type: "steps", content: { eyebrow: "ADMISSION", title: "Simple, Stress-Free", titleHighlight: "Admission", items: [
           { title: "Enquire Online", text: "Fill the short admission form", icon: "edit" },
           { title: "Campus Tour", text: "See classrooms, labs and grounds", icon: "home" },
           { title: "Friendly Interaction", text: "A relaxed chat with your child — no tests", icon: "headset" },
           { title: "Welcome Aboard", text: "Complete formalities and join the family", icon: "graduation" },
         ] } },
-        { type: "team", content: { eyebrow: "OUR TEACHERS", title: "Meet the People Who", titleHighlight: "Inspire", members: [
+        { type: "imageBanner", content: { title: "No heavy school bags. Ever.", subtitle: "Books stay in class lockers, homework is light and purposeful, and Saturdays are for clubs, not cramming.", buttonLabel: "See Our Approach", buttonHref: "/academics", image: "" } },
+        { type: "team", style: { layout: "list" }, content: { eyebrow: "OUR TEACHERS", title: "Meet the People Who", titleHighlight: "Inspire", members: [
           { name: "Mrs. Sunita Agarwal", role: "Principal", image: "", note: "M.A., M.Ed · 22 yrs" },
           { name: "Ms. Meera Krishnan", role: "Class 1 & 2 Coordinator", image: "", note: "B.Ed · Phonics Trainer" },
           { name: "Mr. Rakesh Verma", role: "Mathematics", image: "", note: "M.Sc, B.Ed" },
           { name: "Ms. Anjali Deshpande", role: "Activities & Sports", image: "", note: "B.P.Ed · Yoga Certified" },
         ] } },
-        { type: "noticeBoard", content: { eyebrow: "STAY UPDATED", title: "Latest from", titleHighlight: "School", limit: 4, notices: [
-          { date: "05 Jul", title: "Admissions open for Classes 1–5 — apply now", category: "Admission", link: "/admission", isNew: true },
-          { date: "01 Jul", title: "Parent-Teacher Meeting on 12th July", category: "Event", link: "", isNew: true },
-          { date: "28 Jun", title: "Annual Sports Day — 25th July", category: "Event", link: "", isNew: false },
-          { date: "20 Jun", title: "School reopens 1st July after summer break", category: "Holiday", link: "", isNew: false },
-        ] } },
-        { type: "testimonials", content: { eyebrow: "PARENTS SAY", title: "Trusted by", titleHighlight: "Parents", items: [
+        { type: "testimonials", style: { background: "light" }, content: { eyebrow: "PARENTS SAY", title: "Trusted by", titleHighlight: "Parents", items: [
           { name: "Anita Rao", role: "Mother of Kabir, Class 3", text: "Kabir used to struggle with reading. Within a term his class teacher had him reading storybooks on his own. The personal attention here is real.", rating: 5 },
           { name: "Vikas Sharma", role: "Father of Myra, Class 1", text: "A lovely balance of studies and activities. Myra talks about her skating and coding classes as much as her maths — that tells you everything.", rating: 5 },
           { name: "Farah Ali", role: "Mother of Ayaan, Class 5", text: "Safe campus, caring teachers and very transparent communication. We always know exactly how our son is doing.", rating: 5 },
           { name: "Suresh Pillai", role: "Father of Diya, Class 4", text: "The project-based learning is excellent. Diya explains science concepts at home with real confidence now.", rating: 5 },
         ] } },
-        { type: "faq", style: { background: "light" }, content: { eyebrow: "PARENT FAQ", title: "Questions Parents", titleHighlight: "Often Ask", items: [
+        { type: "faq", style: { layout: "split" }, content: { eyebrow: "PARENT FAQ", title: "Questions Parents", titleHighlight: "Often Ask", intro: "Answers to what parents ask most during campus tours. We are happy to talk anytime.", items: [
           { q: "Which board does the school follow?", a: "We follow the CBSE / NCERT framework for Classes 1–5, enriched with our own activity-based and project-based programme." },
           { q: "What is the age criteria for Class 1?", a: "Children should be 6 years old by 31st March of the admission year. Our team will confirm eligibility for other classes." },
           { q: "Is there an entrance test?", a: "No. We have a relaxed, friendly interaction with the child and parents to understand the child better." },
           { q: "How many students are there in a class?", a: "We cap classes at 25 students, so teachers can give every child individual attention." },
           { q: "Do you provide transport?", a: "Yes. GPS-tracked school buses with lady attendants cover all major routes in the city." },
+          { q: "What are the school timings?", a: "8:00am to 1:30pm, Monday to Friday. Saturday is a half-day for clubs and activities." },
           { q: "How are parents kept informed?", a: "Through the parent app, monthly progress notes, term-wise report cards and regular parent-teacher meetings." },
         ] } },
-        { type: "cta", content: { title: "Give your child the best start", highlight: "Apply for Admission", phones: ["9000000000"], buttonLabel: "Apply Now", buttonHref: "/admission" } },
+        { type: "cta", style: { background: "primary" }, content: { title: "Give your child the best start", highlight: "Apply for Admission", phones: ["9000000000"], buttonLabel: "Apply Now", buttonHref: "/admission" } },
       ],
     },
     { slug: "about", title: "About", isSystem: true, order: 1, sections: [
@@ -103,6 +112,12 @@ export const primarySchool: TemplateDef = {
     ] },
     { slug: "academics", title: "Academics", isSystem: true, order: 2, sections: [
       { type: "serviceCategories", content: { eyebrow: "", title: "Our", titleHighlight: "Curriculum", categories: ["Academics (Classes 1–5)", "Co-curricular"] } },
+      { type: "features", style: { layout: "split", background: "light" }, content: { eyebrow: "HOW WE TEACH", title: "Learning Without", titleHighlight: "Pressure", items: [
+        { icon: "clipboard", title: "No Exams Till Class 2", text: "Continuous, observation-based assessment with a skills report card every term." },
+        { icon: "edit", title: "Light, Meaningful Homework", text: "10–20 minutes a day — reading logs, maths games and small projects." },
+        { icon: "book", title: "Reading Levels", text: "Every child reads at their own level from a 2,000-book graded library." },
+        { icon: "zap", title: "Coding From Class 1", text: "Unplugged logic games first, block-based coding from Class 3." },
+      ] } },
       { type: "cta", content: { title: "Want to know more?", highlight: "Talk to Us", phones: ["9000000000"], buttonLabel: "Apply Now", buttonHref: "/admission" } },
     ] },
     { slug: "activities", title: "Activities", isSystem: true, order: 3, sections: [
@@ -112,7 +127,10 @@ export const primarySchool: TemplateDef = {
         { icon: "users", title: "Cultural Events", text: "Annual day, festivals and inter-house competitions." },
         { icon: "plane", title: "Field Trips", text: "Learning beyond the classroom — farms, museums and science parks." },
       ] } },
-      { type: "gallery", content: { eyebrow: "", title: "Life at", titleHighlight: "Our School" } },
+      { type: "gallery", style: { layout: "masonry" }, content: { eyebrow: "", title: "Life at", titleHighlight: "Our School" } },
+      { type: "openingHours", style: { background: "light" }, content: { eyebrow: "CLUB TIMETABLE", title: "Saturday", titleHighlight: "Clubs", note: "Clubs are included in the annual fee. Children pick two clubs every term.", days: [
+        { day: "Skating & Football", hours: "8:30am – 9:45am" }, { day: "Art, Craft & Clay", hours: "10:00am – 11:00am" }, { day: "Robotics & Coding", hours: "10:00am – 11:00am" }, { day: "Music, Dance & Drama", hours: "11:15am – 12:30pm" },
+      ] } },
     ] },
     { slug: "facilities", title: "Facilities", isSystem: true, order: 4, sections: [
       { type: "features", content: { items: [

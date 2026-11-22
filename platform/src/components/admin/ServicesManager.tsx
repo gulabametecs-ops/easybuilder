@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Trash2, Plus, ArrowLeft, Wrench, Eye, ExternalLink,
@@ -46,9 +46,12 @@ export function ServicesManager({
   const [previewTick, setPreviewTick] = useState(0);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
+  // Re-sync when the server sends fresh data (adjust state during render, not in an effect).
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (prevInitial !== initial) {
+    setPrevInitial(initial);
     setItems(initial);
-  }, [initial]);
+  }
 
   const atLimit = limit > 0 && count >= limit;
   const selectedService = items.find((s) => s.id === selected) ?? null;
@@ -84,8 +87,7 @@ export function ServicesManager({
       <div className="flex flex-col xl:flex-row xl:items-stretch flex-1 min-h-0 gap-0">
         {/* Left panel */}
         <div
-          className="w-full flex flex-col min-h-0 order-2 xl:order-1"
-          style={previewHidden ? { flex: "1 1 auto", width: "100%" } : { width: 400, flex: "0 0 400px", minWidth: 300, maxWidth: "100%" }}
+          className={`w-full flex flex-col min-h-0 flex-1 xl:order-1 ${previewHidden ? "" : "xl:flex-none xl:w-[400px]"}`}
         >
           <div className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex-1 min-h-0 h-full">
             {selectedService ? (
@@ -129,8 +131,13 @@ export function ServicesManager({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <Wrench className="w-4 h-4 text-lime-600 shrink-0" />
-                      <p className="text-sm font-semibold text-slate-800 dark:text-white">Services</p>
-                      <span className="text-xs text-slate-400">{items.length}{limit > 0 ? `/${limit}` : ""}</span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h1 className="text-sm font-semibold text-slate-800 dark:text-white">Services</h1>
+                          <span className="text-xs text-slate-400">{items.length}{limit > 0 ? `/${limit}` : ""}</span>
+                        </div>
+                        <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 truncate">What you offer — shown on your website and service pages.</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {previewHidden && (
@@ -151,7 +158,7 @@ export function ServicesManager({
                       value={q}
                       onChange={(e) => setQ(e.target.value)}
                       placeholder="Search services…"
-                      className="w-full rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-800 pl-8 pr-3 py-1.5 text-sm outline-none focus:border-lime-500"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-800 text-slate-900 dark:text-slate-100 pl-8 pr-3 py-1.5 text-sm outline-none focus:border-lime-500"
                     />
                   </div>
                 </div>
@@ -159,7 +166,7 @@ export function ServicesManager({
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-3">
                   {atLimit && (
                     <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-200">
-                      Plan limit reached ({limit}). <a href="/admin/settings" className="font-semibold underline">Upgrade</a> to add more.
+                      Plan limit reached ({limit}). <a href="/admin/billing" className="font-semibold underline">Upgrade</a> to add more.
                     </div>
                   )}
 
@@ -221,7 +228,7 @@ export function ServicesManager({
         {!previewHidden && <div className="hidden xl:block w-px bg-slate-200 dark:bg-slate-700 shrink-0 order-1 xl:order-2 self-stretch" />}
 
         {!previewHidden && (
-          <div className="flex-1 min-w-0 min-h-[420px] xl:min-h-0 order-1 xl:order-3 flex flex-col">
+          <div className="hidden xl:flex flex-1 min-w-0 min-h-0 xl:order-3 flex-col">
             <DevicePreviewFrame
               src={previewPath}
               reloadKey={`${selected ?? "home"}:${previewTick}`}
@@ -257,9 +264,12 @@ function ServiceEditor({
   const [pending, start] = useTransition();
   const [form, setForm] = useState(service);
 
-  useEffect(() => {
+  // Re-sync when the server sends fresh data (adjust state during render, not in an effect).
+  const [prevService, setPrevService] = useState(service);
+  if (prevService !== service) {
+    setPrevService(service);
     setForm(service);
-  }, [service]);
+  }
 
   const set = <K extends keyof Service>(k: K, v: Service[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -385,7 +395,8 @@ function AddServicePanel({
         className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3"
         action={(fd) => {
           start(async () => {
-            await addService(fd);
+            const r = await addService(fd);
+            if (r?.error) { alert(r.error); return; }
             onAdded();
           });
         }}

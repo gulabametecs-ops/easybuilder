@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { resolveGroqModel } from "./groqModel";
+import { getProvider, chatUrlFromBase, parseMap, type AiProvider } from "./ai/providers";
 
 export { GROQ_DEFAULT_MODEL, isValidGroqModelId, normalizeGroqModelInput, resolveGroqModel } from "./groqModel";
 
@@ -27,13 +28,18 @@ export type PlatformConfig = {
   demoWhatsAppPhoneId: string;
   groqApiKey: string;
   groqModel: string;
+  aiProvider: string;
+  aiKeys: string;
+  aiModels: string;
+  aiBaseUrl: string;
+  referralSettings: string;
 };
 
 const DEFAULTS: PlatformConfig = {
   id: "singleton",
   razorpayKeyId: "",
   razorpayKeySecret: "",
-  platformName: "StandardSaaS",
+  platformName: "SitePixl",
   supportEmail: "",
   supportPhone: "",
   broadcastShow: false,
@@ -53,6 +59,11 @@ const DEFAULTS: PlatformConfig = {
   demoWhatsAppPhoneId: "",
   groqApiKey: "",
   groqModel: "",
+  aiProvider: "groq",
+  aiKeys: "{}",
+  aiModels: "{}",
+  aiBaseUrl: "",
+  referralSettings: "{}",
 };
 
 // The single platform settings row (or defaults if not yet created).
@@ -76,11 +87,24 @@ export async function getRazorpayKeys(): Promise<{ keyId: string; keySecret: str
   };
 }
 
-/** Groq AI keys: Super Admin DB settings take priority, then env vars. */
-export async function getGroqConfig(): Promise<{ apiKey: string; model: string }> {
+
+/**
+ * Active AI provider for the website builder (Super Admin → Settings → AI).
+ * Keys/models are stored per provider so switching never loses one; Groq also falls
+ * back to the legacy groqApiKey/groqModel fields and GROQ_* env vars.
+ */
+export async function getAiConfig(): Promise<{ provider: AiProvider; url: string; apiKey: string; model: string }> {
   const cfg = await getPlatformConfig();
-  return {
-    apiKey: cfg.groqApiKey || process.env.GROQ_API_KEY || "",
-    model: resolveGroqModel(cfg.groqModel || process.env.GROQ_MODEL),
-  };
+  const provider = getProvider(cfg.aiProvider);
+  const keys = parseMap(cfg.aiKeys);
+  const models = parseMap(cfg.aiModels);
+  let apiKey = keys[provider.id] || "";
+  let model = models[provider.id] || "";
+  if (provider.id === "groq") {
+    apiKey ||= cfg.groqApiKey || process.env.GROQ_API_KEY || "";
+    model = resolveGroqModel(model || cfg.groqModel || process.env.GROQ_MODEL);
+  }
+  if (provider.id === "openai") apiKey ||= process.env.OPENAI_API_KEY || "";
+  const url = provider.id === "custom" ? chatUrlFromBase(cfg.aiBaseUrl) : provider.url;
+  return { provider, url, apiKey, model: model || provider.defaultModel };
 }

@@ -12,6 +12,9 @@ import {
 import { defaultTheme, defaultHeader, defaultFooter, defaultSeo } from "./template";
 import { parseBlocks, parseDocs, parseStringList as parseEventList, resolveEventKind, type EventBlock } from "./eventContent";
 import { parsePayments, toPublicPayments, type PublicPayments } from "./payments";
+import { mapProperty, type PublicProperty } from "./property";
+import { mapCause, type PublicCause } from "./cause";
+import { applyPaymentToggles, parseIntegrations, type IntegrationsConfig } from "./integrations";
 
 // Reads the tenant key/kind that the proxy attached to the request.
 export async function getTenantKey(): Promise<{ key: string; kind: string } | null> {
@@ -40,11 +43,13 @@ export type TenantConfig = {
   customCss: string;
   resultConfig: string;
   payments: PublicPayments;
+  integrations: IntegrationsConfig;
 };
 
 // Loads + parses the site-wide config (theme/header/footer/seo) for a tenant.
 export const getTenantConfig = cache(async (tenantId: string, bizName: string): Promise<TenantConfig> => {
   const cfg = await db.siteConfig.findUnique({ where: { tenantId } });
+  const integrations = parseIntegrations(cfg?.integrations);
   return {
     theme: parseJson<ThemeConfig>(cfg?.theme, defaultTheme),
     header: parseJson<HeaderConfig>(cfg?.header, defaultHeader(bizName)),
@@ -52,7 +57,8 @@ export const getTenantConfig = cache(async (tenantId: string, bizName: string): 
     seo: parseJson<SeoConfig>(cfg?.seo, defaultSeo(bizName)),
     customCss: cfg?.customCss ?? "",
     resultConfig: cfg?.resultConfig ?? "{}",
-    payments: toPublicPayments(parsePayments(cfg?.payments)),
+    payments: applyPaymentToggles(toPublicPayments(parsePayments(cfg?.payments)), integrations),
+    integrations,
   };
 });
 
@@ -266,4 +272,63 @@ export const getSiteEventBySlug = cache(async (tenantId: string, slug: string): 
     : { tenantId, slug, published: true };
   const row = await db.siteEvent.findFirst({ where });
   return row ? mapEvent(row) : null;
+});
+
+// ─── Property listings (real-estate sectors) ─────────────────────────────────
+async function propertyWhere(tenantId: string, extra: Record<string, unknown> = {}) {
+  const { getActiveDemoSession } = await import("./demoSession");
+  const demo = await getActiveDemoSession();
+  return demo
+    ? { tenantId, published: true, ...extra, OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] }
+    : { tenantId, published: true, ...extra };
+}
+
+export const getSiteProperties = cache(async (tenantId: string): Promise<PublicProperty[]> => {
+  const rows = await db.property.findMany({
+    where: await propertyWhere(tenantId),
+    orderBy: [{ featured: "desc" }, { order: "asc" }, { createdAt: "desc" }],
+  });
+  return rows.map(mapProperty);
+});
+
+export const getSitePropertyBySlug = cache(async (tenantId: string, slug: string): Promise<PublicProperty | null> => {
+  const row = await db.property.findFirst({ where: await propertyWhere(tenantId, { slug }) });
+  return row ? mapProperty(row) : null;
+});
+
+// ─── NGO fundraising causes ─────────────────────────────────────────────────
+// raised/donors = the NGO's offline figures + paid online donations tagged with the cause.
+async function onlineTotals(tenantId: string, causeIds: string[]) {
+  if (!causeIds.length) return new Map<string, { amount: number; donors: number }>();
+  const rows = await db.siteDonation.groupBy({
+    by: ["causeId"],
+    where: { tenantId, status: "paid", causeId: { in: causeIds } },
+    _sum: { amount: true },
+    _count: { _all: true },
+  });
+  return new Map(rows.map((r) => [r.causeId, { amount: Math.round((r._sum.amount ?? 0) / 100), donors: r._count._all }]));
+}
+
+async function causeWhere(tenantId: string, extra: Record<string, unknown> = {}) {
+  const { getActiveDemoSession } = await import("./demoSession");
+  const demo = await getActiveDemoSession();
+  return demo
+    ? { tenantId, published: true, ...extra, OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] }
+    : { tenantId, published: true, ...extra };
+}
+
+export const getSiteCauses = cache(async (tenantId: string): Promise<PublicCause[]> => {
+  const rows = await db.cause.findMany({
+    where: await causeWhere(tenantId),
+    orderBy: [{ featured: "desc" }, { urgent: "desc" }, { order: "asc" }, { createdAt: "desc" }],
+  });
+  const totals = await onlineTotals(tenantId, rows.map((r) => r.id));
+  return rows.map((r) => mapCause(r, totals.get(r.id)));
+});
+
+export const getSiteCauseBySlug = cache(async (tenantId: string, slug: string): Promise<PublicCause | null> => {
+  const row = await db.cause.findFirst({ where: await causeWhere(tenantId, { slug }) });
+  if (!row) return null;
+  const totals = await onlineTotals(tenantId, [row.id]);
+  return mapCause(row, totals.get(row.id));
 });

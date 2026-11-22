@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "node:crypto";
 import { db } from "../src/lib/db";
 import { createTenantFromTemplate } from "../src/lib/provision";
+import { fillDemoImages } from "../src/lib/demoImages";
 import { gradeFor } from "../src/lib/results";
 
 const EDU = new Set(["play-school", "primary-school", "school", "coaching"]);
@@ -68,7 +69,8 @@ async function seedEducation(tenantId: string, vertical: string) {
 async function main() {
   // Local SQLite keeps the easy dev logins; any real database needs explicit credentials
   // (the defaults are public in this repo, so they'd hand out super-admin + demo-owner access).
-  const isLocal = (process.env.DATABASE_URL ?? "file:").startsWith("file:");
+  // Local MySQL (localhost / 127.0.0.1) gets easy demo logins; anything else is treated as production.
+  const isLocal = /^mysql:\/\/[^@]*@(localhost|127\.0\.0\.1)(:\d+)?\//i.test(process.env.DATABASE_URL ?? "");
   const superEmail = process.env.SUPER_ADMIN_EMAIL || "super@platform.test";
   const superPassword = process.env.SUPER_ADMIN_PASSWORD || (isLocal ? "super1234" : "");
   if (superPassword.length < (isLocal ? 1 : 12)) {
@@ -102,6 +104,40 @@ async function main() {
     { subdomain: "demo-foundation", vertical: "social-foundation", name: "Rise Social Foundation", email: "demo@foundation.test" },
     { subdomain: "demo-pharmacy", vertical: "pharmacy", name: "CareWell Pharmacy", email: "demo@pharmacy.test" },
     { subdomain: "demo-events", vertical: "events-training", name: "SummitHub Events", email: "demo@events.test" },
+    { subdomain: "demo-language", vertical: "language-institute", name: "Lingua Bridge Academy", email: "demo@language.test" },
+    { subdomain: "demo-driving", vertical: "driving-school", name: "SafeDrive Motor Training", email: "demo@driving.test" },
+    { subdomain: "demo-computer", vertical: "computer-institute", name: "CodeCraft Computer Institute", email: "demo@computer.test" },
+    { subdomain: "demo-interior", vertical: "interior-design", name: "Nest & Nook Interiors", email: "demo@interior.test" },
+    { subdomain: "demo-carcare", vertical: "car-service", name: "TorqueCare Auto Studio", email: "demo@carcare.test" },
+    { subdomain: "demo-movers", vertical: "packers-movers", name: "ShiftRight Packers & Movers", email: "demo@movers.test" },
+    { subdomain: "demo-cafe", vertical: "cafe-bakery", name: "Crumb & Co. Café", email: "demo@cafe.test" },
+    { subdomain: "demo-catering", vertical: "catering", name: "Rasoi Royale Caterers", email: "demo@catering.test" },
+    { subdomain: "demo-resort", vertical: "hotel-resort", name: "Aranya Bay Resort", email: "demo@resort.test" },
+    { subdomain: "demo-dental", vertical: "dental-clinic", name: "BrightSmile Dental Care", email: "demo@dental.test" },
+    { subdomain: "demo-lab", vertical: "diagnostic-lab", name: "PrimeCheck Diagnostics", email: "demo@lab.test" },
+    { subdomain: "demo-physio", vertical: "physio-clinic", name: "MoveWell Physio & Rehab", email: "demo@physio.test" },
+    { subdomain: "demo-construction", vertical: "construction", name: "SolidStone Builders", email: "demo@construction.test" },
+    { subdomain: "demo-export", vertical: "import-export", name: "Indus Global Exim", email: "demo@export.test" },
+    { subdomain: "demo-jewellery", vertical: "jewellery-store", name: "Swarna Mahal Jewellers", email: "demo@jewellery.test" },
+    { subdomain: "demo-yoga", vertical: "yoga-studio", name: "Prana Yoga Studio", email: "demo@yoga.test" },
+    { subdomain: "demo-salon", vertical: "salon-spa", name: "Velvet Salon & Spa", email: "demo@salon.test" },
+    { subdomain: "demo-nutrition", vertical: "nutrition-clinic", name: "NourishFit Nutrition Clinic", email: "demo@nutrition.test" },
+    { subdomain: "demo-animal", vertical: "animal-welfare", name: "Paws of Hope Shelter", email: "demo@animal.test" },
+    { subdomain: "demo-seniorcare", vertical: "senior-care", name: "Sukoon Senior Living", email: "demo@seniorcare.test" },
+    { subdomain: "demo-rwa", vertical: "resident-welfare", name: "Green Meadows Residents Association", email: "demo@rwa.test" },
+    { subdomain: "demo-wedding", vertical: "wedding-planner", name: "Shubh Vivah Weddings", email: "demo@wedding.test" },
+    { subdomain: "demo-photo", vertical: "photo-studio", name: "Frame & Focus Studio", email: "demo@photo.test" },
+    { subdomain: "demo-banquet", vertical: "banquet-hall", name: "Grand Utsav Banquets", email: "demo@banquet.test" },
+    { subdomain: "demo-women", vertical: "women-empowerment", name: "Shakti Mahila Foundation", email: "demo@women.test" },
+    { subdomain: "demo-childedu", vertical: "child-education-ngo", name: "Akshar Bachpan Trust", email: "demo@childedu.test" },
+    { subdomain: "demo-green", vertical: "environment-ngo", name: "Haritam Earth Collective", email: "demo@green.test" },
+    { subdomain: "demo-relief", vertical: "health-relief-ngo", name: "Raksha Relief Foundation", email: "demo@relief.test" },
+    { subdomain: "demo-foodbank", vertical: "food-bank", name: "Annapurna Roti Bank", email: "demo@foodbank.test" },
+    { subdomain: "demo-kitchen", vertical: "kitchen-sink-wholesale", name: "SinkWorld Kitchen Traders", email: "demo@kitchen.test" },
+    { subdomain: "demo-electrical", vertical: "electrical-wholesale", name: "Volt Line Electricals", email: "demo@electrical.test" },
+    { subdomain: "demo-realestate", vertical: "real-estate-broker", name: "Prime Nest Realty", email: "demo@realestate.test" },
+    { subdomain: "demo-pg", vertical: "pg-hostel", name: "Comfort Stay PG", email: "demo@pg.test" },
+    { subdomain: "demo-builder", vertical: "builder-developer", name: "Skyline Developers", email: "demo@builder.test" },
   ];
 
   for (const d of demos) {
@@ -116,6 +152,7 @@ async function main() {
       vertical: d.vertical,
     });
     if (EDU.has(d.vertical)) await seedEducation(tenant.id, d.vertical);
+    await fillDemoImages(tenant.id, d.vertical); // demo sites only: sector photos + logo
     console.log(`✅ ${d.vertical}: http://${d.subdomain}.localhost:3000  (admin: ${d.email}${isLocal ? ` / ${demoPassword}` : ""})`);
   }
 }

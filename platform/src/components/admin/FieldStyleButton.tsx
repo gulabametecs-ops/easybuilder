@@ -71,12 +71,15 @@ export function FieldStyleButton({
   const dirty = !sameStyle(draft, value);
   const d = mergeFieldStyle(defaults, draft);
 
-  useEffect(() => {
+  // Reset the draft when the popover opens or the saved value changes while open.
+  const [synced, setSynced] = useState({ open, value });
+  if (synced.open !== open || synced.value !== value) {
+    setSynced({ open, value });
     if (open) {
       setDraft(value);
       setJustSaved(false);
     }
-  }, [open, value]);
+  }
 
   useEffect(() => {
     if (!open) return;

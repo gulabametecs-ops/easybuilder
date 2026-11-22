@@ -2,6 +2,8 @@ export type AdminPrefs = {
   notifyLeads: boolean;
   notifyAppointments: boolean;
   notifyWeeklySummary: boolean;
+  /** Dashboard "Getting started" card dismissed. */
+  setupChecklistHidden?: boolean;
 };
 
 export const DEFAULT_ADMIN_PREFS: AdminPrefs = {

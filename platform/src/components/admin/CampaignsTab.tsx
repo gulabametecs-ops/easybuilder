@@ -80,7 +80,7 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
       </div>
 
       {!adding ? (
-        <button onClick={() => setAdding(true)} className="mb-4 inline-flex items-center gap-2 rounded-lg bg-lime-500 text-white px-4 py-2.5 text-sm font-semibold hover:bg-lime-600">
+        <button onClick={() => setAdding(true)} className="admin-grad mb-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-md shadow-blue-600/20 hover:opacity-90">
           <Plus className="w-4 h-4" /> New campaign
         </button>
       ) : (
@@ -91,7 +91,7 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
           </div>
           <form action={(fd) => { start(() => createCampaign(fd)); setAdding(false); }} className="space-y-4">
             <CampaignFields siteUrl={siteUrl} services={services} bizName={bizName} vertical={vertical} />
-            <button className="rounded-lg bg-slate-900 dark:bg-lime-500 dark:text-slate-900 text-white text-sm font-semibold px-5 py-2.5 hover:opacity-90">Create campaign</button>
+            <button className="admin-grad rounded-xl text-sm font-semibold px-5 py-2.5 shadow-md shadow-blue-600/20 hover:opacity-90">Create campaign</button>
           </form>
         </Card>
       )}
@@ -122,10 +122,13 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
       )}
 
       {campaigns.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 p-10 text-center">
-          <p className="text-sm font-semibold text-slate-800 dark:text-white">No campaigns yet</p>
-          <p className="text-xs text-slate-400 mt-1 mb-3">Create one to target an audience and launch ads on Google, Meta or Instagram.</p>
-          <button type="button" onClick={() => setAdding(true)} className="text-sm font-semibold text-lime-600 hover:underline">Create first campaign</button>
+        <div className="rounded-2xl border border-dashed border-slate-300 dark:border-white/15 bg-gradient-to-br from-lime-50/60 to-violet-50/60 dark:from-lime-500/[0.05] dark:to-violet-500/[0.05] p-8 sm:p-10 text-center">
+          <span className="admin-grad inline-flex w-14 h-14 rounded-2xl items-center justify-center mb-4 shadow-lg shadow-blue-600/20">
+            <Rocket className="w-6 h-6" />
+          </span>
+          <p className="text-base font-bold text-slate-800 dark:text-white">No campaigns yet</p>
+          <p className="text-sm text-slate-500 mt-1 mb-4 max-w-sm mx-auto">Pick a service and audience, then launch ads on Google, Meta or Instagram with a tracked link.</p>
+          <button type="button" onClick={() => setAdding(true)} className="admin-grad inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-md shadow-blue-600/20 hover:opacity-90"><Plus className="w-4 h-4" /> Create first campaign</button>
         </div>
       ) : filtered.length === 0 ? (
         <p className="text-xs text-slate-400 py-6 text-center">No campaigns match your filters.</p>
@@ -138,7 +141,7 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
                   <input type="hidden" name="id" value={c.id} />
                   <CampaignFields siteUrl={siteUrl} services={services} bizName={bizName} vertical={vertical} c={c} />
                   <div className="flex gap-2">
-                    <button className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-4 py-2">Save</button>
+                    <button className="admin-grad rounded-xl text-sm font-semibold px-4 py-2 hover:opacity-90">Save</button>
                     <button type="button" onClick={() => setEditing(null)} className="rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm px-4 py-2">Cancel</button>
                   </div>
                 </form>
@@ -389,12 +392,8 @@ function ctaLabel(objective: string) {
   return objective === "calls" ? "Call Now" : objective === "sales" ? "Shop Now" : objective === "leads" ? "Book Now" : "Learn More";
 }
 
-function AdPreview({ platform, image, headline, adText, bizName, host, objective, service }: { platform: string; image: string; headline: string; adText: string; bizName: string; host: string; objective: string; service: string }) {
-  const H = headline || (service ? `${service} — Special Offer!` : "Your headline appears here");
-  const T = adText || "Your ad description shows here — write something that grabs attention.";
-  const initial = (bizName || "B").charAt(0).toUpperCase();
-  const cta = ctaLabel(objective);
-  const Img = ({ ratio }: { ratio: string }) => (
+function AdImg({ ratio, image }: { ratio: string; image: string }) {
+  return (
     <div className={`${ratio} bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 overflow-hidden`}>
       {image
         // eslint-disable-next-line @next/next/no-img-element
@@ -402,6 +401,13 @@ function AdPreview({ platform, image, headline, adText, bizName, host, objective
         : <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">Ad image</div>}
     </div>
   );
+}
+
+function AdPreview({ platform, image, headline, adText, bizName, host, objective, service }: { platform: string; image: string; headline: string; adText: string; bizName: string; host: string; objective: string; service: string }) {
+  const H = headline || (service ? `${service} — Special Offer!` : "Your headline appears here");
+  const T = adText || "Your ad description shows here — write something that grabs attention.";
+  const initial = (bizName || "B").charAt(0).toUpperCase();
+  const cta = ctaLabel(objective);
 
   if (platform === "google") {
     return (
@@ -415,7 +421,7 @@ function AdPreview({ platform, image, headline, adText, bizName, host, objective
   if (platform === "whatsapp" || platform === "local") {
     return (
       <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden shadow-sm max-w-[300px]">
-        <Img ratio="aspect-video" />
+        <AdImg ratio="aspect-video" image={image} />
         <div className="p-3">
           <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{H}</p>
           <p className="text-sm text-slate-500 mt-0.5">{T}</p>
@@ -435,7 +441,7 @@ function AdPreview({ platform, image, headline, adText, bizName, host, objective
         </div>
       </div>
       {!insta && <p className="px-3 pb-2 text-sm text-slate-700 dark:text-slate-200">{T}</p>}
-      <Img ratio={insta ? "aspect-square" : "aspect-[1.91/1]"} />
+      <AdImg ratio={insta ? "aspect-square" : "aspect-[1.91/1]"} image={image} />
       {insta ? (
         <div className="p-3">
           <p className="text-sm">
@@ -507,7 +513,7 @@ function CampaignCard({ c, siteUrl, onEdit, onStatus, onDelete, onMetrics }: { c
             <h3 className="font-bold text-slate-900 dark:text-white">{c.name}</h3>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.cls}`}>{p.label}</span>
             {c.service && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300">{c.service}</span>}
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_CLS[c.status] ?? STATUS_CLS.draft}`}>{c.status}</span>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${STATUS_CLS[c.status] ?? STATUS_CLS.draft}`}><span className={`w-1.5 h-1.5 rounded-full bg-current ${c.status === "active" ? "animate-pulse" : ""}`} />{c.status}</span>
           </div>
           <p className="text-xs text-slate-400 capitalize">{c.objective}{c.budget ? ` · ${inr(c.budget)}` : ""}</p>
         </div>

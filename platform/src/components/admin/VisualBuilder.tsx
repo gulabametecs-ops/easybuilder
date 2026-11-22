@@ -5,7 +5,7 @@ import {
   Eye, EyeOff, Trash2, Plus, Pencil, Paintbrush, GripVertical,
   LayoutTemplate, LayoutGrid, AlignLeft, BarChart3, Images, ListOrdered, Megaphone, Users, Tag,
   Sparkles, Quote, HelpCircle, Play, MapPin, FileText, Mail, Bell, Trophy, Download, CreditCard,
-  Clock, Type, Timer, PanelTop, CalendarClock, ArrowLeft, ChevronUp, ChevronDown, Copy,
+  Clock, Type, Timer, PanelTop, CalendarClock, Building2, HandHeart, Wallet, ArrowLeft, ChevronUp, ChevronDown, Copy,
   Layers, type LucideIcon,
 } from "lucide-react";
 import { toggleSection, deleteSection, moveSection, addSection, reorderSections, duplicateSection } from "@/lib/actions/content";
@@ -33,7 +33,7 @@ const SECTION_ICON: Record<string, LucideIcon> = {
   gallery: Images, steps: ListOrdered, cta: Megaphone, team: Users, priceList: Tag, features: Sparkles,
   testimonials: Quote, faq: HelpCircle, logos: Users, video: Play, imageBanner: Images, contactInfo: MapPin,
   quoteForm: FileText, contactForm: Mail, appointmentForm: CalendarClock, richText: Type, pricingPlans: CreditCard,
-  openingHours: Clock, countdown: Timer, map: MapPin, noticeBoard: Bell, toppers: Trophy, downloads: Download,
+  openingHours: Clock, countdown: Timer, map: MapPin, noticeBoard: Bell, toppers: Trophy, downloads: Download, propertyList: Building2, causeList: HandHeart, payOnline: Wallet,
 };
 
 export function VisualBuilder({
@@ -79,7 +79,12 @@ export function VisualBuilder({
     setSectionsW(defaultSectionsW(row.clientWidth));
   }, []);
 
-  useEffect(() => { setItems(sections); }, [sections]);
+  // Re-sync when the server sends fresh data (adjust state during render, not in an effect).
+  const [prevSections, setPrevSections] = useState(sections);
+  if (prevSections !== sections) {
+    setPrevSections(sections);
+    setItems(sections);
+  }
 
   // Hash content/style so colour-only edits (same string length) still refresh preview
   const hash = (s: string) => {
@@ -258,6 +263,7 @@ export function VisualBuilder({
                       <SectionStyleEditor
                         key={`s-${selectedSection.id}`}
                         id={selectedSection.id}
+                        type={selectedSection.type}
                         style={selectedSection.style}
                         siteColors={siteColors}
                         onSaved={(style) => onSectionSaved(selectedSection.id, { style })}

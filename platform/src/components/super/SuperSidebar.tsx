@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import { LayoutDashboard, Inbox, CreditCard, Building2, Settings, LogOut, Menu, X, ShieldCheck, BarChart3, Ticket, Sun, Moon } from "lucide-react";
+import { useState } from "react";
+import { useHtmlDark } from "@/lib/useHtmlDark";
+import { LayoutDashboard, Inbox, CreditCard, Building2, Settings, LogOut, Menu, X, ShieldCheck, BarChart3, Ticket, Sun, Moon, Gift, Wallet } from "lucide-react";
 import { superLogout } from "@/lib/actions/superAuth";
+import { BrandLogo, BrandMark } from "@/components/BrandLogo";
 
 const NAV = [
   { href: "/super", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -14,30 +16,32 @@ const NAV = [
   { href: "/super/enquiries", label: "Enquiries", icon: Inbox },
   { href: "/super/demo-leads", label: "Demo leads", icon: ShieldCheck },
   { href: "/super/coupons", label: "Coupons", icon: Ticket },
+  { href: "/super/referrals", label: "Referrals", icon: Gift },
+  { href: "/super/payouts", label: "Payouts", icon: Wallet },
   { href: "/super/settings", label: "Settings", icon: Settings },
 ];
 
 export function SuperSidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [dark, setDark] = useState(true);
-  useEffect(() => setDark(document.documentElement.classList.contains("dark")), []);
+  const dark = useHtmlDark(true);
   const toggleTheme = () => {
     const n = !dark;
-    setDark(n);
     document.documentElement.classList.toggle("dark", n);
     try { localStorage.setItem("theme", n ? "dark" : "light"); } catch {}
   };
   return (
     <>
       <div className="lg:hidden flex items-center justify-between bg-slate-900 text-white px-4 h-14">
-        <span className="font-bold flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-lime-400" /> Super Admin</span>
+        <span className="flex items-center gap-2 font-bold"><BrandMark size={24} id="spx-sm" /> Super Admin</span>
         <button onClick={() => setOpen((v) => !v)}>{open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}</button>
       </div>
       <aside className={`${open ? "block" : "hidden"} lg:block fixed lg:static inset-y-0 left-0 z-30 w-64 bg-slate-900 text-slate-300 flex flex-col`}>
         <div className="h-16 flex items-center gap-2 px-5 border-b border-white/10">
-          <ShieldCheck className="w-6 h-6 text-lime-400" />
-          <span className="font-bold text-white">Super Admin</span>
+          <BrandLogo size={24} onDark />
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-lime-300">
+            <ShieldCheck className="h-3 w-3" /> Super
+          </span>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {NAV.map((n) => {

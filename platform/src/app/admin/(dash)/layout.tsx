@@ -8,9 +8,10 @@ import { getPlatformConfig } from "@/lib/platformConfig";
 import { checkAdminAccess } from "@/lib/subscription";
 import { getActiveDemoSessionForTenant, isDemoSubdomain, demoVisibleWhere } from "@/lib/demoSession";
 import { db } from "@/lib/db";
-import { Sidebar } from "@/components/admin/Sidebar";
+import { Sidebar, AdminPageTitle } from "@/components/admin/Sidebar";
 import { ThemeToggle } from "@/components/marketing/ThemeToggle";
 import { DemoTimerBar } from "@/components/site/DemoTimerBar";
+import { PageIntro } from "@/components/PageIntro";
 
 export const metadata = { title: "Admin" };
 
@@ -69,7 +70,8 @@ export default async function DashLayout({ children }: { children: React.ReactNo
   ]);
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 lg:flex lg:h-screen lg:overflow-hidden">
+    <div className="admin-brand min-h-screen bg-slate-50 dark:bg-slate-950 lg:flex lg:h-screen lg:overflow-hidden">
+      <PageIntro />
       <Sidebar
         bizName={authed.tenant.name}
         userName={authed.session.name}
@@ -77,6 +79,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
         newLeads={newLeads}
         pendingAppts={pendingAppts}
         newVolunteers={newVolunteers}
+        vertical={authed.tenant.vertical}
       />
       <div className="flex-1 min-w-0 flex flex-col min-h-0 admin-shell">
         {demoSession?.expiresAt && <DemoTimerBar expiresAt={demoSession.expiresAt.toISOString()} />}
@@ -88,33 +91,33 @@ export default async function DashLayout({ children }: { children: React.ReactNo
         )}
         {platform.broadcastShow && platform.broadcastText && (
           <div className="bg-slate-900 text-white text-sm px-5 sm:px-8 py-2.5 flex items-center gap-2 shrink-0">
-            <Megaphone className="w-4 h-4 text-lime-400 shrink-0" />
+            <Megaphone className="w-4 h-4 text-violet-300 shrink-0" />
             <span>{platform.broadcastText}</span>
           </div>
         )}
-        <div className="sticky top-0 z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-5 sm:px-8 h-14 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <span className="hidden sm:inline">Plan:</span>
-            <span className="font-semibold text-slate-800 dark:text-slate-100 capitalize">{planLabel}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <a href="/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
-              <ExternalLink className="w-4 h-4" /> <span className="hidden sm:inline">Preview site</span>
+        <header className="sticky top-0 z-20 bg-white/80 dark:bg-slate-950/80 backdrop-blur border-b border-slate-200/80 dark:border-white/10 px-4 sm:px-8 h-14 sm:h-16 flex items-center justify-between gap-3 shrink-0">
+          <AdminPageTitle />
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <span className="hidden md:inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-white/10 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> <span className="capitalize">{planLabel}</span> plan
+            </span>
+            <ThemeToggle className="w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 text-slate-600 dark:text-amber-300 hover:border-lime-400 hover:text-lime-600 transition-colors" />
+            <a href="/" target="_blank" rel="noreferrer" title="View site" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 px-2.5 sm:px-3 py-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:border-lime-400 hover:text-lime-600">
+              <ExternalLink className="w-4 h-4" /> <span className="hidden sm:inline">View site</span>
             </a>
             {!demoSession && (
-              <a href={upgradeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-lime-500 to-emerald-500 text-white px-3.5 py-1.5 text-sm font-semibold hover:opacity-90">
-                <Rocket className="w-4 h-4" /> Upgrade plan
+              <a href={upgradeUrl} target="_blank" rel="noreferrer" className="admin-grad inline-flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3.5 py-1.5 text-sm font-semibold shadow-md shadow-blue-600/20 hover:opacity-90">
+                <Rocket className="w-4 h-4" /> <span className="hidden sm:inline">Upgrade</span>
               </a>
             )}
             {demoSession && (
-              <Link href={`${proto}://${ROOT_DOMAIN.includes("localhost") ? "localhost:3000" : ROOT_DOMAIN}/subscribe?vertical=${demoSession.vertical}`} className="inline-flex items-center gap-1.5 rounded-lg bg-lime-500 text-white px-3.5 py-1.5 text-sm font-semibold hover:bg-lime-600">
-                Get this website
+              <Link href={`${proto}://${ROOT_DOMAIN.includes("localhost") ? "localhost:3000" : ROOT_DOMAIN}/subscribe?vertical=${demoSession.vertical}`} className="admin-grad inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold shadow-md shadow-blue-600/20 hover:opacity-90 whitespace-nowrap">
+                <Rocket className="w-4 h-4 hidden sm:block" /> Get this site
               </Link>
             )}
           </div>
-        </div>
-        <main className="p-5 sm:p-8 max-w-6xl mx-auto w-full flex-1 min-h-0 overflow-auto has-[.admin-full-bleed]:max-w-none has-[.admin-full-bleed]:px-3 sm:has-[.admin-full-bleed]:px-4 has-[.admin-full-bleed]:py-3 has-[.admin-full-bleed]:overflow-hidden has-[.admin-full-bleed]:flex has-[.admin-full-bleed]:flex-col">
+        </header>
+        <main className="p-4 sm:p-8 max-w-6xl mx-auto w-full flex-1 min-h-0 overflow-auto has-[.admin-full-bleed]:max-w-none has-[.admin-full-bleed]:px-3 sm:has-[.admin-full-bleed]:px-4 has-[.admin-full-bleed]:py-3 has-[.admin-full-bleed]:overflow-hidden has-[.admin-full-bleed]:flex has-[.admin-full-bleed]:flex-col">
           {children}
         </main>
       </div>

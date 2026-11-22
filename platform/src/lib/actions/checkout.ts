@@ -5,7 +5,8 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { createTenantFromTemplate } from "@/lib/provision";
-import { getDuration, priceFor, subscriptionEndFromDuration, resolveTier } from "@/lib/plans";
+import { cookies } from "next/headers";
+import { getDuration, resolveDuration, priceFor, subscriptionEndFromDuration, resolveTier } from "@/lib/plans";
 import { getPlatformConfig } from "@/lib/platformConfig";
 import { getVertical } from "@/lib/verticals";
 import { isDesignId } from "@/lib/designs";
@@ -18,6 +19,8 @@ import { getAuthedSession } from "@/lib/auth";
 import { rateLimit } from "@/lib/rateLimit";
 import { normalizeBlueprint } from "@/lib/ai/normalizeBlueprint";
 import { applyBlueprint } from "@/lib/ai/applyBlueprint";
+import { resolveReferrer, settleReferralForOrder } from "@/lib/referralServer";
+import { REF_COOKIE } from "@/lib/referral";
 
 const RESERVED = new Set(["www", "admin", "api", "app", "mail", "ftp", "root", "demo", "super", "dashboard", "static", "assets", "cdn"]);
 
@@ -157,10 +160,18 @@ async function applyRenewal(orderId: string): Promise<{ ok: true; url: string; a
   };
 }
 
+type ProvisionResult = { ok: true; url: string; adminUrl: string; email: string; planLabel: string } | { ok: false; message: string };
+
 // Provisions a tenant from a PAID order. Fully idempotent and collision-safe.
-export async function provisionForOrder(
-  orderId: string,
-): Promise<{ ok: true; url: string; adminUrl: string; email: string; planLabel: string } | { ok: false; message: string }> {
+// Every paid path (mock, Razorpay verify, webhook, super-admin mark-paid/retry) ends here,
+// so this is where referral commissions are settled (idempotent per order).
+export async function provisionForOrder(orderId: string): Promise<ProvisionResult> {
+  const res = await provisionOrder(orderId);
+  if (res.ok) await settleReferralForOrder(orderId).catch((e) => console.error("[referral] settle failed:", e));
+  return res;
+}
+
+async function provisionOrder(orderId: string): Promise<ProvisionResult> {
   const order = await db.order.findUnique({ where: { id: orderId } });
   if (!order) return { ok: false, message: "Order not found." };
 
@@ -292,7 +303,7 @@ export async function subscribe(_prev: CheckoutState, formData: FormData): Promi
   const cfg = await getPlatformConfig();
   const vertical = getVertical(raw.vertical);
   const tier = resolveTier(raw.tier, cfg.planOverrides);
-  const duration = getDuration(raw.duration);
+  const duration = resolveDuration(raw.duration, cfg.planOverrides);
   if (!vertical || !tier || !duration) return { status: "error", message: "Please choose a sector, plan and duration." };
   const planLabel = `${tier.name} · ${duration.label}`;
   let amount = priceFor(tier, duration);
@@ -321,11 +332,21 @@ export async function subscribe(_prev: CheckoutState, formData: FormData): Promi
   if (couponCode && !coupon.valid) return { status: "error", message: coupon.message || "Invalid coupon." };
   if (coupon.valid) amount = Math.round(amount * (1 - coupon.percentOff / 100));
 
+  // Referral: a code typed at checkout wins over the ?ref= cookie (last click). Buyer pays full price.
+  const typedRef = formData.get("referralCode")?.toString() ?? "";
+  const referral = await resolveReferrer(
+    typedRef || (await cookies()).get(REF_COOKIE)?.value || "",
+    { email: parsed.data.email, phone: parsed.data.phone },
+    Boolean(typedRef.trim()),
+  );
+  if (referral.error) return { status: "error", message: referral.error };
+
   const rzpOn = await razorpayEnabled();
   if (!rzpOn && !mockPaymentsAllowed()) return { status: "error", message: "Online payments are not set up yet. Please contact us." };
 
   const order = await db.order.create({
     data: {
+      referrerTenantId: referral.tenantId,
       customerName: parsed.data.businessName,
       email: parsed.data.email,
       phone: parsed.data.phone,
@@ -426,7 +447,7 @@ export async function renewSubscription(_prev: RenewState, formData: FormData): 
   const durationId = formData.get("duration")?.toString() ?? "";
   const cfg = await getPlatformConfig();
   const tier = resolveTier(tierId, cfg.planOverrides);
-  const duration = getDuration(durationId);
+  const duration = resolveDuration(durationId, cfg.planOverrides);
   if (!tier || !duration) return { status: "error", message: "Please choose a plan and duration." };
 
   const planLabel = `${tier.name} · ${duration.label}`;
@@ -457,6 +478,7 @@ export async function renewSubscription(_prev: RenewState, formData: FormData): 
       couponCode: coupon.valid ? coupon.code : "",
       kind,
       tenantId: authed.tenant.id,
+      referrerTenantId: authed.tenant.referredByTenantId, // renewals keep earning for the referrer
     },
   });
 

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { siteIntegrations } from "@/lib/integrations";
 import type { Metadata } from "next";
 import {
   getCurrentTenant,
@@ -10,6 +11,8 @@ import {
   getSiteNotices,
   getSitePeople,
   getSiteEvents,
+  getSiteProperties,
+  getSiteCauses,
 } from "@/lib/tenant";
 import { getAuthedSession } from "@/lib/auth";
 import { faqJsonLd } from "@/lib/seo";
@@ -19,6 +22,7 @@ import { getActiveDemoSessionForTenant, loadDemoOverlay, trackDemoPageView, isDe
 import { applySectionsOverlay } from "@/lib/demoOverlay";
 import { designSections } from "@/lib/designs";
 import { cookies } from "next/headers";
+import { TenantPrivacy } from "@/components/site/TenantPrivacy";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +33,18 @@ function slugFrom(parts?: string[]): string {
   return parts.join("/");
 }
 
+// Every tenant gets a built-in privacy notice at /privacy (TenantPrivacy) unless it
+// publishes its own page with that slug — a tenant's own page always wins.
+// ponytail: sites provisioned before Nov 2026 have an untouched stub page; it's
+// detected by its text and replaced by the full notice. Drop once those are migrated.
+const LEGACY_PRIVACY_STUB = "respects your privacy. This policy explains how we handle your information.";
+type PageLike = { isSystem: boolean; sections: { type: string; content: string }[] } | null;
+function showsDefaultPrivacy(slugStr: string, page: PageLike): boolean {
+  if (slugStr !== "privacy") return false;
+  if (!page) return true;
+  return page.isSystem && page.sections.length <= 2 && page.sections.some((s) => s.type === "richText" && s.content.includes(LEGACY_PRIVACY_STUB));
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tenant = await getCurrentTenant();
   if (!tenant) return {};
@@ -37,6 +53,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const slugStr = slugFrom(slug);
   const isHome = slugStr === "home";
   const page = await getPageBySlug(tenant.id, slugStr);
+  if (showsDefaultPrivacy(slugStr, page)) {
+    return {
+      title: `Privacy Policy — ${tenant.name}`,
+      description: `How ${tenant.name} handles the personal data you share through this website.`,
+      alternates: { canonical: "/privacy" },
+    };
+  }
 
   const title = page?.seoTitle || (page && !isHome ? `${page.title} — ${tenant.name}` : config.seo.title);
   const description = page?.seoDescription || config.seo.description;
@@ -81,6 +104,11 @@ export default async function SitePage({ params, searchParams }: Props) {
   const page = editMode
     ? await getPageForEditor(tenant.id, slugStr)
     : await getPageBySlug(tenant.id, slugStr);
+  // In the builder, an existing privacy page is shown as-is so it can be edited.
+  if (editMode ? !page && slugStr === "privacy" : showsDefaultPrivacy(slugStr, page)) {
+    const { footer } = await getTenantConfig(tenant.id, tenant.name);
+    return <TenantPrivacy bizName={tenant.name} contact={footer.contact} />;
+  }
   if (!page) notFound();
 
   let sections = page.sections.map((s) => ({ ...s, pageId: page.id }));
@@ -96,13 +124,17 @@ export default async function SitePage({ params, searchParams }: Props) {
     sections = sections.filter((s) => s.visible);
   }
 
-  const [config, servicesByCategory, galleryByCategory, notices, people, events] = await Promise.all([
+  const needsProperties = sections.some((s) => s.type === "propertyList");
+  const needsCauses = sections.some((s) => s.type === "causeList");
+  const [config, servicesByCategory, galleryByCategory, notices, people, events, properties, causes] = await Promise.all([
     getTenantConfig(tenant.id, tenant.name),
     getServicesGrouped(tenant.id),
     getGalleryGrouped(tenant.id),
     getSiteNotices(tenant.id),
     getSitePeople(tenant.id),
     getSiteEvents(tenant.id),
+    needsProperties ? getSiteProperties(tenant.id) : Promise.resolve([]),
+    needsCauses ? getSiteCauses(tenant.id) : Promise.resolve([]),
   ]);
 
   const ctx: RenderContext = {
@@ -114,7 +146,10 @@ export default async function SitePage({ params, searchParams }: Props) {
     notices,
     people,
     events,
+    properties,
+    causes,
     payments: config.payments,
+    integrations: siteIntegrations(config.integrations, config.seo),
     orgName: tenant.name,
   };
 

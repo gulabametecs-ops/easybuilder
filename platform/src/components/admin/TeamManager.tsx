@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { inviteTeamMember, removeTeamMember, updateTeamMemberRole, type TeamState } from "@/lib/actions/team";
 import { fieldCls, labelCls } from "./AdminWorkspace";
 
@@ -21,6 +21,8 @@ export function TeamManager({
 }) {
   const [state, action, pending] = useActionState(inviteTeamMember, init);
   const [busy, start] = useTransition();
+  const [rowMsg, setRowMsg] = useState<TeamState | null>(null);
+  const run = (fn: () => Promise<TeamState>) => start(async () => setRowMsg(await fn()));
 
   return (
     <div className="max-w-xl space-y-4">
@@ -42,19 +44,19 @@ export function TeamManager({
                   <select
                     defaultValue={m.role}
                     disabled={busy}
-                    onChange={(e) => start(async () => { await updateTeamMemberRole(m.id, e.target.value); })}
+                    onChange={(e) => { const role = e.target.value; run(() => updateTeamMemberRole(m.id, role)); }}
                     className="rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 text-xs px-2 py-1.5"
                   >
                     <option value="owner">Owner</option>
                     <option value="admin">Admin</option>
                     <option value="staff">Staff</option>
                   </select>
-                  <button type="button" disabled={busy} onClick={() => start(async () => { await removeTeamMember(m.id); })} className="text-xs text-rose-600 font-semibold hover:underline">
+                  <button type="button" disabled={busy} onClick={() => { if (confirm(`Remove ${m.email} from your team? They will lose admin access.`)) run(() => removeTeamMember(m.id)); }} className="text-xs text-rose-600 font-semibold hover:underline">
                     Remove
                   </button>
                 </>
               ) : canManage && m.id !== currentUserId && m.role === "staff" ? (
-                <button type="button" disabled={busy} onClick={() => start(async () => { await removeTeamMember(m.id); })} className="text-xs text-rose-600 font-semibold hover:underline">
+                <button type="button" disabled={busy} onClick={() => { if (confirm(`Remove ${m.email} from your team? They will lose admin access.`)) run(() => removeTeamMember(m.id)); }} className="text-xs text-rose-600 font-semibold hover:underline">
                   Remove
                 </button>
               ) : (
@@ -64,6 +66,7 @@ export function TeamManager({
           </li>
         ))}
       </ul>
+      {rowMsg?.message && <p className={`text-xs ${rowMsg.ok ? "text-emerald-600" : "text-rose-600"}`}>{rowMsg.message}</p>}
 
       {canManage && (
         <form action={action} className="grid sm:grid-cols-2 gap-3 rounded-2xl border border-slate-100 dark:border-slate-800 p-3">

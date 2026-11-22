@@ -3,13 +3,15 @@ import Link from "next/link";
 import { VERTICALS, getVertical, categoryOf } from "@/lib/verticals";
 import { paymentMode } from "@/lib/actions/checkout";
 import { getPlatformConfig } from "@/lib/platformConfig";
-import { resolveTiers } from "@/lib/plans";
+import { cookies } from "next/headers";
+import { resolveTiers, resolveDurations } from "@/lib/plans";
+import { REF_COOKIE, normalizeRefCode } from "@/lib/referral";
 import { SubscribeFlow } from "@/components/marketing/SubscribeFlow";
 import { MarketingPageHero } from "@/components/marketing/MarketingPageHero";
 import { mkt } from "@/lib/marketingTheme";
 import { ArrowLeft } from "lucide-react";
 
-export const metadata = { title: "Subscribe — Standard SaaS" };
+export const metadata = { title: "Subscribe — SitePixl" };
 
 type Props = { searchParams: Promise<{ vertical?: string; tier?: string; duration?: string; from?: string; design?: string }> };
 
@@ -19,6 +21,8 @@ export default async function SubscribePage({ searchParams }: Props) {
   const mode = await paymentMode();
   const cfg = await getPlatformConfig();
   const tiers = resolveTiers(cfg.planOverrides);
+  const durations = resolveDurations(cfg.planOverrides);
+  const referral = normalizeRefCode((await cookies()).get(REF_COOKIE)?.value);
 
   const selected = vertical ? getVertical(vertical) : null;
   const validVertical = selected ? vertical! : "home-services";
@@ -64,6 +68,8 @@ export default async function SubscribePage({ searchParams }: Props) {
           defaultDuration={duration}
           mock={mode === "mock"}
           tiers={tiers}
+          durations={durations}
+          defaultReferral={referral}
           fromAi={fromAi}
           defaultDesign={design}
         />

@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { getAuthedSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { PageHeader, Badge } from "@/components/admin/ui";
+import { PageHeader } from "@/components/admin/ui";
 import { PagesManager } from "@/components/admin/PagesManager";
+import { planFor } from "@/lib/usage";
 
 export const metadata = { title: "Pages" };
 
@@ -10,6 +10,7 @@ export default async function PagesPage() {
   const authed = await getAuthedSession();
   if (!authed) return null;
 
+  const { limits } = await planFor(authed.tenant);
   const pages = await db.page.findMany({
     where: { tenantId: authed.tenant.id },
     orderBy: { order: "asc" },
@@ -35,7 +36,7 @@ export default async function PagesPage() {
         title="Pages & Sections"
         subtitle="Create pages from ready layouts, then edit content visually."
       />
-      <PagesManager pages={payload} />
+      <PagesManager pages={payload} pageLimit={limits?.pages ?? 0} />
     </>
   );
 }

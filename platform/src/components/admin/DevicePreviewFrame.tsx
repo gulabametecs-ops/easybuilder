@@ -45,9 +45,8 @@ export function DevicePreviewFrame({
   const [stageSize, setStageSize] = useState({ w: 800, h: 600 });
   const active = PREVIEW_DEVICES.find((d) => d.id === device)!;
 
-  useEffect(() => {
-    if (controlledDevice) setInnerDevice(controlledDevice);
-  }, [controlledDevice]);
+  // Remember the last controlled device so it sticks if the parent stops controlling it.
+  if (controlledDevice && innerDevice !== controlledDevice) setInnerDevice(controlledDevice);
 
   const setDevice = (id: PreviewDevice) => {
     setInnerDevice(id);

@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import Link from "next/link";
 import { signupAction, checkSubdomain, type SignupState } from "@/lib/actions/signup";
 import { Check, ArrowRight, ExternalLink } from "lucide-react";
+import { LegalConsent } from "./LegalConsent";
 
 const ROOT = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
 const initial: SignupState = { status: "idle" };
@@ -16,7 +16,7 @@ export function SignupForm() {
 
   // Debounced availability check.
   useEffect(() => {
-    if (sub.length < 3) { setAvail(null); return; }
+    if (sub.length < 3) return;
     const t = setTimeout(async () => setAvail(await checkSubdomain(sub)), 400);
     return () => clearTimeout(t);
   }, [sub]);
@@ -28,7 +28,7 @@ export function SignupForm() {
           <Check className="w-7 h-7 text-[var(--mkt-accent-text)] dark:text-[var(--mkt-accent-text)]" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Your website is live! 🎉</h2>
-        <p className="text-slate-600 dark:text-slate-300 mt-2">We've created your site and admin panel.</p>
+        <p className="text-slate-600 dark:text-slate-300 mt-2">We&apos;ve created your site and admin panel.</p>
         <div className="mt-6 space-y-3 text-left">
           <a href={state.url} className="flex items-center justify-between rounded-lg bg-black/[0.03] dark:bg-white/5 border border-black/10 dark:border-white/10 px-4 py-3 hover:bg-black/[0.06] dark:hover:bg-white/10">
             <span className="text-slate-600 dark:text-slate-300 text-sm">Your website</span>
@@ -59,7 +59,11 @@ export function SignupForm() {
             name="subdomain"
             required
             value={sub}
-            onChange={(e) => setSub(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+            onChange={(e) => {
+              const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+              setSub(v);
+              if (v.length < 3) setAvail(null);
+            }}
             placeholder="yourbusiness"
             className="flex-1 bg-transparent px-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none"
           />
@@ -87,6 +91,7 @@ export function SignupForm() {
         {pending ? "Creating your website..." : "Create my website"}
         {!pending && <ArrowRight className="w-4 h-4" />}
       </button>
+      <LegalConsent className="text-center" />
       <p className="text-center text-xs text-slate-400 dark:text-slate-500">Already have a site? Log in at <span className="text-slate-600 dark:text-slate-300">yourname.{ROOT}/admin</span></p>
     </form>
   );

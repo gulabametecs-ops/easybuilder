@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { getCurrentTenant, getTenantConfig } from "@/lib/tenant";
 import { db } from "@/lib/db";
 import { img } from "@/lib/img";
-import { Icon, categoryIcon } from "@/components/site/Icon";
+import { Icon } from "@/components/site/Icon";
 
 type Props = { params: Promise<{ slug: string }> };
 

@@ -6,7 +6,6 @@ import { verticalName } from "@/lib/verticals";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/admin/ui";
 
 export const metadata = { title: "Clients" };
-const proto = ROOT_DOMAIN.includes("localhost") ? "http" : "https";
 
 type Props = { searchParams: Promise<{ q?: string; filter?: string }> };
 

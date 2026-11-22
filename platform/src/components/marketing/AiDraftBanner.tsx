@@ -1,24 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { readAiDraft } from "@/lib/ai/promptStorage";
+import { useAiDraftItem, AI_BLUEPRINT_KEY } from "@/lib/ai/promptStorage";
 import { mkt } from "@/lib/marketingTheme";
 
 export function AiDraftBanner() {
-  const [siteName, setSiteName] = useState<string | null>(null);
-
-  useEffect(() => {
-    const draft = readAiDraft();
-    if (!draft?.blueprint) return;
+  const raw = useAiDraftItem(AI_BLUEPRINT_KEY);
+  const siteName = useMemo(() => {
+    if (!raw) return null;
     try {
-      const bp = JSON.parse(draft.blueprint) as { website?: { name?: string } };
-      setSiteName(bp.website?.name?.trim() || "Your website");
+      const bp = JSON.parse(raw) as { website?: { name?: string } };
+      return bp.website?.name?.trim() || "Your website";
     } catch {
-      setSiteName("Your website");
+      return "Your website";
     }
-  }, []);
+  }, [raw]);
 
   if (!siteName) return null;
 

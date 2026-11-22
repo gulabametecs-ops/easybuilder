@@ -55,6 +55,59 @@ export type EventSeed = {
   qrCaption?: string;
 };
 
+export type CauseSeed = {
+  title: string;
+  slug?: string;
+  category: string;
+  summary: string;
+  story: string; // paragraphs separated by blank lines
+  goalAmount: number; // INR
+  offlineRaised?: number; // INR already raised (seed realistic progress)
+  offlineDonors?: number;
+  deadline?: string; // YYYY-MM-DD, "" = ongoing
+  urgent?: boolean;
+  beneficiaries?: string;
+  location?: string;
+  impactTiers?: { amount: number; label: string }[];
+  updates?: { date: string; title: string; text: string }[];
+  status?: "active" | "completed" | "paused";
+  featured?: boolean;
+};
+
+export type PropertySeed = {
+  title: string;
+  slug?: string;
+  purpose: "sale" | "rent" | "pg" | "project";
+  propertyType: string;
+  price: number;
+  priceNote?: string;
+  deposit?: number;
+  maintenance?: number;
+  bhk?: string;
+  areaSqft?: number;
+  furnishing?: string;
+  bathrooms?: number;
+  floor?: string;
+  facing?: string;
+  parking?: string;
+  availableFrom?: string;
+  possession?: string;
+  rera?: string;
+  sharing?: string;
+  foodIncluded?: boolean;
+  gender?: string;
+  locality: string;
+  city: string;
+  address?: string;
+  summary: string;
+  description: string;
+  highlights?: string[];
+  amenities?: string[]; // ids from lib/property AMENITIES
+  floorPlans?: { label: string; area?: string }[];
+  status?: "available" | "under-offer" | "sold" | "rented";
+  featured?: boolean;
+};
+
 // A complete website blueprint for one vertical/sector.
 export type TemplateDef = {
   theme: ThemeConfig;
@@ -67,5 +120,7 @@ export type TemplateDef = {
   gallery: { category: string; caption: string }[];
   people?: (biz: string) => PersonSeed[];
   events?: (biz: string) => EventSeed[];
+  properties?: (biz: string) => PropertySeed[];
+  causes?: (biz: string) => CauseSeed[];
   pages: (biz: string) => PageSeed[];
 };

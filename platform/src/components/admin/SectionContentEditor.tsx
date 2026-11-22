@@ -12,6 +12,7 @@ import { websiteFieldDefaults } from "@/lib/fieldStyle";
 import { ImageInput } from "./ImageInput";
 import { FieldStyleButton } from "./FieldStyleButton";
 import { IconPicker } from "./IconPicker";
+import { PURPOSES } from "@/lib/property";
 
 type Json = Record<string, unknown>;
 type SiteColors = ThemeConfig["colors"];
@@ -223,6 +224,16 @@ function FieldEditor({
           <option value="minimal">Minimal — clean light, centered (trending)</option>
           <option value="slideshow">Slideshow — auto-rotating slides (add your own)</option>
           <option value="custom">Custom — my own HTML</option>
+        </select>
+      </Labeled>
+    );
+  }
+  if (k === "purpose" && (typeof value === "string" || value == null)) {
+    return (
+      <Labeled text="Show listings">
+        <select className={inputCls} value={String(value || "all")} onChange={(e) => onChange(e.target.value)}>
+          <option value="all">All purposes</option>
+          {PURPOSES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
         </select>
       </Labeled>
     );

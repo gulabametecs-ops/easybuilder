@@ -3,6 +3,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getAuthedSession } from "@/lib/auth";
 import { LoginForm } from "@/components/admin/LoginForm";
 import { getActiveDemoSessionForTenant, isDemoSubdomain } from "@/lib/demoSession";
+import { BrandMark } from "@/components/BrandLogo";
 
 export const metadata = { title: "Admin Login" };
 
@@ -58,7 +59,9 @@ export default async function AdminLoginPage() {
             defaultPassword={demoSession?.adminPassword || undefined}
           />
         </div>
-        <p className="text-center text-xs text-slate-400 mt-4">Powered by Standard SaaS</p>
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-slate-400">
+          Powered by <BrandMark size={14} id="spx-al" /> <span className="font-semibold text-slate-500">SitePixl</span>
+        </p>
       </div>
     </div>
   );

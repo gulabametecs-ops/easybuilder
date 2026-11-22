@@ -1,4 +1,4 @@
-import { formatINR, getDuration, resolveTier } from "@/lib/plans";
+import { formatINR, getAnyDuration, resolveTier } from "@/lib/plans";
 import { verticalName } from "@/lib/verticals";
 import { gstBreakdown } from "@/lib/invoice";
 import type { PlatformConfig } from "@/lib/platformConfig";
@@ -9,15 +9,15 @@ type Order = {
   company: string; vertical: string; plan: string; amount: number; status: string; gateway: string;
 };
 
-/** Platform-branded GST invoice (StandardSaaS theme: navy + lime). */
+/** Platform-branded GST invoice (SitePixl theme: navy + lime). */
 export function Invoice({ order, cfg }: { order: Order; cfg: PlatformConfig }) {
   const [tierId, durId] = order.plan.split("-");
   const tier = resolveTier(tierId, "{}");
-  const duration = getDuration(durId);
+  const duration = getAnyDuration(durId);
   const gst = gstBreakdown(order.amount, cfg.gstRate);
   const date = new Date(order.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const desc = `${tier?.name ?? order.plan} plan · ${verticalName(order.vertical)}${duration ? ` · ${duration.label}` : ""} website subscription`;
-  const brand = cfg.platformName || "StandardSaaS";
+  const brand = cfg.platformName || "SitePixl";
   const initial = brand.charAt(0).toUpperCase();
 
   return (

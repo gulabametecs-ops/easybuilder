@@ -16,9 +16,5 @@ export default async function LeadsPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  return (
-    <div className="admin-full-bleed flex flex-col flex-1 min-h-0">
-      <LeadsManager leads={leads} />
-    </div>
-  );
+  return <LeadsManager leads={leads} bizName={authed.tenant.name} />;
 }

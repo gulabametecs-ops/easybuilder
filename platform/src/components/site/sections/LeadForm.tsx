@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { submitLead, type FormState } from "@/lib/actions/site";
 import { Icon } from "../Icon";
+import { PrivacyConsent } from "../PrivacyConsent";
 
 const initial: FormState = { ok: false, message: "" };
 
@@ -62,8 +63,9 @@ export function LeadForm({
       </button>
       <p className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
         <Icon name="shield" className="w-3.5 h-3.5" />
-        Your information is safe with us. We never share your data.
+        Your information is used only to respond to your request.
       </p>
+      <PrivacyConsent />
     </form>
   );
 }

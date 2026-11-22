@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   Inbox, Search, Phone, Mail, MapPin, Trash2, MessageCircle, Download,
-  Filter,
+  Sparkles, PhoneCall, Trophy, CalendarRange, X, Tag, Clock, ArrowUpDown,
 } from "lucide-react";
 import { updateLeadStatus, deleteLead } from "@/lib/actions/crm";
-import { AdminWorkspace } from "./AdminWorkspace";
-import { Badge } from "./ui";
+import { PageHeader, StatCard, Card, EmptyState, btnSecondary } from "./ui";
 
 type Lead = {
   id: string;
@@ -21,13 +20,38 @@ type Lead = {
   createdAt: Date | string;
 };
 
-const STATUSES = ["all", "new", "contacted", "converted", "closed"] as const;
-const tone: Record<string, "green" | "blue" | "amber" | "slate"> = {
-  new: "green",
-  contacted: "blue",
-  converted: "amber",
-  closed: "slate",
+const STATUSES = ["new", "contacted", "converted", "closed"] as const;
+const FILTERS = ["all", ...STATUSES] as const;
+const chip: Record<string, string> = {
+  new: "bg-lime-500/12 text-lime-700 dark:text-lime-300 border-lime-500/25",
+  contacted: "bg-amber-500/12 text-amber-700 dark:text-amber-300 border-amber-500/25",
+  converted: "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/25",
+  closed: "bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20",
 };
+const AVATARS = [
+  "from-blue-500 to-violet-500", "from-emerald-500 to-teal-500", "from-amber-500 to-orange-500",
+  "from-rose-500 to-pink-500", "from-sky-500 to-cyan-500", "from-violet-500 to-fuchsia-500",
+];
+const DAY = 86_400_000;
+
+const initialsOf = (name: string) =>
+  name.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "?";
+const avatarOf = (name: string) => AVATARS[[...name].reduce((h, c) => h + c.charCodeAt(0), 0) % AVATARS.length];
+const digits = (phone: string) => phone.replace(/[^0-9]/g, "");
+const fmtDate = (d: Date | string) =>
+  new Date(d).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" });
+
+function timeAgo(d: Date | string, now: number) {
+  const s = Math.max(0, Math.round((now - new Date(d).getTime()) / 1000));
+  if (s < 60) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.round(h / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
 
 function downloadCsv(leads: Lead[]) {
   const rows = [
@@ -43,173 +67,331 @@ function downloadCsv(leads: Lead[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "leads.csv";
+  a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-export function LeadsManager({ leads: initial }: { leads: Lead[] }) {
+export function LeadsManager({ leads: initial, bizName }: { leads: Lead[]; bizName: string }) {
   const [pending, start] = useTransition();
   const [leads, setLeads] = useState(initial);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [sort, setSort] = useState<"new" | "old" | "name">("new");
+  const [openId, setOpenId] = useState<string | null>(null);
+  // Fixed at mount so render stays pure; time-ago labels are minute-accurate anyway.
+  const [now] = useState(() => Date.now());
 
-  useEffect(() => setLeads(initial), [initial]);
+  // Re-sync when the server sends fresh data (adjust state during render, not in an effect).
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (prevInitial !== initial) {
+    setPrevInitial(initial);
+    setLeads(initial);
+  }
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return leads.filter((l) => {
+    const fromT = from ? new Date(`${from}T00:00:00`).getTime() : -Infinity;
+    const toT = to ? new Date(`${to}T23:59:59.999`).getTime() : Infinity;
+    const list = leads.filter((l) => {
       if (status !== "all" && l.status !== status) return false;
+      const t = new Date(l.createdAt).getTime();
+      if (t < fromT || t > toT) return false;
       if (!needle) return true;
       return [l.name, l.phone, l.email, l.service, l.location, l.message]
         .join(" ")
         .toLowerCase()
         .includes(needle);
     });
-  }, [leads, q, status]);
+    const time = (l: Lead) => new Date(l.createdAt).getTime();
+    return list.sort((a, b) =>
+      sort === "name" ? a.name.localeCompare(b.name) : sort === "old" ? time(a) - time(b) : time(b) - time(a),
+    );
+  }, [leads, q, status, from, to, sort]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: leads.length };
-    for (const s of STATUSES) {
-      if (s === "all") continue;
-      c[s] = leads.filter((l) => l.status === s).length;
-    }
+    for (const s of STATUSES) c[s] = leads.filter((l) => l.status === s).length;
     return c;
   }, [leads]);
+  const thisWeek = leads.filter((l) => now - new Date(l.createdAt).getTime() < 7 * DAY).length;
+
+  const setLeadStatus = (id: string, next: string) => {
+    setLeads((prev) => prev.map((x) => (x.id === id ? { ...x, status: next } : x)));
+    start(() => updateLeadStatus(id, next));
+  };
+  const removeLead = (id: string) => {
+    if (!confirm("Delete this lead?")) return;
+    setLeads((prev) => prev.filter((x) => x.id !== id));
+    setOpenId(null);
+    start(() => deleteLead(id));
+  };
+
+  const open = leads.find((l) => l.id === openId) ?? null;
+  const filtersOn = !!(q || from || to || status !== "all");
 
   return (
-    <div className={pending ? "opacity-70 pointer-events-none" : ""}>
-      <AdminWorkspace
+    <div className="space-y-5">
+      <PageHeader
         title="Leads"
-        titleIcon={<Inbox className="w-4 h-4 text-lime-600 shrink-0" />}
-        tabs={[{ id: "inbox", label: "Inbox", icon: Inbox }]}
-        tab="inbox"
-        onTabChange={() => {}}
-        toolbar={
-          <button
-            type="button"
-            onClick={() => downloadCsv(filtered)}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-lime-400"
-          >
-            <Download className="w-3.5 h-3.5" /> CSV
+        subtitle="Every enquiry from your website — follow up fast and track each one."
+        icon={<Inbox />}
+        action={
+          <button type="button" onClick={() => downloadCsv(filtered)} disabled={filtered.length === 0} className={btnSecondary}>
+            <Download className="w-4 h-4" /> Export CSV
+            <span className="text-xs font-medium text-slate-400">({filtered.length})</span>
           </button>
         }
-        headerExtra={
-          <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 space-y-2">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search name, phone, email…"
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-800 text-slate-900 dark:text-slate-100 pl-8 pr-3 py-1.5 text-sm outline-none focus:border-lime-500"
-              />
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {STATUSES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatus(s)}
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold capitalize ${
-                    status === s
-                      ? "bg-slate-900 text-white dark:bg-lime-500 dark:text-slate-900"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                  }`}
-                >
-                  <Filter className="w-3 h-3" /> {s} · {counts[s] ?? 0}
-                </button>
-              ))}
-            </div>
+      />
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <StatCard label="Total leads" value={counts.all} icon={<Inbox />} tone="brand" />
+        <StatCard label="New" value={counts.new} hint="Waiting for a reply" icon={<Sparkles />} tone="violet" />
+        <StatCard label="Contacted" value={counts.contacted} icon={<PhoneCall />} tone="amber" />
+        <StatCard label="Converted" value={counts.converted} hint={counts.all ? `${Math.round((counts.converted / counts.all) * 100)}% conversion` : undefined} icon={<Trophy />} tone="green" />
+        <div className="col-span-2 sm:col-span-1">
+          <StatCard label="This week" value={thisWeek} hint="Last 7 days" icon={<CalendarRange />} tone="sky" />
+        </div>
+      </div>
+
+      <Card className="overflow-hidden">
+        {/* Pipeline tabs */}
+        <div className="flex gap-1 p-2 overflow-x-auto border-b border-slate-100 dark:border-white/10">
+          {FILTERS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setStatus(s)}
+              className={`shrink-0 inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold capitalize transition ${
+                status === s
+                  ? "admin-grad shadow-md shadow-blue-600/20"
+                  : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
+              }`}
+            >
+              {s === "all" ? "All leads" : s}
+              <span className={`rounded-full px-1.5 min-w-[1.25rem] text-[11px] leading-5 ${status === s ? "bg-white/25" : "bg-slate-100 dark:bg-white/10"}`}>
+                {counts[s] ?? 0}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div className="p-3 grid gap-2 sm:grid-cols-[1fr_auto_auto] border-b border-slate-100 dark:border-white/10">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search name, phone, email, service…"
+              aria-label="Search leads"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-800 text-slate-900 dark:text-slate-100 pl-9 pr-3 py-2 text-sm outline-none focus:border-lime-500 focus:ring-4 focus:ring-lime-500/15"
+            />
           </div>
-        }
-      >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} aria-label="From date" className="min-w-0 flex-1 rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-800 text-slate-700 dark:text-slate-100 px-2.5 py-2 text-sm outline-none focus:border-lime-500" />
+            <span className="text-slate-400 text-xs">to</span>
+            <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} aria-label="To date" className="min-w-0 flex-1 rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-800 text-slate-700 dark:text-slate-100 px-2.5 py-2 text-sm outline-none focus:border-lime-500" />
+          </div>
+          <label className="relative flex items-center">
+            <ArrowUpDown className="w-4 h-4 absolute left-3 text-slate-400 pointer-events-none" />
+            <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort" className="w-full rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-800 text-slate-700 dark:text-slate-100 pl-9 pr-3 py-2 text-sm outline-none focus:border-lime-500">
+              <option value="new">Newest first</option>
+              <option value="old">Oldest first</option>
+              <option value="name">Name A–Z</option>
+            </select>
+          </label>
+        </div>
+
         {leads.length === 0 ? (
-          <div className="text-center py-14 px-4">
-            <span className="inline-flex w-12 h-12 rounded-2xl bg-lime-500/15 text-lime-600 items-center justify-center mb-3">
-              <Inbox className="w-6 h-6" />
-            </span>
-            <p className="text-sm font-semibold text-slate-800 dark:text-white">No leads yet</p>
-            <p className="text-xs text-slate-400 mt-1">Quote & contact form submissions will show up here.</p>
-          </div>
+          <EmptyState icon={<Inbox />} title="No leads yet" hint="When visitors fill your contact or quote forms, their enquiries land here instantly." />
         ) : filtered.length === 0 ? (
-          <p className="text-center text-xs text-slate-400 py-10">No matches</p>
+          <EmptyState
+            icon={<Search />}
+            title="No leads match"
+            hint="Try a different search, status or date range."
+            action={filtersOn ? (
+              <button type="button" className={btnSecondary} onClick={() => { setQ(""); setFrom(""); setTo(""); setStatus("all"); }}>
+                Clear filters
+              </button>
+            ) : undefined}
+          />
         ) : (
-          <div className="space-y-2">
+          <ul className={`divide-y divide-slate-100 dark:divide-white/5 ${pending ? "opacity-70" : ""}`}>
             {filtered.map((l) => (
-              <div
-                key={l.id}
-                className="rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{l.name}</p>
-                      <Badge tone={tone[l.status] ?? "slate"}>{l.status}</Badge>
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(l.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                      <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{l.phone}</span>
-                      {l.email && <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{l.email}</span>}
-                      {l.location && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{l.location}</span>}
-                    </div>
-                    {l.service && <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Service: <b>{l.service}</b></p>}
-                    {l.message && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{l.message}</p>}
+              <li key={l.id} className="group flex gap-3 px-3 sm:px-4 py-3.5 hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
+                <span className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarOf(l.name)} text-white text-sm font-bold flex items-center justify-center shrink-0`}>
+                  {initialsOf(l.name)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <button type="button" onClick={() => setOpenId(l.id)} className="font-semibold text-slate-900 dark:text-white hover:text-lime-600 text-left truncate max-w-full">
+                      {l.name}
+                    </button>
+                    {l.status === "new" && <span className="w-1.5 h-1.5 rounded-full bg-lime-500" aria-label="New" />}
+                    <span className="text-xs text-slate-400 inline-flex items-center gap-1" title={fmtDate(l.createdAt)} suppressHydrationWarning>
+                      <Clock className="w-3 h-3" /> {timeAgo(l.createdAt, now)}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {l.service && <span className="inline-flex items-center gap-1 font-medium text-slate-700 dark:text-slate-200"><Tag className="w-3 h-3 text-lime-600" />{l.service}</span>}
+                    {l.location && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{l.location}</span>}
+                    <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{l.phone}</span>
+                  </div>
+                  {l.message && (
+                    <button type="button" onClick={() => setOpenId(l.id)} className="block text-left text-sm text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-1 hover:text-slate-700 dark:hover:text-slate-200">
+                      “{l.message}”
+                    </button>
+                  )}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                    <StatusSelect value={l.status} onChange={(v) => setLeadStatus(l.id, v)} />
+                    <Actions lead={l} bizName={bizName} />
+                    <button type="button" onClick={() => setOpenId(l.id)} className="text-xs font-semibold text-lime-600 hover:underline px-1.5">
+                      Details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeLead(l.id)}
+                      className="ml-auto p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                      title="Delete"
+                      aria-label={`Delete ${l.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5 mt-2.5 pt-2 border-t border-slate-50 dark:border-slate-800">
-                  <select
-                    value={l.status}
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setLeads((prev) => prev.map((x) => (x.id === l.id ? { ...x, status: next } : x)));
-                      start(() => updateLeadStatus(l.id, next));
-                    }}
-                    className="rounded-lg border border-slate-200 dark:border-slate-600 dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-2 py-1.5 text-xs outline-none focus:border-lime-500"
-                  >
-                    {STATUSES.filter((s) => s !== "all").map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                  <a href={`tel:${l.phone}`} className="p-1.5 rounded-lg bg-lime-500/15 text-lime-700 dark:text-lime-400" title="Call">
-                    <Phone className="w-3.5 h-3.5" />
-                  </a>
-                  {l.phone && (
-                    <a
-                      href={`https://wa.me/${l.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hi ${l.name}, regarding your enquiry…`)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-600"
-                      title="WhatsApp"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                  {l.email && (
-                    <a href={`mailto:${l.email}`} className="p-1.5 rounded-lg bg-sky-500/15 text-sky-600" title="Email">
-                      <Mail className="w-3.5 h-3.5" />
-                    </a>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!confirm("Delete this lead?")) return;
-                      setLeads((prev) => prev.filter((x) => x.id !== l.id));
-                      start(() => deleteLead(l.id));
-                    }}
-                    className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 ml-auto"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {open && (
+        <LeadDrawer
+          lead={open}
+          bizName={bizName}
+          now={now}
+          onClose={() => setOpenId(null)}
+          onStatus={(v) => setLeadStatus(open.id, v)}
+          onDelete={() => removeLead(open.id)}
+        />
+      )}
+    </div>
+  );
+}
+
+function StatusSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label="Lead status"
+      className={`rounded-full border px-3 py-1 text-xs font-bold capitalize outline-none cursor-pointer focus:ring-4 focus:ring-lime-500/15 ${chip[value] ?? chip.closed}`}
+    >
+      {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+    </select>
+  );
+}
+
+function Actions({ lead, bizName, big = false }: { lead: Lead; bizName: string; big?: boolean }) {
+  const cls = big
+    ? "flex-1 inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold"
+    : "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold";
+  const greeting = `Hi ${lead.name}, thanks for contacting ${bizName}! ${lead.service ? `About your enquiry for ${lead.service} — ` : ""}how can we help you?`;
+  return (
+    <>
+      {lead.phone && (
+        <a href={`tel:${lead.phone}`} className={`${cls} bg-lime-500/12 text-lime-700 dark:text-lime-300 hover:bg-lime-500/20`}>
+          <Phone className="w-3.5 h-3.5" /> Call
+        </a>
+      )}
+      {lead.phone && (
+        <a
+          href={`https://wa.me/${digits(lead.phone)}?text=${encodeURIComponent(greeting)}`}
+          target="_blank"
+          rel="noreferrer"
+          className={`${cls} bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20`}
+        >
+          <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+        </a>
+      )}
+      {lead.email && (
+        <a
+          href={`mailto:${lead.email}?subject=${encodeURIComponent(`Your enquiry with ${bizName}`)}&body=${encodeURIComponent(`${greeting}\n\n`)}`}
+          className={`${cls} bg-violet-500/12 text-violet-700 dark:text-violet-300 hover:bg-violet-500/20`}
+        >
+          <Mail className="w-3.5 h-3.5" /> Email
+        </a>
+      )}
+    </>
+  );
+}
+
+function LeadDrawer({
+  lead, bizName, now, onClose, onStatus, onDelete,
+}: {
+  lead: Lead; bizName: string; now: number; onClose: () => void; onStatus: (v: string) => void; onDelete: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const rows: [string, string, typeof Phone][] = [
+    ["Phone", lead.phone, Phone],
+    ["Email", lead.email, Mail],
+    ["Service", lead.service, Tag],
+    ["Location", lead.location, MapPin],
+    ["Received", fmtDate(lead.createdAt), Clock],
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label={`Lead: ${lead.name}`}>
+      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
+      <aside className="absolute right-0 inset-y-0 w-full sm:w-[28rem] bg-white dark:bg-slate-900 shadow-2xl flex flex-col">
+        <div className="admin-grad px-5 pt-5 pb-6">
+          <div className="flex items-start justify-between gap-3">
+            <span className="w-12 h-12 rounded-2xl bg-white/20 text-white text-lg font-bold flex items-center justify-center">
+              {initialsOf(lead.name)}
+            </span>
+            <button type="button" onClick={onClose} aria-label="Close" className="p-2 rounded-xl hover:bg-white/15">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-xl font-extrabold mt-3 break-words">{lead.name}</p>
+          <p className="text-sm text-white/80" suppressHydrationWarning>Enquiry · {timeAgo(lead.createdAt, now)}</p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+          <div className="flex gap-2"><Actions lead={lead} bizName={bizName} big /></div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Status</p>
+            <StatusSelect value={lead.status} onChange={onStatus} />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Message</p>
+            <p className="rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-4 text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words">
+              {lead.message || <span className="text-slate-400">No message left.</span>}
+            </p>
+          </div>
+          <dl className="rounded-2xl border border-slate-100 dark:border-white/10 divide-y divide-slate-100 dark:divide-white/5">
+            {rows.filter(([, v]) => v).map(([k, v, Ic]) => (
+              <div key={k} className="flex items-start gap-3 px-4 py-3">
+                <Ic className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                <dt className="text-xs text-slate-500 w-20 shrink-0 mt-0.5">{k}</dt>
+                <dd className="text-sm font-medium text-slate-800 dark:text-slate-100 break-all">{v}</dd>
               </div>
             ))}
-          </div>
-        )}
-      </AdminWorkspace>
+          </dl>
+        </div>
+        <div className="p-4 border-t border-slate-100 dark:border-white/10">
+          <button type="button" onClick={onDelete} className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 dark:border-rose-500/30 text-rose-600 py-2.5 text-sm font-semibold hover:bg-rose-50 dark:hover:bg-rose-500/10">
+            <Trash2 className="w-4 h-4" /> Delete lead
+          </button>
+        </div>
+      </aside>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { Download } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatINR } from "@/lib/plans";
-import { verticalName, VERTICALS } from "@/lib/verticals";
+import { VERTICALS } from "@/lib/verticals";
 import { PageHeader, StatCard, Card } from "@/components/admin/ui";
 
 export const metadata = { title: "Analytics" };

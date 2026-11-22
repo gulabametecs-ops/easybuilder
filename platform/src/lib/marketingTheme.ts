@@ -1,5 +1,5 @@
 /**
- * StandardSaaS marketing tokens — pairs with CSS variables on `.mkt-root` (globals.css).
+ * SitePixl marketing tokens — pairs with CSS variables on `.mkt-root` (globals.css).
  * Ivory paper + charcoal ink + terracotta highlights.
  */
 export const mkt = {
@@ -8,8 +8,8 @@ export const mkt = {
   sectionBgAlt: "bg-[var(--mkt-bg-alt)]",
   container: "mx-auto max-w-6xl px-4 sm:px-6",
   containerNarrow: "mx-auto max-w-5xl px-4 sm:px-6",
-  h1: "font-display text-4xl sm:text-5xl leading-[1.1] text-[var(--mkt-text)]",
-  h2: "font-display text-[1.75rem] sm:text-[2.35rem] leading-[1.15] text-[var(--mkt-text)] text-balance",
+  h1: "font-display text-[2rem] sm:text-[2.6rem] leading-[1.12] text-[var(--mkt-text)]",
+  h2: "font-display text-[1.55rem] sm:text-[2rem] leading-[1.18] text-[var(--mkt-text)] text-balance",
   eyebrow:
     "inline-flex items-center gap-2 rounded-full border border-[var(--mkt-border)] bg-[var(--mkt-surface)] px-3 py-1 text-[var(--mkt-accent-text)] text-[11px] font-semibold tracking-[0.16em] uppercase",
   muted: "text-[var(--mkt-text-muted)]",

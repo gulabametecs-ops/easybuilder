@@ -1,5 +1,6 @@
 import { getAuthedSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { fileUploadMb } from "@/lib/usage";
 import { NoticesManager } from "@/components/admin/NoticesManager";
 import { getDemoSessionId } from "@/lib/actions/guard";
 import { demoVisibleWhere } from "@/lib/demoSession";
@@ -18,6 +19,7 @@ export default async function NoticesPage() {
   return (
     <div className="admin-full-bleed flex flex-col flex-1 min-h-0">
       <NoticesManager
+        maxFileMb={await fileUploadMb(authed.tenant)}
         notices={notices.map((n) => ({
           id: n.id,
           date: n.date,
