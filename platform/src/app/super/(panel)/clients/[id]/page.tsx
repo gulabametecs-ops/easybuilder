@@ -7,7 +7,8 @@ import { verticalName } from "@/lib/verticals";
 import { formatBytes, formatINR } from "@/lib/plans";
 import { LogIn } from "lucide-react";
 import { recordManualPayment } from "@/lib/actions/superAdmin";
-import { Card, StatCard, Badge, EmptyState } from "@/components/admin/ui";
+import { Card, StatCard, EmptyState } from "@/components/admin/ui";
+import { Avatar, Pill, ORDER_TONE, orderLabel } from "@/components/super/kit";
 import { ClientActions } from "@/components/super/ClientActions";
 import { PlanUsage, LicenseTimeline } from "@/components/super/ClientUsage";
 import { getUsage, planFor } from "@/lib/usage";
@@ -61,7 +62,7 @@ export default async function ClientDetailPage({ params }: Props) {
           </div>
           <div className="flex gap-2">
             <a href={url} target="_blank" className="inline-flex items-center gap-1.5 rounded-xl border border-white/40 px-3.5 py-2 text-sm font-semibold hover:bg-white/10"><ExternalLink className="w-4 h-4" /> Site</a>
-            <a href={`/super/impersonate/${tenant.id}`} className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 hover:bg-white/90"><LogIn className="w-4 h-4" /> Login as client</a>
+            <a href={`/super/impersonate/${tenant.id}`} className="inline-flex items-center gap-1.5 rounded-xl bg-white/95 px-3.5 py-2 text-sm font-semibold text-slate-950 hover:bg-white/85"><LogIn className="w-4 h-4" /> Login as client</a>
           </div>
         </div>
       </div>
@@ -80,7 +81,7 @@ export default async function ClientDetailPage({ params }: Props) {
           <Card className="p-5">
             <h3 className="font-semibold text-slate-900 mb-4">Account details</h3>
             <dl className="grid sm:grid-cols-2 gap-4 text-sm">
-              <Detail label="Status" value={<Badge tone={tenant.status === "suspended" ? "red" : expired ? "amber" : "green"}>{tenant.status === "suspended" ? "suspended" : expired ? "expired" : "active"}</Badge>} />
+              <Detail label="Status" value={<Pill tone={tenant.status === "suspended" ? "red" : expired ? "amber" : "green"}>{tenant.status === "suspended" ? "suspended" : expired ? "expired" : "active"}</Pill>} />
               <Detail label="Plan" value={<span className="capitalize">{tenant.plan}</span>} />
               <Detail label="License ends" value={tenant.subscriptionEndsAt ? new Date(tenant.subscriptionEndsAt).toLocaleDateString() : "Lifetime"} />
               <Detail label="Created" value={new Date(tenant.createdAt).toLocaleDateString()} />
@@ -110,9 +111,10 @@ export default async function ClientDetailPage({ params }: Props) {
             {tenant.leads.length === 0 ? <EmptyState title="No leads yet" /> : (
               <ul className="divide-y divide-slate-100">
                 {tenant.leads.map((l) => (
-                  <li key={l.id} className="p-4 flex items-center justify-between">
-                    <div><p className="font-medium text-slate-900">{l.name} · <span className="font-normal text-slate-500">{l.phone}</span></p><p className="text-sm text-slate-500">{l.service || "General"}{l.message ? ` — ${l.message}` : ""}</p></div>
-                    <Badge tone={l.status === "new" ? "green" : "slate"}>{l.status}</Badge>
+                  <li key={l.id} className="p-4 flex items-center gap-3">
+                    <Avatar name={l.name} size="sm" />
+                    <div className="min-w-0 flex-1"><p className="font-medium text-slate-900">{l.name} · <span className="font-normal text-slate-500">{l.phone}</span></p><p className="text-sm text-slate-500">{l.service || "General"}{l.message ? ` — ${l.message}` : ""}</p></div>
+                    <Pill tone={l.status === "new" ? "green" : "slate"}>{l.status}</Pill>
                   </li>
                 ))}
               </ul>
@@ -124,10 +126,10 @@ export default async function ClientDetailPage({ params }: Props) {
               <div className="p-5 border-b border-slate-100 font-semibold text-slate-900">Payment history</div>
               <ul className="divide-y divide-slate-100">
                 {tenant.orders.map((o) => (
-                  <li key={o.id} className="p-4 flex items-center justify-between text-sm">
+                  <li key={o.id} className="p-4 flex flex-wrap items-center justify-between gap-2 text-sm">
                     <span className="text-slate-600">{new Date(o.createdAt).toLocaleDateString()} · {o.plan}</span>
                     <span className="font-semibold text-slate-900">{formatINR(o.amount)}</span>
-                    <Badge tone={o.status === "provisioned" ? "green" : o.status === "paid" ? "blue" : "slate"}>{o.status}</Badge>
+                    <Pill tone={ORDER_TONE[o.status] ?? "slate"}>{orderLabel(o.status)}</Pill>
                   </li>
                 ))}
               </ul>

@@ -69,6 +69,7 @@ const CATEGORY_REP: Record<string, string> = {
   "Fitness & Wellness": "gym-fitness",
   "Community & Non-profit": "ngo-charity",
   "Events & Training": "events-training",
+  "Corporate & Professional Services": "it-services",
 };
 function categoryPhoto(category: string): string | null {
   const id = DEMO_PHOTOS[CATEGORY_REP[category] ?? ""]?.[0]?.id;

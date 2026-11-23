@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getPlatformConfig } from "@/lib/platformConfig";
 import { resolveTiers, resolveDurations } from "@/lib/plans";
 import { resolveReferralSettings } from "@/lib/referral";
+import { Settings } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui";
 import { SuperSettings } from "@/components/super/SuperSettings";
 import { parseMap } from "@/lib/ai/providers";
@@ -17,7 +18,7 @@ export default async function SuperSettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" subtitle="Payments, plans, GST, reminders and admin accounts." />
+      <PageHeader title="Settings" subtitle="Payments, plans, GST, reminders and admin accounts." icon={<Settings />} />
       <SuperSettings
         cfg={{
           razorpayKeyId: cfg.razorpayKeyId,

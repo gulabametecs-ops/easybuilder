@@ -17,10 +17,20 @@ function file(name: string, body: string) {
 
 export async function GET(request: Request) {
   if (!(await getSuperSession())) return new Response("Unauthorized", { status: 401 });
-  const type = new URL(request.url).searchParams.get("type") ?? "clients";
+  const params = new URL(request.url).searchParams;
+  const type = params.get("type") ?? "clients";
 
   if (type === "orders") {
-    const orders = await db.order.findMany({ orderBy: { createdAt: "desc" } });
+    // Same optional filters as the Orders page (q, status) so "Export" matches what's on screen.
+    const q = params.get("q")?.trim();
+    const status = params.get("status") || undefined;
+    const orders = await db.order.findMany({
+      where: {
+        ...(q ? { OR: [{ customerName: { contains: q } }, { email: { contains: q } }, { subdomain: { contains: q } }] } : {}),
+        ...(status ? { status } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+    });
     const rows: (string | number)[][] = [["Date", "Customer", "Email", "Phone", "Sector", "Plan", "Amount", "Status", "Gateway"]];
     for (const o of orders) rows.push([o.createdAt.toISOString().slice(0, 10), o.customerName, o.email, o.phone, verticalName(o.vertical), o.plan, formatINR(o.amount), o.status, o.gateway]);
     return file("orders.csv", csv(rows));

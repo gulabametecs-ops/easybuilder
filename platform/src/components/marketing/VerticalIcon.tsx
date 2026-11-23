@@ -50,6 +50,14 @@ import {
   KeyRound,
   BedDouble,
   Building,
+  Calculator,
+  Scale,
+  Code,
+  Megaphone,
+  Briefcase,
+  TrendingUp,
+  ShieldCheck,
+  Laptop,
   type LucideIcon,
 } from "lucide-react";
 
@@ -105,6 +113,14 @@ const MAP: Record<string, LucideIcon> = {
   key: KeyRound,
   bed: BedDouble,
   "building-2": Building,
+  calculator: Calculator,
+  scale: Scale,
+  code: Code,
+  megaphone: Megaphone,
+  briefcase: Briefcase,
+  "trending-up": TrendingUp,
+  "shield-check": ShieldCheck,
+  laptop: Laptop,
 };
 
 export function VerticalIcon({ name, className }: { name: string; className?: string }) {

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Ban, CheckCircle2, Download, Hourglass, Wallet } from "lucide-react";
 import { db } from "@/lib/db";
 import { formatINR } from "@/lib/plans";
 import { maskAccount } from "@/lib/referral";
-import { PageHeader, Card, Badge, EmptyState, StatCard } from "@/components/admin/ui";
+import { PageHeader, Card, EmptyState } from "@/components/admin/ui";
+import { Kpi, Chips, Who, Pill, tbl, thead, th, tbody, tr, td } from "@/components/super/kit";
 import { PayoutActions } from "@/components/super/PayoutActions";
 
 export const metadata = { title: "Payouts" };
@@ -30,58 +31,55 @@ export default async function PayoutsPage({ searchParams }: { searchParams: Prom
       <PageHeader
         title="Referral payouts"
         subtitle="Withdrawal requests from customers. Transfer the net amount, then mark paid with the UTR."
-        action={<Link href="/super/export?type=payouts" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 text-sm font-semibold px-4 py-2 hover:bg-white"><Download className="w-4 h-4" /> CSV</Link>}
+        icon={<Wallet />}
+        action={<Link href="/super/export?type=payouts" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 hover:border-lime-400 hover:text-lime-600 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200"><Download className="h-4 w-4" /> Export CSV</Link>}
       />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-        <StatCard label="Open requests" value={t("requested")?._count ?? 0} hint={formatINR(t("requested")?._sum.netAmount ?? 0) + " to pay"} />
-        <StatCard label="Paid out" value={formatINR(t("paid")?._sum.netAmount ?? 0)} hint={`${t("paid")?._count ?? 0} payouts`} />
-        <StatCard label="Rejected" value={t("rejected")?._count ?? 0} />
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <Kpi label="Open requests" value={t("requested")?._count ?? 0} hint={formatINR(t("requested")?._sum.netAmount ?? 0) + " to pay"} icon={<Hourglass />} tone={t("requested")?._count ? "amber" : "slate"} href="/super/payouts?status=requested" />
+        <Kpi label="Paid out" value={formatINR(t("paid")?._sum.netAmount ?? 0)} hint={`${t("paid")?._count ?? 0} payouts`} icon={<CheckCircle2 />} tone="green" href="/super/payouts?status=paid" />
+        <Kpi label="Rejected" value={t("rejected")?._count ?? 0} icon={<Ban />} tone="red" href="/super/payouts?status=rejected" />
       </div>
-      <div className="flex gap-2 mb-3 text-sm">
-        {["requested", "paid", "rejected", "all"].map((s) => (
-          <Link key={s} href={`/super/payouts?status=${s}`} className={`rounded-full px-3 py-1 font-medium capitalize ${filter === s ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-600"}`}>{s === "requested" ? "Open" : s}</Link>
-        ))}
-      </div>
-      <Card>
-        {rows.length === 0 ? <EmptyState title="Nothing here" hint="Withdrawal requests show up here." /> : (
+      <Chips items={["requested", "paid", "rejected", "all"].map((s) => ({ href: `/super/payouts?status=${s}`, label: s === "requested" ? "Open" : s, active: filter === s, count: s === "all" ? totals.reduce((n, x) => n + x._count, 0) : t(s)?._count ?? 0 }))} />
+      <Card className="overflow-hidden">
+        {rows.length === 0 ? <EmptyState icon={<Wallet />} title={filter === "requested" ? "No open requests" : "Nothing here"} hint="Withdrawal requests from referring customers show up here." /> : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-slate-400 border-b border-slate-100">
+            <table className={tbl}>
+              <thead className={thead}>
                 <tr>
-                  <th className="p-4 font-medium">Customer</th>
-                  <th className="p-4 font-medium">{showTds ? "Gross / TDS / Net" : "Amount"}</th>
-                  <th className="p-4 font-medium">Pay to</th>
-                  <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium">Requested</th>
-                  <th className="p-4 font-medium">Actions</th>
+                  <th className={th}>Customer</th>
+                  <th className={th}>{showTds ? "Gross / TDS / Net" : "Amount"}</th>
+                  <th className={th}>Pay to</th>
+                  <th className={th}>Status</th>
+                  <th className={th}>Requested</th>
+                  <th className={th}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className={tbody}>
                 {rows.map((w) => (
-                  <tr key={w.id} className="align-top">
-                    <td className="p-4 font-medium text-slate-900">{w.tenant.name}<br /><span className="text-slate-400 font-normal">{w.tenant.subdomain}</span></td>
-                    <td className="p-4 whitespace-nowrap">
+                  <tr key={w.id} className={`${tr} align-top`}>
+                    <td className={td}><Who name={w.tenant.name} sub={w.tenant.subdomain} /></td>
+                    <td className={`${td} whitespace-nowrap`}>
                       {showTds ? (
                         <>
-                          <span className="text-slate-600">{formatINR(w.amount)} − {formatINR(w.tdsAmount)} ({w.tdsPct}%)</span><br />
-                          <span className="font-semibold text-slate-900">= {formatINR(w.netAmount)}</span>
+                          <span>{formatINR(w.amount)} − {formatINR(w.tdsAmount)} ({w.tdsPct}%)</span><br />
+                          <span className="font-bold text-slate-900 dark:text-white">= {formatINR(w.netAmount)}</span>
                         </>
-                      ) : <span className="font-semibold text-slate-900">{formatINR(w.netAmount)}</span>}
+                      ) : <span className="font-bold text-slate-900 dark:text-white">{formatINR(w.netAmount)}</span>}
                     </td>
-                    <td className="p-4 text-slate-600">
+                    <td className={td}>
                       {w.method === "upi" ? <>UPI <span className="font-mono">{w.upiId}</span></> : <>{w.accountName}<br /><span className="font-mono">{maskAccount(w.accountNumber)}</span> · {w.ifsc}</>}
                       {w.pan ? <><br /><span className="text-xs text-slate-400">PAN {w.pan}</span></> : <><br /><span className="text-xs text-amber-600">No PAN</span></>}
                       {w.status === "requested" && w.method === "bank" && (
                         <details className="text-xs mt-1"><summary className="cursor-pointer text-lime-600">Full account no.</summary><span className="font-mono">{w.accountNumber}</span></details>
                       )}
                     </td>
-                    <td className="p-4">
-                      <Badge tone={TONE[w.status] ?? "slate"}>{w.status}</Badge>
+                    <td className={td}>
+                      <Pill tone={TONE[w.status] ?? "slate"}>{w.status === "requested" ? "open" : w.status}</Pill>
                       {w.reference && <p className="text-xs text-slate-400 mt-1">UTR {w.reference}</p>}
                       {w.rejectReason && <p className="text-xs text-red-500 mt-1 max-w-[200px]">{w.rejectReason}</p>}
                     </td>
-                    <td className="p-4 text-slate-400 whitespace-nowrap">{w.createdAt.toLocaleDateString("en-IN")}</td>
-                    <td className="p-4">{w.status === "requested" ? <PayoutActions id={w.id} /> : <span className="text-xs text-slate-400">{w.processedAt?.toLocaleDateString("en-IN")}</span>}</td>
+                    <td className={`${td} whitespace-nowrap text-slate-400`}>{w.createdAt.toLocaleDateString("en-IN")}</td>
+                    <td className={td}>{w.status === "requested" ? <PayoutActions id={w.id} /> : <span className="text-xs text-slate-400">{w.processedAt?.toLocaleDateString("en-IN")}</span>}</td>
                   </tr>
                 ))}
               </tbody>

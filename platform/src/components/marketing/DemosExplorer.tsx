@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight, ArrowUpRight, Check, Clock, Play, Search, ChevronDown,
-  GraduationCap, House, UtensilsCrossed, Stethoscope, Factory, Dumbbell, HeartHandshake, CalendarDays, LayoutGrid, Building2,
+  GraduationCap, House, UtensilsCrossed, Stethoscope, Factory, Dumbbell, HeartHandshake, CalendarDays, LayoutGrid, Building2, Briefcase,
   type LucideIcon,
 } from "lucide-react";
 import { VerticalIcon } from "./VerticalIcon";
@@ -103,6 +103,7 @@ const CAT_STYLE: Record<string, { icon: LucideIcon; from: string; to: string }> 
   "Fitness & Wellness": { icon: Dumbbell, from: "#22c55e", to: "#14b8a6" },
   "Community & Non-profit": { icon: HeartHandshake, from: "#ec4899", to: "#a855f7" },
   "Events & Training": { icon: CalendarDays, from: "#8b5cf6", to: "#d946ef" },
+  "Corporate & Professional Services": { icon: Briefcase, from: "#0f172a", to: "#0891b2" },
 };
 const catStyle = (name: string) => CAT_STYLE[name] ?? { icon: LayoutGrid, from: "#64748b", to: "#334155" };
 

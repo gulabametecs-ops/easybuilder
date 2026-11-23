@@ -561,6 +561,7 @@ const RECOMMENDED: Record<string, string[]> = {
   "Home & Local Services": ["googleReviews", "tawk", "ga4", "googleAds"],
   "Trade & Manufacturing": ["tawk", "ga4", "linkedin", "googleVerify"],
   "Events & Training": ["calendly", "razorpayPage", "googleReviews", "metaPixel"],
+  "Corporate & Professional Services": ["calendly", "linkedin", "googleReviews", "ga4"],
 };
 export function recommendedFor(category: string): string[] {
   return RECOMMENDED[category] ?? ["ga4", "googleReviews", "tawk", "googleVerify"];

@@ -2,12 +2,14 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatINR } from "@/lib/plans";
 import { balances, commissionState, type CommissionView } from "@/lib/referral";
-import { PageHeader, Card, Badge, EmptyState, StatCard } from "@/components/admin/ui";
+import { Ban, CheckCircle2, Clock, Gift, Send, Trophy, Wallet } from "lucide-react";
+import { PageHeader, Card, EmptyState } from "@/components/admin/ui";
+import { Kpi, Panel, Chips, Who, Avatar, Pill, tbl, thead, th, tbody, tr, td } from "@/components/super/kit";
 
 export const metadata = { title: "Referrals" };
 
-const TONE: Record<CommissionView, "amber" | "green" | "blue" | "slate" | "red"> = {
-  pending: "amber", available: "green", requested: "blue", paid: "slate", reversed: "red",
+const TONE: Record<CommissionView, "amber" | "green" | "blue" | "violet" | "red"> = {
+  pending: "amber", available: "green", requested: "blue", paid: "violet", reversed: "red",
 };
 const STATES = ["all", "pending", "available", "requested", "paid", "reversed"] as const;
 
@@ -48,67 +50,67 @@ export default async function SuperReferralsPage({ searchParams }: { searchParam
 
   return (
     <>
-      <PageHeader title="Referrals" subtitle={`${referredCount} referred customers · commissions are created when a referred order is paid.`} />
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
-        <StatCard label="Pending (hold)" value={formatINR(totals.pending)} />
-        <StatCard label="Available" value={formatINR(totals.available)} />
-        <StatCard label="Requested" value={formatINR(totals.requested)} />
-        <StatCard label="Paid out" value={formatINR(totals.paid)} />
-        <StatCard label="Reversed" value={formatINR(totals.reversed)} />
+      <PageHeader title="Referrals" subtitle={`${referredCount} referred customers · commissions are created when a referred order is paid.`} icon={<Gift />} />
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+        <Kpi label="Pending (hold)" value={formatINR(totals.pending)} hint="In refund window" icon={<Clock />} tone="amber" href={href("pending")} />
+        <Kpi label="Available" value={formatINR(totals.available)} hint="Can be withdrawn" icon={<CheckCircle2 />} tone="green" href={href("available")} />
+        <Kpi label="Requested" value={formatINR(totals.requested)} hint="Awaiting payout" icon={<Send />} tone="blue" href="/super/payouts" />
+        <Kpi label="Paid out" value={formatINR(totals.paid)} icon={<Wallet />} tone="violet" href={href("paid")} />
+        <Kpi label="Reversed" value={formatINR(totals.reversed)} hint="Refunded orders" icon={<Ban />} tone="red" href={href("reversed")} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-5">
-        <Card className="p-5 lg:col-span-1 h-fit">
-          <p className="text-sm font-semibold text-slate-900 mb-3">Top referrers</p>
-          {top.length === 0 ? <p className="text-sm text-slate-400">No referrals yet.</p> : (
-            <ol className="space-y-2 text-sm">
+        <Panel title="Top referrers" sub="By commission earned" icon={<Trophy />} className="h-fit lg:col-span-1">
+          {top.length === 0 ? <p className="p-8 text-center text-sm text-slate-400">No referrals yet.</p> : (
+            <ol className="divide-y divide-slate-100 text-sm dark:divide-white/5">
               {top.map((t, i) => {
                 const n = names.get(t.referrerTenantId);
+                const on = referrer === t.referrerTenantId;
                 return (
-                  <li key={t.referrerTenantId} className="flex items-center gap-2">
-                    <span className="w-5 text-slate-400">{i + 1}.</span>
-                    <Link href={href(status, t.referrerTenantId)} className="flex-1 min-w-0 truncate text-slate-800 hover:underline">{n?.name ?? "Deleted client"}</Link>
-                    <span className="text-xs text-slate-400">{t._count}×</span>
-                    <span className="font-semibold text-slate-900">{formatINR(t._sum.amount ?? 0)}</span>
+                  <li key={t.referrerTenantId}>
+                    <Link href={href(status, t.referrerTenantId)} className={`flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-white/[0.03] ${on ? "bg-lime-500/5" : ""}`}>
+                      <span className={`w-5 text-center text-xs font-bold ${i < 3 ? "text-amber-500" : "text-slate-400"}`}>{i + 1}</span>
+                      <Avatar name={n?.name ?? "?"} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold text-slate-800 dark:text-slate-100">{n?.name ?? "Deleted client"}</span>
+                        <span className="block text-xs text-slate-400">{t._count} referral{t._count === 1 ? "" : "s"}</span>
+                      </span>
+                      <span className="font-bold text-slate-900 dark:text-white">{formatINR(t._sum.amount ?? 0)}</span>
+                    </Link>
                   </li>
                 );
               })}
             </ol>
           )}
-        </Card>
+        </Panel>
 
         <div className="lg:col-span-2">
-          <div className="flex flex-wrap gap-2 mb-3 text-sm">
-            {STATES.map((s) => (
-              <Link key={s} href={href(s)} className={`rounded-full px-3 py-1 font-medium capitalize ${status === s ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-600"}`}>{s}</Link>
-            ))}
-            {referrer && <Link href={href(status, "")} className="rounded-full px-3 py-1 font-medium bg-lime-100 text-lime-800">Referrer filter ✕</Link>}
-          </div>
-          <Card>
-            {rows.length === 0 ? <EmptyState title="No commissions" /> : (
+          <Chips items={[...STATES.map((s) => ({ href: href(s), label: s, active: status === s })), ...(referrer ? [{ href: href(status, ""), label: `${names.get(referrer)?.name ?? "Referrer"} ✕`, active: false }] : [])]} />
+          <Card className="overflow-hidden">
+            {rows.length === 0 ? <EmptyState icon={<Gift />} title="No commissions" hint="Commissions appear when a referred customer pays." /> : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-slate-400 border-b border-slate-100">
+                <table className={tbl}>
+                  <thead className={thead}>
                     <tr>
-                      <th className="p-4 font-medium">Referrer</th>
-                      <th className="p-4 font-medium">Referred</th>
-                      <th className="p-4 font-medium">Order (excl. GST)</th>
-                      <th className="p-4 font-medium">Commission</th>
-                      <th className="p-4 font-medium">Status</th>
-                      <th className="p-4 font-medium">Date</th>
+                      <th className={th}>Referrer</th>
+                      <th className={th}>Referred</th>
+                      <th className={th}>Order (excl. GST)</th>
+                      <th className={th}>Commission</th>
+                      <th className={th}>Status</th>
+                      <th className={th}>Date</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className={tbody}>
                     {rows.map((c) => {
                       const st = commissionState(c, now);
                       return (
-                        <tr key={c.id}>
-                          <td className="p-4 font-medium text-slate-900">{c.referrer.name}<br /><span className="text-slate-400 font-normal">{c.referrer.subdomain}</span></td>
-                          <td className="p-4 text-slate-600">{c.referredName}</td>
-                          <td className="p-4 text-slate-600">{formatINR(c.baseAmount)}</td>
-                          <td className="p-4 font-semibold text-slate-900">{formatINR(c.amount)} <span className="text-xs font-normal text-slate-400">({c.ratePct}%)</span></td>
-                          <td className="p-4"><Badge tone={TONE[st]}>{st}</Badge></td>
-                          <td className="p-4 text-slate-400 whitespace-nowrap">{c.createdAt.toLocaleDateString("en-IN")}</td>
+                        <tr key={c.id} className={tr}>
+                          <td className={td}><Who name={c.referrer.name} sub={c.referrer.subdomain} /></td>
+                          <td className={td}>{c.referredName || "—"}</td>
+                          <td className={`${td} whitespace-nowrap`}>{formatINR(c.baseAmount)}</td>
+                          <td className={`${td} whitespace-nowrap font-bold text-slate-900 dark:text-white`}>{formatINR(c.amount)} <span className="text-xs font-normal text-slate-400">({c.ratePct}%)</span></td>
+                          <td className={td}><Pill tone={TONE[st]}>{st}</Pill></td>
+                          <td className={`${td} whitespace-nowrap text-slate-400`}>{c.createdAt.toLocaleDateString("en-IN")}</td>
                         </tr>
                       );
                     })}

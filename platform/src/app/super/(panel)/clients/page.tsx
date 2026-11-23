@@ -5,7 +5,8 @@ import { formatBytes } from "@/lib/plans";
 import { db } from "@/lib/db";
 import { ROOT_DOMAIN } from "@/lib/domains";
 import { verticalName } from "@/lib/verticals";
-import { PageHeader, Card, Badge, EmptyState, StatCard } from "@/components/admin/ui";
+import { PageHeader, Card, EmptyState, StatCard, btnPrimary } from "@/components/admin/ui";
+import { Who, Pill, Chips, tbl, thead, th, tbody, tr, td } from "@/components/super/kit";
 
 export const metadata = { title: "Clients" };
 
@@ -61,8 +62,9 @@ export default async function ClientsPage({ searchParams }: Props) {
       <PageHeader
         title="Clients"
         subtitle={`${clients.length} businesses${query ? ` matching "${query}"` : ""}`}
+        icon={<Building2 />}
         action={
-          <Link href="/super/clients/new" className="inline-flex items-center gap-2 rounded-lg bg-lime-500 text-white font-semibold px-4 py-2.5 text-sm hover:bg-lime-600">
+          <Link href="/super/clients/new" className={btnPrimary}>
             <Plus className="w-4 h-4" /> Add client
           </Link>
         }
@@ -85,51 +87,44 @@ export default async function ClientsPage({ searchParams }: Props) {
         <form className="relative flex-1 max-w-md" action="/super/clients">
           {activeFilter !== "all" && <input type="hidden" name="filter" value={activeFilter} />}
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input name="q" defaultValue={query} placeholder="Search by business, subdomain or email…" className="w-full rounded-lg border border-slate-300 pl-10 pr-4 py-2.5 text-sm outline-none focus:border-lime-500" />
+          <input name="q" defaultValue={query} placeholder="Search by business, subdomain or email…" className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-lime-500 dark:border-slate-700" />
         </form>
-        <div className="flex flex-wrap gap-1.5">
-          {FILTERS.map((f) => {
-            const href = `/super/clients?filter=${f.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`;
-            return (
-              <Link key={f.id} href={href} className={`rounded-lg px-3 py-2 text-sm font-medium ${activeFilter === f.id ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-                {f.label}
-              </Link>
-            );
-          })}
+        <div className="[&>div]:mb-0">
+          <Chips items={FILTERS.map((f) => ({ href: `/super/clients?filter=${f.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`, label: f.label, active: activeFilter === f.id }))} />
         </div>
       </div>
 
-      <Card>
+      <Card className="overflow-hidden">
         {clients.length === 0 ? (
-          <EmptyState title="No clients found" hint={query ? "Try a different search." : "Add your first client."} />
+          <EmptyState icon={<Building2 />} title="No clients found" hint={query ? "Try a different search." : "Add your first client."} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-left text-slate-400 border-b border-slate-100">
+            <table className={tbl}>
+              <thead className={thead}>
                 <tr>
-                  <th className="p-4 font-medium">Business</th>
-                  <th className="p-4 font-medium">Sector</th>
-                  <th className="p-4 font-medium">Plan</th>
-                  <th className="p-4 font-medium">License ends</th>
-                  <th className="p-4 font-medium">Storage</th>
-                  <th className="p-4 font-medium">Leads</th>
-                  <th className="p-4 font-medium">Status</th>
-                  <th className="p-4 font-medium"></th>
+                  <th className={th}>Business</th>
+                  <th className={th}>Sector</th>
+                  <th className={th}>Plan</th>
+                  <th className={th}>License ends</th>
+                  <th className={th}>Storage</th>
+                  <th className={th}>Leads</th>
+                  <th className={th}>Status</th>
+                  <th className={th}></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className={tbody}>
                 {clients.map((c) => {
                   const expired = c.subscriptionEndsAt && new Date(c.subscriptionEndsAt) < new Date();
                   return (
-                    <tr key={c.id} className="hover:bg-slate-50">
-                      <td className="p-4 font-medium text-slate-900">{c.name}<br /><span className="text-slate-400 font-normal">{c.subdomain}.{ROOT_DOMAIN}</span></td>
-                      <td className="p-4 text-slate-600">{verticalName(c.vertical)}</td>
-                      <td className="p-4 text-slate-600 capitalize">{c.plan}</td>
-                      <td className="p-4 text-slate-600">{c.subscriptionEndsAt ? new Date(c.subscriptionEndsAt).toLocaleDateString() : "Lifetime"}</td>
-                      <td className="p-4 text-slate-600 whitespace-nowrap">{formatBytes(bytesOf.get(c.id) ?? 0)}</td>
-                      <td className="p-4 text-slate-600">{c._count.leads}</td>
-                      <td className="p-4"><Badge tone={c.status === "suspended" ? "red" : expired ? "amber" : "green"}>{c.status === "suspended" ? "suspended" : expired ? "expired" : "active"}</Badge></td>
-                      <td className="p-4">
+                    <tr key={c.id} className={tr}>
+                      <td className={td}><Who name={c.name} sub={`${c.subdomain}.${ROOT_DOMAIN}`} href={`/super/clients/${c.id}`} /></td>
+                      <td className={`${td} whitespace-nowrap`}>{verticalName(c.vertical)}</td>
+                      <td className={`${td} capitalize`}>{c.plan}</td>
+                      <td className={`${td} whitespace-nowrap`}>{c.subscriptionEndsAt ? new Date(c.subscriptionEndsAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "Lifetime"}</td>
+                      <td className={`${td} whitespace-nowrap`}>{formatBytes(bytesOf.get(c.id) ?? 0)}</td>
+                      <td className={td}>{c._count.leads}</td>
+                      <td className={td}><Pill tone={c.status === "suspended" ? "red" : expired ? "amber" : "green"}>{c.status === "suspended" ? "suspended" : expired ? "expired" : "active"}</Pill></td>
+                      <td className={td}>
                         <Link href={`/super/clients/${c.id}`} className="inline-flex items-center gap-1 text-lime-600 font-medium hover:underline"><Eye className="w-4 h-4" /> View</Link>
                       </td>
                     </tr>

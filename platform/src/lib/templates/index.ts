@@ -57,6 +57,19 @@ import { electricalWholesale } from "./electricalWholesale";
 import { realEstateBroker } from "./realEstateBroker";
 import { pgHostel } from "./pgHostel";
 import { builderDeveloper } from "./builderDeveloper";
+import { tiffinService } from "./tiffinService";
+import { canteenCatering } from "./canteenCatering";
+import { liveCounterCatering } from "./liveCounterCatering";
+import { halwaiSweets } from "./halwaiSweets";
+import { jainSatvikCatering } from "./jainSatvikCatering";
+import { caFirm } from "./caFirm";
+import { lawFirm } from "./lawFirm";
+import { itServices } from "./itServices";
+import { digitalMarketing } from "./digitalMarketing";
+import { hrStaffing } from "./hrStaffing";
+import { businessConsulting } from "./businessConsulting";
+import { insuranceAdvisor } from "./insuranceAdvisor";
+import { coworkingSpace } from "./coworkingSpace";
 
 // The original home-services template, assembled from template.ts.
 const homeServices: TemplateDef = {
@@ -122,6 +135,19 @@ export const TEMPLATES: Record<string, TemplateDef> = {
   "real-estate-broker": realEstateBroker,
   "pg-hostel": pgHostel,
   "builder-developer": builderDeveloper,
+  "tiffin-service": tiffinService,
+  "canteen-catering": canteenCatering,
+  "live-counter-catering": liveCounterCatering,
+  "halwai-sweets": halwaiSweets,
+  "jain-satvik-catering": jainSatvikCatering,
+  "ca-firm": caFirm,
+  "law-firm": lawFirm,
+  "it-services": itServices,
+  "digital-marketing": digitalMarketing,
+  "hr-staffing": hrStaffing,
+  "business-consulting": businessConsulting,
+  "insurance-advisor": insuranceAdvisor,
+  "coworking-space": coworkingSpace,
 };
 
 export function getTemplate(vertical: string): TemplateDef {

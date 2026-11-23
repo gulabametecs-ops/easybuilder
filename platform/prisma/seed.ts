@@ -138,6 +138,19 @@ async function main() {
     { subdomain: "demo-realestate", vertical: "real-estate-broker", name: "Prime Nest Realty", email: "demo@realestate.test" },
     { subdomain: "demo-pg", vertical: "pg-hostel", name: "Comfort Stay PG", email: "demo@pg.test" },
     { subdomain: "demo-builder", vertical: "builder-developer", name: "Skyline Developers", email: "demo@builder.test" },
+    { subdomain: "demo-tiffin", vertical: "tiffin-service", name: "Maa Ki Rasoi Tiffins", email: "demo@tiffin.test" },
+    { subdomain: "demo-canteen", vertical: "canteen-catering", name: "WorkFuel Canteen Services", email: "demo@canteen.test" },
+    { subdomain: "demo-livecounter", vertical: "live-counter-catering", name: "Angaar Live Kitchens", email: "demo@livecounter.test" },
+    { subdomain: "demo-halwai", vertical: "halwai-sweets", name: "Mithaas Halwai & Caterers", email: "demo@halwai.test" },
+    { subdomain: "demo-satvik", vertical: "jain-satvik-catering", name: "Navkar Satvik Caterers", email: "demo@satvik.test" },
+    { subdomain: "demo-ca", vertical: "ca-firm", name: "Agarwal Iyer & Co.", email: "demo@ca.test" },
+    { subdomain: "demo-law", vertical: "law-firm", name: "Mehra & Rao Advocates", email: "demo@law.test" },
+    { subdomain: "demo-it", vertical: "it-services", name: "CodeNest Technologies", email: "demo@it.test" },
+    { subdomain: "demo-digital", vertical: "digital-marketing", name: "GrowthLoop Digital", email: "demo@digital.test" },
+    { subdomain: "demo-hr", vertical: "hr-staffing", name: "TalentBridge Staffing", email: "demo@hr.test" },
+    { subdomain: "demo-consulting", vertical: "business-consulting", name: "Northstar Advisory Partners", email: "demo@consulting.test" },
+    { subdomain: "demo-insurance", vertical: "insurance-advisor", name: "SurakshaPlus Advisors", email: "demo@insurance.test" },
+    { subdomain: "demo-cowork", vertical: "coworking-space", name: "HiveWorks Coworking", email: "demo@cowork.test" },
   ];
 
   for (const d of demos) {
