@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BarChart3, Building2, Download, Filter, IndianRupee, Layers, Receipt, ShieldCheck, TrendingUp, UserPlus, Users } from "lucide-react";
 import { db } from "@/lib/db";
+import { NOT_DEMO_TENANT } from "@/lib/demoSession";
 import { formatINR } from "@/lib/plans";
 import { verticalName } from "@/lib/verticals";
 import { buckets, contactMatcher, pctDelta, series } from "@/lib/superStats";
@@ -29,7 +30,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
 
   const [paidOrders, tenants, leads, provisioned] = await Promise.all([
     db.order.findMany({ where: { status: { in: ["paid", "provisioned"] } }, select: { amount: true, createdAt: true, vertical: true, email: true, phone: true } }),
-    db.tenant.findMany({ select: { createdAt: true, plan: true, vertical: true, status: true } }),
+    db.tenant.findMany({ where: NOT_DEMO_TENANT, select: { createdAt: true, plan: true, vertical: true, status: true } }),
     db.platformLead.findMany({ where: { createdAt: { gte: prevFrom } }, select: { createdAt: true, type: true, verified: true, vertical: true, email: true, phone: true } }),
     db.order.findMany({ where: { status: "provisioned" }, select: { email: true, phone: true } }),
   ]);

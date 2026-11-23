@@ -5,6 +5,7 @@ import {
   Plus, Server, Settings, ShieldCheck, Sparkles, Ticket, TrendingUp, UserPlus, Wallet, Zap, Clock, Inbox,
 } from "lucide-react";
 import { db } from "@/lib/db";
+import { NOT_DEMO_TENANT } from "@/lib/demoSession";
 import { formatBytes, formatINR } from "@/lib/plans";
 import { verticalName } from "@/lib/verticals";
 import { ADMIN_GRACE_DAYS } from "@/lib/subscription";
@@ -30,16 +31,16 @@ export default async function SuperOverview() {
     recentOrders, recentTenants, recentLeadRows, unverifiedCount, storage, disk,
   ] = await Promise.all([
     db.order.findMany({ where: { status: { in: ["paid", "provisioned"] } }, select: { amount: true, createdAt: true, email: true, phone: true } }),
-    db.tenant.findMany({ select: { createdAt: true, status: true, subscriptionEndsAt: true, vertical: true } }),
+    db.tenant.findMany({ where: NOT_DEMO_TENANT, select: { createdAt: true, status: true, subscriptionEndsAt: true, vertical: true } }),
     db.platformLead.findMany({ where: { type: "demo" }, select: { createdAt: true, email: true, phone: true, vertical: true } }),
     db.platformLead.findMany({ where: { createdAt: { gte: leadsFrom } }, select: { createdAt: true } }),
-    db.tenant.findMany({ where: { status: "active", subscriptionEndsAt: { gte: now, lte: in30 } }, orderBy: { subscriptionEndsAt: "asc" }, select: { id: true, name: true, subscriptionEndsAt: true } }),
-    db.tenant.findMany({ where: { status: "active", subscriptionEndsAt: { gte: graceFrom, lt: now } }, orderBy: { subscriptionEndsAt: "asc" }, select: { id: true, name: true, subscriptionEndsAt: true } }),
+    db.tenant.findMany({ where: { ...NOT_DEMO_TENANT, status: "active", subscriptionEndsAt: { gte: now, lte: in30 } }, orderBy: { subscriptionEndsAt: "asc" }, select: { id: true, name: true, subscriptionEndsAt: true } }),
+    db.tenant.findMany({ where: { ...NOT_DEMO_TENANT, status: "active", subscriptionEndsAt: { gte: graceFrom, lt: now } }, orderBy: { subscriptionEndsAt: "asc" }, select: { id: true, name: true, subscriptionEndsAt: true } }),
     db.order.findMany({ where: { status: "paid" }, orderBy: { createdAt: "asc" }, select: { id: true, customerName: true, amount: true, createdAt: true } }),
     db.platformLead.findMany({ where: { type: "demo", status: "new", verified: false }, orderBy: { createdAt: "desc" }, take: 5, select: { id: true, name: true, createdAt: true } }),
     db.referralWithdrawal.aggregate({ where: { status: "requested" }, _count: true, _sum: { netAmount: true } }),
     db.order.findMany({ orderBy: { createdAt: "desc" }, take: 6, select: { id: true, customerName: true, amount: true, status: true, createdAt: true } }),
-    db.tenant.findMany({ orderBy: { createdAt: "desc" }, take: 6, select: { id: true, name: true, vertical: true, createdAt: true } }),
+    db.tenant.findMany({ where: NOT_DEMO_TENANT, orderBy: { createdAt: "desc" }, take: 6, select: { id: true, name: true, vertical: true, createdAt: true } }),
     db.platformLead.findMany({ orderBy: { createdAt: "desc" }, take: 6, select: { id: true, name: true, type: true, vertical: true, createdAt: true } }),
     db.platformLead.count({ where: { type: "demo", status: "new", verified: false } }),
     db.mediaFile.aggregate({ _sum: { bytes: true } }),

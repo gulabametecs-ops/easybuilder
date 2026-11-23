@@ -32,6 +32,11 @@ export function parseOverlay(raw: string): DemoOverlay {
   }
 }
 
+/** Prisma where: real customer tenants only (demo sandboxes excluded from business stats). */
+export const NOT_DEMO_TENANT = {
+  subdomain: { notIn: VERTICALS.flatMap((v) => (v.demoSubdomain ? [v.demoSubdomain] : [])) },
+};
+
 export function isDemoSubdomain(subdomain: string): boolean {
   return VERTICALS.some((v) => v.demoSubdomain === subdomain);
 }
