@@ -47,21 +47,21 @@ export function ClientActions({ tenantId, status, plan }: { tenantId: string; st
       <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-100">
         <button
           onClick={() => start(() => setTenantStatus(tenantId, suspended ? "active" : "suspended"))}
-          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${suspended ? "bg-lime-500 text-white hover:bg-lime-600" : "bg-amber-100 text-amber-700 hover:bg-amber-200"}`}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold ${suspended ? "bg-lime-500 text-white hover:bg-lime-600" : "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25"}`}
         >
           <Power className="w-4 h-4" /> {suspended ? "Activate" : "Deactivate"}
         </button>
         {!cancelled && (
           <button
             onClick={() => { const reason = prompt("Cancel this subscription? Optionally note a reason:"); if (reason !== null) start(() => cancelSubscription(tenantId, reason)); }}
-            className="inline-flex items-center gap-2 rounded-lg bg-orange-50 text-orange-600 px-4 py-2 text-sm font-semibold hover:bg-orange-100"
+            className="inline-flex items-center gap-2 rounded-lg bg-orange-50 text-orange-600 px-4 py-2 text-sm font-semibold hover:bg-orange-100 dark:bg-orange-500/15 dark:text-orange-300"
           >
             <Ban className="w-4 h-4" /> Cancel subscription
           </button>
         )}
         <button
           onClick={() => { if (confirm("Delete this client and ALL its data permanently? This cannot be undone.")) start(() => deleteTenant(tenantId)); }}
-          className="inline-flex items-center gap-2 rounded-lg bg-red-50 text-red-600 px-4 py-2 text-sm font-semibold hover:bg-red-100"
+          className="inline-flex items-center gap-2 rounded-lg bg-red-50 text-red-600 px-4 py-2 text-sm font-semibold hover:bg-red-100 dark:bg-red-500/15 dark:text-red-300"
         >
           <Trash2 className="w-4 h-4" /> Delete client
         </button>

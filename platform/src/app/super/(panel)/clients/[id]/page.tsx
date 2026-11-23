@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, CalendarCheck, ExternalLink, FileStack, HardDrive, Inbox } from "lucide-react";
 import { db } from "@/lib/db";
 import { ROOT_DOMAIN } from "@/lib/domains";
 import { verticalName } from "@/lib/verticals";
-import { formatINR } from "@/lib/plans";
+import { formatBytes, formatINR } from "@/lib/plans";
 import { LogIn } from "lucide-react";
 import { recordManualPayment } from "@/lib/actions/superAdmin";
-import { PageHeader, Card, StatCard, Badge, EmptyState } from "@/components/admin/ui";
+import { Card, StatCard, Badge, EmptyState } from "@/components/admin/ui";
 import { ClientActions } from "@/components/super/ClientActions";
+import { PlanUsage, LicenseTimeline } from "@/components/super/ClientUsage";
+import { getUsage, planFor } from "@/lib/usage";
 
 export const metadata = { title: "Client" };
 const proto = ROOT_DOMAIN.includes("localhost") ? "http" : "https";
@@ -29,6 +31,7 @@ export default async function ClientDetailPage({ params }: Props) {
   });
   if (!tenant) notFound();
 
+  const [usage, plan] = await Promise.all([getUsage(tenant.id), planFor(tenant)]);
   const url = `${proto}://${tenant.subdomain}.${ROOT_DOMAIN}`;
   const expired = tenant.subscriptionEndsAt && new Date(tenant.subscriptionEndsAt) < new Date();
   const owner = tenant.users[0];
@@ -38,24 +41,37 @@ export default async function ClientDetailPage({ params }: Props) {
       <Link href="/super/clients" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to clients
       </Link>
-      <PageHeader
-        title={tenant.name}
-        subtitle={`${tenant.subdomain}.${ROOT_DOMAIN} · ${verticalName(tenant.vertical)}`}
-        action={
-          <div className="flex gap-2">
-            <a href={url} target="_blank" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"><ExternalLink className="w-4 h-4" /> Site</a>
-            <a href={`/super/impersonate/${tenant.id}`} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 text-white px-3 py-2 text-sm font-semibold hover:bg-slate-800"><LogIn className="w-4 h-4" /> Login as client</a>
+      {/* Hero */}
+      <div className="admin-grad relative mb-6 overflow-hidden rounded-3xl p-6 sm:p-7 shadow-lg">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10" aria-hidden />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-xl font-extrabold backdrop-blur">
+              {tenant.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">{tenant.name}</h1>
+              <p className="truncate text-sm text-white/80">{tenant.subdomain}.{ROOT_DOMAIN} · {verticalName(tenant.vertical)}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+                <span className="rounded-full bg-white/20 px-2.5 py-0.5 capitalize">{plan.tier?.name ?? tenant.plan}</span>
+                <span className={`rounded-full px-2.5 py-0.5 ${tenant.status === "suspended" ? "bg-red-500" : expired ? "bg-amber-500" : "bg-emerald-500"}`}>{tenant.status === "suspended" ? "Suspended" : expired ? "Expired" : "Active"}</span>
+                {tenant.customDomain && <span className="rounded-full bg-white/20 px-2.5 py-0.5">{tenant.customDomain}</span>}
+              </div>
+            </div>
           </div>
-        }
-      />
+          <div className="flex gap-2">
+            <a href={url} target="_blank" className="inline-flex items-center gap-1.5 rounded-xl border border-white/40 px-3.5 py-2 text-sm font-semibold hover:bg-white/10"><ExternalLink className="w-4 h-4" /> Site</a>
+            <a href={`/super/impersonate/${tenant.id}`} className="inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 hover:bg-white/90"><LogIn className="w-4 h-4" /> Login as client</a>
+          </div>
+        </div>
+      </div>
 
-      {/* Usage stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <StatCard label="Services" value={tenant._count.services} />
-        <StatCard label="Images" value={tenant._count.galleryItems} />
-        <StatCard label="Leads" value={tenant._count.leads} />
-        <StatCard label="Appointments" value={tenant._count.appointments} />
-        <StatCard label="Pages" value={tenant._count.pages} />
+      {/* Activity */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard label="Storage used" value={formatBytes(usage.storageBytes)} icon={<HardDrive className="h-4 w-4" />} />
+        <StatCard label="Leads" value={tenant._count.leads} icon={<Inbox className="h-4 w-4" />} />
+        <StatCard label="Appointments" value={tenant._count.appointments} icon={<CalendarCheck className="h-4 w-4" />} />
+        <StatCard label="Pages" value={tenant._count.pages} icon={<FileStack className="h-4 w-4" />} />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -85,7 +101,7 @@ export default async function ClientDetailPage({ params }: Props) {
               <label className="block"><span className="block text-xs font-medium text-slate-500 mb-1">Extend by</span>
                 <select name="months" defaultValue="12" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="1">1 Month</option><option value="3">3 Months</option><option value="6">6 Months</option><option value="12">1 Year</option><option value="24">2 Years</option><option value="36">3 Years</option></select>
               </label>
-              <button className="rounded-lg bg-slate-900 text-white text-sm font-semibold px-4 py-2 hover:bg-slate-800">Record</button>
+              <button className="admin-grad rounded-lg text-sm font-semibold px-4 py-2 hover:opacity-90">Record</button>
             </form>
           </Card>
 
@@ -119,11 +135,15 @@ export default async function ClientDetailPage({ params }: Props) {
           )}
         </div>
 
-        {/* Right: actions */}
-        <Card className="p-5 h-fit">
-          <h3 className="font-semibold text-slate-900 mb-4">Manage license</h3>
-          <ClientActions tenantId={tenant.id} status={tenant.status} plan={tenant.plan} />
-        </Card>
+        {/* Right: usage, licence, actions */}
+        <div className="space-y-6">
+          <LicenseTimeline endsAt={tenant.subscriptionEndsAt} status={tenant.status} />
+          <PlanUsage usage={usage} limits={plan.limits} planName={plan.tier?.name ?? tenant.plan} />
+          <Card className="p-5 h-fit">
+            <h3 className="font-semibold text-slate-900 mb-4">Manage license</h3>
+            <ClientActions tenantId={tenant.id} status={tenant.status} plan={tenant.plan} />
+          </Card>
+        </div>
       </div>
     </>
   );

@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { Search, Plus, Eye } from "lucide-react";
+import { statfs } from "node:fs/promises";
+import { Search, Plus, Eye, HardDrive, Server, Building2, CalendarClock } from "lucide-react";
+import { formatBytes } from "@/lib/plans";
 import { db } from "@/lib/db";
 import { ROOT_DOMAIN } from "@/lib/domains";
 import { verticalName } from "@/lib/verticals";
-import { PageHeader, Card, Badge, EmptyState } from "@/components/admin/ui";
+import { PageHeader, Card, Badge, EmptyState, StatCard } from "@/components/admin/ui";
 
 export const metadata = { title: "Clients" };
 
@@ -38,11 +40,21 @@ export default async function ClientsPage({ searchParams }: Props) {
 
   const where = conditions.length ? { AND: conditions } : {};
 
-  const clients = await db.tenant.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { leads: true, appointments: true, services: true } } },
-  });
+  const [clients, storage, expiring, disk] = await Promise.all([
+    db.tenant.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { leads: true, appointments: true, services: true } } },
+    }),
+    db.mediaFile.groupBy({ by: ["tenantId"], _sum: { bytes: true } }),
+    db.tenant.count({ where: { status: "active", subscriptionEndsAt: { gte: now, lte: in30 } } }),
+    // Free space on the disk that holds uploads (null on hosts without a real disk).
+    statfs(process.cwd()).catch(() => null),
+  ]);
+  const bytesOf = new Map(storage.map((r) => [r.tenantId, r._sum.bytes ?? 0]));
+  const totalBytes = storage.reduce((n, r) => n + (r._sum.bytes ?? 0), 0);
+  const diskTotal = disk ? disk.blocks * disk.bsize : 0;
+  const diskFree = disk ? disk.bavail * disk.bsize : 0;
 
   return (
     <>
@@ -55,6 +67,18 @@ export default async function ClientsPage({ searchParams }: Props) {
           </Link>
         }
       />
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+        <StatCard label="Clients" value={clients.length} icon={<Building2 className="h-4 w-4" />} />
+        <StatCard label="Client storage" value={formatBytes(totalBytes)} hint="All uploaded files" icon={<HardDrive className="h-4 w-4" />} />
+        <StatCard
+          label="Server disk free"
+          value={disk ? formatBytes(diskFree) : "—"}
+          hint={disk ? `of ${formatBytes(diskTotal)} · ${Math.round((1 - diskFree / diskTotal) * 100)}% used` : "Not available"}
+          icon={<Server className="h-4 w-4" />}
+        />
+        <StatCard label="Expiring in 30 days" value={expiring} icon={<CalendarClock className="h-4 w-4" />} />
+      </div>
 
       {/* Search + filter tabs */}
       <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-5">
@@ -87,6 +111,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                   <th className="p-4 font-medium">Sector</th>
                   <th className="p-4 font-medium">Plan</th>
                   <th className="p-4 font-medium">License ends</th>
+                  <th className="p-4 font-medium">Storage</th>
                   <th className="p-4 font-medium">Leads</th>
                   <th className="p-4 font-medium">Status</th>
                   <th className="p-4 font-medium"></th>
@@ -101,6 +126,7 @@ export default async function ClientsPage({ searchParams }: Props) {
                       <td className="p-4 text-slate-600">{verticalName(c.vertical)}</td>
                       <td className="p-4 text-slate-600 capitalize">{c.plan}</td>
                       <td className="p-4 text-slate-600">{c.subscriptionEndsAt ? new Date(c.subscriptionEndsAt).toLocaleDateString() : "Lifetime"}</td>
+                      <td className="p-4 text-slate-600 whitespace-nowrap">{formatBytes(bytesOf.get(c.id) ?? 0)}</td>
                       <td className="p-4 text-slate-600">{c._count.leads}</td>
                       <td className="p-4"><Badge tone={c.status === "suspended" ? "red" : expired ? "amber" : "green"}>{c.status === "suspended" ? "suspended" : expired ? "expired" : "active"}</Badge></td>
                       <td className="p-4">
