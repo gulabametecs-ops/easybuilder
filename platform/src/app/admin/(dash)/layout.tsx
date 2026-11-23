@@ -82,7 +82,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
         vertical={authed.tenant.vertical}
       />
       <div className="flex-1 min-w-0 flex flex-col min-h-0 admin-shell">
-        {demoSession?.expiresAt && <DemoTimerBar expiresAt={demoSession.expiresAt.toISOString()} />}
+        {demoSession?.expiresAt && <DemoTimerBar expiresAt={demoSession.expiresAt.toISOString()} link={{ href: "/", label: "View website" }} />}
         {access.expired && !demoSession && (
           <div className="bg-amber-500 text-amber-950 text-sm px-5 sm:px-8 py-2.5 flex items-center justify-between gap-3 shrink-0">
             <span className="font-medium">Your subscription has expired. Renew now to keep your site online.</span>

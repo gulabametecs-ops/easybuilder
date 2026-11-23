@@ -138,7 +138,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       {loadThirdParty && <IntegrationScripts i={integrations} />}
       {/* Inside the /demos live stage the toolbar already shows the timer. */}
       {demoSession?.expiresAt && (await headers()).get("sec-fetch-dest") !== "iframe" && (
-        <DemoTimerBar expiresAt={demoSession.expiresAt.toISOString()} />
+        <DemoTimerBar expiresAt={demoSession.expiresAt.toISOString()} link={{ href: "/admin", label: "Open admin panel" }} />
       )}
       <div className="site-root min-h-screen flex flex-col" style={themeToStyle(config.theme)}>
         <SiteHeader header={config.header} />
