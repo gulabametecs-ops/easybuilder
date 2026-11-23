@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { createSuperSession, destroySuperSession, verifySuperCredentials } from "@/lib/superAuth";
 import { rateLimit } from "@/lib/rateLimit";
 
-export type SuperAuthState = { error: string };
+export type SuperAuthState = { error: string; ok?: boolean };
 
 const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
@@ -22,7 +22,8 @@ export async function superLogin(_prev: SuperAuthState, formData: FormData): Pro
   const user = await verifySuperCredentials(parsed.data.email, parsed.data.password);
   if (!user) return { error: "Invalid credentials" };
   await createSuperSession({ userId: user.id, email: user.email, name: user.name ?? "Admin" });
-  redirect("/super");
+  // Browser navigation, not redirect(): a server-action redirect behind nginx resolved to loopback.
+  return { error: "", ok: true };
 }
 
 export async function superLogout() {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { superLogin, type SuperAuthState } from "@/lib/actions/superAuth";
 import { ShieldCheck } from "lucide-react";
 
@@ -9,6 +9,9 @@ const inputCls = "w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 
 
 export function SuperLoginForm() {
   const [state, action, pending] = useActionState(superLogin, initial);
+  useEffect(() => {
+    if (state.ok) window.location.href = "/super";
+  }, [state]);
   return (
     <form action={action} className="space-y-4">
       <div className="flex items-center gap-2 justify-center mb-2 text-lime-400">

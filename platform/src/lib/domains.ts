@@ -38,11 +38,9 @@ export function parseHost(rawHost: string | null | undefined): HostInfo {
     return { kind: "marketing" };
   }
 
-  // Local dev: treat 127.0.0.1 same as localhost when platform runs on localhost
-  if (
-    (root === "localhost" || ROOT_DOMAIN.includes("localhost")) &&
-    (host === "127.0.0.1" || host === "localhost")
-  ) {
+  // Loopback is never a tenant: local dev, and internal Next.js fetches (server-action
+  // redirects etc.) behind nginx come from 127.0.0.1.
+  if (host === "127.0.0.1" || host === "localhost") {
     return { kind: "marketing" };
   }
 
@@ -55,5 +53,5 @@ export function parseHost(rawHost: string | null | undefined): HostInfo {
   }
 
   // Anything else is a connected custom domain -> tenant by custom domain
-  return { kind: "custom", key: host };
+  return { kind: "custom", key: host.replace(/^www\./, "") };
 }

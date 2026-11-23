@@ -81,6 +81,7 @@ export function proxy(request: NextRequest) {
   // Public tenant pages -> rewrite into the /site route tree so they don't
   // collide with the marketing routes at the root path space.
   const rewritten = url.clone();
+  rewritten.protocol = "http:"; // app server is plain http; nginx terminates TLS (else EPROTO on https://localhost)
   rewritten.pathname = `/site${path === "/" ? "" : path}`;
   return NextResponse.rewrite(rewritten, { request: { headers } });
 }
