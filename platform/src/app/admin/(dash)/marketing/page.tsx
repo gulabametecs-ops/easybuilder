@@ -7,6 +7,8 @@ import { getDemoSessionId } from "@/lib/actions/guard";
 import { demoVisibleWhere } from "@/lib/demoSession";
 import { lastDays } from "@/lib/analytics";
 import { VERTICALS } from "@/lib/verticals";
+import { siteIntegrations } from "@/lib/integrations";
+import { upcomingOccasions, istToday } from "@/lib/marketingIdeas";
 
 export const metadata = { title: "Marketing" };
 
@@ -52,6 +54,9 @@ export default async function MarketingPage() {
 
   const siteUrl = tenant.customDomain ? `https://${tenant.customDomain}` : `http://${tenant.subdomain}.${ROOT_DOMAIN}`;
   const ann = config.header.announcement ?? { show: false, text: "", link: "" };
+  const si = siteIntegrations(config.integrations, config.seo);
+  const reviewEntry = config.integrations.googleReviews;
+  const reviewLink = reviewEntry?.enabled ? reviewEntry.values.url ?? "" : "";
   const services = Array.from(new Set(serviceRows.map((s) => s.title).filter(Boolean))).slice(0, 20);
 
   return (
@@ -65,6 +70,9 @@ export default async function MarketingPage() {
         vertical={tenant.vertical}
         sector={sector}
         insights={insights}
+        occasions={upcomingOccasions(istToday(), 3)}
+        hasAnalytics={!!(si.gaId || si.gtmId || si.fbPixelId)}
+        reviewLink={reviewLink}
         canBlast={["owner", "admin"].includes(authed.session.role)}
         campaigns={campaigns.map((c) => ({
           id: c.id, name: c.name, platform: c.platform, objective: c.objective, service: c.service,
