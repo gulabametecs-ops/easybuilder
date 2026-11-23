@@ -3,9 +3,11 @@ import { Mail, MessageCircle, Phone } from "lucide-react";
 import { db } from "@/lib/db";
 import { sweepExpiredDemoSessions } from "@/lib/demoSession";
 import { verticalName } from "@/lib/verticals";
-import { FOLLOW_UP_STATUSES, splitLeadMessage } from "@/lib/leadStatus";
+import { BLOCKED, FOLLOW_UP_STATUSES, leadSearch, splitLeadMessage } from "@/lib/leadStatus";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/admin/ui";
 import { LeadFollowUp } from "@/components/super/LeadFollowUp";
+import { LeadActions } from "@/components/super/LeadActions";
+import { FilterBar } from "@/components/super/FilterBar";
 
 export const metadata = { title: "Demo leads" };
 
@@ -21,24 +23,35 @@ const TONE: Record<string, "slate" | "green" | "amber" | "blue" | "red"> = {
   interested: "green",
   converted: "green",
   "not interested": "slate",
+  blocked: "red",
 };
+const STATUSES = [...FOLLOW_UP_STATUSES, BLOCKED];
 
-export default async function DemoLeadsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+export default async function DemoLeadsPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; sector?: string }> }) {
   // Viewing the list also wipes any abandoned sandboxes (their data + uploads). Leads are kept.
   await sweepExpiredDemoSessions();
   const sp = await searchParams;
-  const filter = FOLLOW_UP_STATUSES.find((s) => s === sp.status);
+  const filter = STATUSES.find((s) => s === sp.status);
+  const qs = (s?: string) => {
+    const u = new URLSearchParams();
+    if (s) u.set("status", s);
+    if (sp.q) u.set("q", sp.q);
+    if (sp.sector) u.set("sector", sp.sector);
+    return u.size ? `/super/demo-leads?${u}` : "/super/demo-leads";
+  };
 
-  const [leads, counts] = await Promise.all([
+  const [leads, counts, sectors] = await Promise.all([
     db.platformLead.findMany({
-      where: { type: "demo", ...(filter ? { status: filter } : {}) },
+      // Blocked contacts only show under the "blocked" chip.
+      where: { type: "demo", ...leadSearch(sp.q), ...(sp.sector ? { vertical: sp.sector } : {}), status: filter ?? { not: BLOCKED } },
       orderBy: { createdAt: "desc" },
       take: 200,
       include: { demoSessions: { orderBy: { createdAt: "asc" }, select: { vertical: true, pagesViewed: true } } },
     }),
     db.platformLead.groupBy({ by: ["status"], where: { type: "demo" }, _count: { _all: true } }),
+    db.platformLead.groupBy({ by: ["vertical"], where: { type: "demo" } }),
   ]);
-  const total = counts.reduce((n, c) => n + c._count._all, 0);
+  const total = counts.reduce((n, c) => n + (c.status === BLOCKED ? 0 : c._count._all), 0);
   const countOf = (s: string) => counts.find((c) => c.status === s)?._count._all ?? 0;
 
   return (
@@ -48,13 +61,25 @@ export default async function DemoLeadsPage({ searchParams }: { searchParams: Pr
         subtitle={`${total} people asked for a demo · sandboxes and their uploads are deleted when the timer ends; the lead stays here for follow-up`}
       />
 
+      <FilterBar
+        q={sp.q}
+        hidden={{ status: filter }}
+        selects={[
+          {
+            name: "sector",
+            label: "Sector",
+            value: sp.sector,
+            options: sectors.filter((s) => s.vertical).map((s) => ({ value: s.vertical, label: verticalName(s.vertical) })).sort((a, b) => a.label.localeCompare(b.label)),
+          },
+        ]}
+      />
       <div className="mb-4 flex flex-wrap gap-2">
-        {[undefined, ...FOLLOW_UP_STATUSES].map((s) => {
+        {[undefined, ...STATUSES].map((s) => {
           const on = s === filter;
           return (
             <Link
               key={s ?? "all"}
-              href={s ? `/super/demo-leads?status=${encodeURIComponent(s)}` : "/super/demo-leads"}
+              href={qs(s)}
               className={`rounded-full border px-3 py-1 text-xs font-semibold capitalize ${on ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
             >
               {s ?? "All"} <span className="opacity-60">{s ? countOf(s) : total}</span>
@@ -135,7 +160,10 @@ export default async function DemoLeadsPage({ searchParams }: { searchParams: Pr
                   </div>
 
                   <div className="w-full shrink-0 lg:w-96">
-                    <LeadFollowUp leadId={l.id} status={l.status} />
+                    <div className="mb-3 flex justify-end">
+                      <LeadActions leadId={l.id} blocked={l.status === BLOCKED} name={l.name} />
+                    </div>
+                    {l.status !== BLOCKED && <LeadFollowUp leadId={l.id} status={l.status} />}
                     {notes.length > 0 && (
                       <ul className="mt-3 space-y-2">
                         {notes.map((n, i) => (

@@ -16,3 +16,20 @@ export function splitLeadMessage(message: string): { details: string[]; notes: {
     }),
   };
 }
+
+// A blocked contact is a PlatformLead with this status (no extra table); see lib/blocklist.
+export const BLOCKED = "blocked";
+
+export const last10 = (p: string) => p.replace(/\D/g, "").slice(-10);
+
+export function sameContact(a: { phone: string; email: string }, b: { phone: string; email: string }) {
+  const pa = last10(a.phone);
+  const ea = a.email.trim().toLowerCase();
+  return (pa.length >= 7 && pa === last10(b.phone)) || (!!ea && ea === b.email.trim().toLowerCase());
+}
+
+/** Prisma where for a free-text lead search (name / phone / email / company). */
+export function leadSearch(q?: string) {
+  const t = q?.trim();
+  return t ? { OR: [{ name: { contains: t } }, { phone: { contains: t } }, { email: { contains: t } }, { company: { contains: t } }] } : {};
+}

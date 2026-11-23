@@ -10,6 +10,7 @@ import { rateLimit } from "@/lib/rateLimit";
 import { sendDemoOtpWhatsApp } from "@/lib/demoWhatsApp";
 import { createTenantFromTemplate } from "@/lib/provision";
 import { fillDemoImages } from "@/lib/demoImages";
+import { isBlockedContact } from "@/lib/blocklist";
 import { randomBytes } from "node:crypto";
 import {
   demoDurationMs,
@@ -125,6 +126,9 @@ export async function requestDemoOtp(_prev: DemoFlowState, formData: FormData): 
   const vertical = getVertical(parsed.data.vertical);
   if (!vertical || vertical.status !== "live" || !vertical.demoSubdomain) {
     return { step: "error", message: "This sector demo is not available yet." };
+  }
+  if (await isBlockedContact(parsed.data.phone, parsed.data.email)) {
+    return { step: "error", message: "Demo is not available for this number. Please contact support." };
   }
 
   const cfg = await getPlatformConfig();

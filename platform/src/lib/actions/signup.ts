@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { isBlockedContact } from "@/lib/blocklist";
 import { createTenantFromTemplate } from "@/lib/provision";
 import { ROOT_DOMAIN } from "@/lib/domains";
 import { headers } from "next/headers";
@@ -116,6 +117,9 @@ export async function submitDemoRequest(_prev: ContactState, formData: FormData)
   const d = parsed.data;
   if (d.contactVia !== "email" && d.phone.replace(/\D/g, "").length < 7) {
     return { ok: false, message: "Add a phone number so we can call or WhatsApp you — or choose Email." };
+  }
+  if (await isBlockedContact(d.phone, d.email)) {
+    return { ok: false, message: "We couldn't accept this request. Please contact support." };
   }
   await db.platformLead.create({
     data: {

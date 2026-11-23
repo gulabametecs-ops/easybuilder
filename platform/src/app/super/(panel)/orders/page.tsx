@@ -6,18 +6,35 @@ import { verticalName } from "@/lib/verticals";
 import { PageHeader, Card, Badge, EmptyState } from "@/components/admin/ui";
 import { RefundButton } from "@/components/super/RefundButton";
 import { RetryProvisionButton } from "@/components/super/RetryProvisionButton";
+import { FilterBar } from "@/components/super/FilterBar";
+
+const STATUSES = ["created", "paid", "provisioned", "failed", "refunded"];
 
 export const metadata = { title: "Orders & Payments" };
 
-export default async function OrdersPage() {
-  const orders = await db.order.findMany({ orderBy: { createdAt: "desc" } });
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+  const sp = await searchParams;
+  const q = sp.q?.trim();
+  const status = STATUSES.find((s) => s === sp.status);
+  const orders = await db.order.findMany({
+    where: {
+      ...(q ? { OR: [{ customerName: { contains: q } }, { email: { contains: q } }, { subdomain: { contains: q } }] } : {}),
+      ...(status ? { status } : {}),
+    },
+    orderBy: { createdAt: "desc" },
+  });
   const revenue = orders.filter((o) => o.status === "paid" || o.status === "provisioned").reduce((s, o) => s + o.amount, 0);
 
   return (
     <>
       <PageHeader title="Orders & Payments" subtitle={`${orders.length} orders · ${formatINR(revenue)} collected`} />
+      <FilterBar
+        q={sp.q}
+        placeholder="Search customer, email, site…"
+        selects={[{ name: "status", label: "Status", value: status, options: STATUSES.map((s) => ({ value: s, label: s === "paid" ? "paid · not live" : s })) }]}
+      />
       <Card>
-        {orders.length === 0 ? <EmptyState title="No orders yet" hint="Subscriptions and payments appear here." /> : (
+        {orders.length === 0 ? <EmptyState title={q || status ? "No matching orders" : "No orders yet"} hint="Subscriptions and payments appear here." /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-slate-400 border-b border-slate-100">

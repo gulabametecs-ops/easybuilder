@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSuperSession } from "@/lib/superAuth";
-import { FOLLOW_UP_STATUSES, NOTE_MARK } from "@/lib/leadStatus";
+import { BLOCKED, FOLLOW_UP_STATUSES, NOTE_MARK, sameContact } from "@/lib/leadStatus";
 
 async function requireSuper() {
   if (!(await getSuperSession())) throw new Error("Unauthorized");
@@ -32,4 +32,26 @@ export async function addLeadNote(leadId: string, formData: FormData) {
     },
   });
   revalidatePath("/super/demo-leads");
+}
+
+const refresh = () => {
+  revalidatePath("/super/demo-leads");
+  revalidatePath("/super/enquiries");
+};
+
+export async function deleteLead(leadId: string) {
+  await requireSuper();
+  await db.platformLead.deleteMany({ where: { id: z.string().min(1).parse(leadId) } });
+  refresh();
+}
+
+/** Block / unblock every lead with the same phone or email. Blocked contacts can't request demos or send enquiries. */
+export async function setLeadBlocked(leadId: string, blocked: boolean) {
+  await requireSuper();
+  const lead = await db.platformLead.findUnique({ where: { id: z.string().min(1).parse(leadId) }, select: { phone: true, email: true } });
+  if (!lead) return;
+  const all = await db.platformLead.findMany({ select: { id: true, phone: true, email: true, status: true } });
+  const ids = all.filter((l) => sameContact(lead, l) && (blocked ? l.status !== BLOCKED : l.status === BLOCKED)).map((l) => l.id);
+  if (ids.length) await db.platformLead.updateMany({ where: { id: { in: ids } }, data: { status: blocked ? BLOCKED : "new" } });
+  refresh();
 }
