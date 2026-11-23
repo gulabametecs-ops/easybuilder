@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   CheckCircle2, Palette, PanelTop, PanelBottom, Code2,
@@ -49,7 +50,8 @@ const COLOR_ROLES: {
 ];
 
 export function AppearanceEditor({ theme, header, footer, customCss, version }: Props) {
-  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("Theme");
+  const wanted = useSearchParams().get("tab");
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>(() => (TABS.some((t) => t.id === wanted) ? wanted : "Theme") as (typeof TABS)[number]["id"]);
   const [previewHidden, setPreviewHidden] = useState(false);
   // `version` changes on every save, so it alone busts the preview cache and remounts the frame.
   const src = `/?__edit=1&v=${encodeURIComponent(version)}`;

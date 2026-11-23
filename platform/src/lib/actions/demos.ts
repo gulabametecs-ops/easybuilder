@@ -41,8 +41,8 @@ const formSchema = z.object({
   phone: z.string().min(7, "Please enter a valid phone number"),
   company: z.string().min(2, "Please enter your business name"),
   vertical: z.string().min(1),
-  city: z.string().trim().min(2, "Please enter your city").max(60),
-  role: z.string().trim().min(1, "Please select your role").max(40),
+  city: z.string().trim().max(60).optional(),
+  role: z.string().trim().max(40).optional(),
   website: z.string().trim().max(60).optional(),
   timeline: z.string().trim().max(40).optional(),
   contactVia: z.string().trim().max(20).optional(),
@@ -52,8 +52,8 @@ const formSchema = z.object({
 // Extra qualifying answers go into the lead's message so sales sees them in Super Admin → Demo leads.
 function leadMessage(d: z.infer<typeof formSchema>): string {
   return [
-    `City: ${d.city}`,
-    `Role: ${d.role}`,
+    d.city && `City: ${d.city}`,
+    d.role && `Role: ${d.role}`,
     d.website && `Current website: ${d.website}`,
     d.timeline && `Wants to go live: ${d.timeline}`,
     d.contactVia && `Best way to reach: ${d.contactVia}`,
@@ -113,8 +113,8 @@ export async function requestDemoOtp(_prev: DemoFlowState, formData: FormData): 
     phone: formData.get("phone"),
     company: formData.get("company"),
     vertical: formData.get("vertical"),
-    city: formData.get("city") ?? "",
-    role: formData.get("role") ?? "",
+    city: formData.get("city") || undefined,
+    role: formData.get("role") || undefined,
     website: formData.get("website") || undefined,
     timeline: formData.get("timeline") || undefined,
     contactVia: formData.get("contactVia") || undefined,

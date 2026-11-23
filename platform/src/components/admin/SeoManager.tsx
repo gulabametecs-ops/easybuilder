@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useActionState, useState, useTransition } from "react";
 import {
   Search, Globe, BarChart3, MapPin, Gauge, CheckCircle2, XCircle, Info,
@@ -64,7 +65,8 @@ export function SeoManager({
   pages: PageAudit[];
   contact: { phone: string; address: string };
 }) {
-  const [tab, setTab] = useState<TabId>("score");
+  const wanted = useSearchParams().get("tab");
+  const [tab, setTab] = useState<TabId>(() => (TABS.some((t) => t.id === wanted) ? wanted : "score") as TabId);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [f, setF] = useState<SeoConfig>(seo);
   const set = (k: keyof SeoConfig, v: string | boolean) => setF((s) => ({ ...s, [k]: v }));

@@ -38,15 +38,15 @@ export function buildChecklist(f: ChecklistFacts): ChecklistItem[] {
     !/your city/i.test(`${f.seoTitle} ${f.seoDescription}`);
 
   const items: ChecklistItem[] = [
-    { id: "logo", label: "Upload your logo", hint: "Shown in the header of every page", href: "/admin/appearance", done: !!f.logoImage.trim() },
-    { id: "colors", label: "Set your brand colours", hint: "Make the site match your signboard", href: "/admin/appearance", done: !!f.primaryColor && !tplColors.has(norm(f.primaryColor)) },
+    { id: "logo", label: "Upload your logo", hint: "Shown in the header of every page", href: "/admin/appearance?tab=Header", done: !!f.logoImage.trim() },
+    { id: "colors", label: "Set your brand colours", hint: "Make the site match your signboard", href: "/admin/appearance?tab=Theme", done: !!f.primaryColor && !tplColors.has(norm(f.primaryColor)) },
     { id: "services", label: "Add at least 3 services", hint: `${f.services} added so far`, href: "/admin/services", done: f.services >= 3 },
     { id: "gallery", label: "Add 5 or more gallery photos", hint: `${f.gallery} added so far`, href: "/admin/gallery", done: f.gallery >= 5 },
-    { id: "contact", label: "Add your phone & email", hint: "Replace the sample contact details", href: "/admin/appearance", done: realPhone && realEmail },
-    { id: "seo", label: "Write your Google title & description", hint: "How you appear in search results", href: "/admin/seo", done: seoDone },
+    { id: "contact", label: "Add your phone & email", hint: "Replace the sample contact details", href: "/admin/appearance?tab=Header", done: realPhone && realEmail },
+    { id: "seo", label: "Write your Google title & description", hint: "How you appear in search results", href: "/admin/seo?tab=meta", done: seoDone },
   ];
   if (f.domainConnected !== null) {
-    items.push({ id: "domain", label: "Connect your own domain", hint: "e.g. www.yourbusiness.in", href: "/admin/settings", done: f.domainConnected });
+    items.push({ id: "domain", label: "Connect your own domain", hint: "e.g. www.yourbusiness.in", href: "/admin/settings?tab=domain", done: f.domainConnected });
   }
   items.push({ id: "lead", label: "Receive your first enquiry", hint: "Share your site to get it", href: "/admin/share", done: f.leads > 0 });
   return items;

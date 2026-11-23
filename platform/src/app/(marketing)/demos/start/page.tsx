@@ -7,6 +7,8 @@ import { DemoConceptPreview } from "@/components/marketing/DemoConceptPreview";
 import { DemoStartPanel } from "@/components/marketing/DemoStartPanel";
 import { VerticalIcon } from "@/components/marketing/VerticalIcon";
 import { mkt } from "@/lib/marketingTheme";
+import { previewUrl } from "@/lib/demoUrls";
+import { getDemoStatusForVertical } from "@/lib/actions/demos";
 
 export const metadata = { title: "Start your live demo — SitePixl" };
 
@@ -27,9 +29,12 @@ export default async function DemoStartPage({
   if (!sector) redirect("/demos");
   const design = sector.designs.find((d) => d.id === sp.design) ?? sector.designs[0];
 
-  // Already verified: go straight to the running demo (or to /demos to switch sectors).
+  // Already verified: straight to the running demo on its subdomain (or to /demos to switch sectors).
   const session = await getActiveDemoSession();
-  if (session?.vertical === sector.id) redirect(`/demos?vertical=${sector.id}&design=${design.id}&live=1`);
+  if (session?.vertical === sector.id) {
+    const live = await getDemoStatusForVertical(sector.id);
+    redirect(live.step === "active" ? previewUrl(live.siteUrl, design.id) : `/demos?vertical=${sector.id}&design=${design.id}&live=1`);
+  }
   if (session) redirect(`/demos?vertical=${sector.id}`);
 
   return (

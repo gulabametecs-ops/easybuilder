@@ -122,6 +122,11 @@ export async function cleanupDemoSessionData(sessionId: string, clearCookies = t
     data: {
       status: "expired",
       overlay: "{}",
+      // Visitor details live on the PlatformLead (Super Admin → Demo leads); drop this copy.
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
       adminUsername: "",
       adminPassword: "",
       otpHash: "",
@@ -241,6 +246,11 @@ export async function sweepExpiredDemoSessions() {
     for (const s of stale) {
       await cleanupDemoSessionData(s.id, false); // someone else's session — don't touch this request's cookies
     }
+    // OTP requested but never verified: nothing to wipe, just drop the visitor copy (lead stays).
+    await db.demoSession.updateMany({
+      where: { status: "pending_otp", otpExpiresAt: { lt: new Date() } },
+      data: { status: "expired", otpHash: "", name: "", email: "", phone: "", company: "" },
+    });
   } catch (err) {
     console.error("sweepExpiredDemoSessions failed", err);
   }

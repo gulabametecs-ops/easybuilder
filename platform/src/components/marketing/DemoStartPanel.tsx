@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { DemoVerticalPanel } from "./DemoVerticalPanel";
+import { DemoVerticalPanel, previewUrl } from "./DemoVerticalPanel";
 
-/** Details + OTP form on /demos/start; once verified, back to /demos with the live stage open. */
+/** Details + OTP form on /demos/start; once verified, straight to the demo subdomain (top-level, so its cookie is first-party). */
 export function DemoStartPanel({
   vertical,
   designs,
@@ -21,7 +21,7 @@ export function DemoStartPanel({
       designs={designs}
       design={design}
       defaultOpen
-      onActivated={() => openLive(vertical.id)}
+      onActivated={(info) => window.location.assign(previewUrl(info.siteUrl, design))}
       onShowActive={openLive}
     />
   );

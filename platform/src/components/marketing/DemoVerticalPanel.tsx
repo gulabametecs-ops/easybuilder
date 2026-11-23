@@ -1,5 +1,6 @@
 "use client";
 
+import { previewUrl } from "@/lib/demoUrls";
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { requestDemoOtp, verifyDemoOtp, switchDemo, type DemoFlowState } from "@/lib/actions/demos";
@@ -26,22 +27,7 @@ type ActiveInfo = {
 
 type DesignRef = { id: string; name: string };
 
-export function previewUrl(siteUrl: string, designId: string) {
-  try {
-    const u = new URL(siteUrl);
-    if (u.pathname.includes("/api/demo/establish")) {
-      const to = u.searchParams.get("to") || "/";
-      const dest = new URL(to, u.origin);
-      dest.searchParams.set("design", designId);
-      u.searchParams.set("to", `${dest.pathname}${dest.search}`);
-      return u.toString();
-    }
-    u.searchParams.set("design", designId);
-    return u.toString();
-  } catch {
-    return `${siteUrl}${siteUrl.includes("?") ? "&" : "?"}design=${designId}`;
-  }
-}
+export { previewUrl };
 
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
@@ -307,50 +293,10 @@ export function DemoVerticalPanel({
         <Field label="Business name" required>
           <input name="company" required autoComplete="organization" placeholder="Bright Smile Dental" className={mkt.input} />
         </Field>
-        <Field label="City" required>
-          <input name="city" required autoComplete="address-level2" placeholder="Pune" className={mkt.input} />
-        </Field>
-        <Field label="Your role" required>
-          <select name="role" required defaultValue="" className={mkt.input}>
-            <option value="" disabled>Select…</option>
-            {["Owner / Founder", "Manager", "Staff member", "Agency / Freelancer", "Other"].map((o) => (
-              <option key={o}>{o}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Already have a website?">
-          <select name="website" defaultValue="" className={mkt.input}>
-            <option value="">Select…</option>
-            {["No, this is my first", "Yes, needs a redesign", "Yes, want to switch"].map((o) => (
-              <option key={o}>{o}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="When do you want to go live?">
-          <select name="timeline" defaultValue="" className={mkt.input}>
-            <option value="">Select…</option>
-            {["This week", "This month", "In 1–3 months", "Just exploring"].map((o) => (
-              <option key={o}>{o}</option>
-            ))}
-          </select>
+        <Field label="City (optional)">
+          <input name="city" autoComplete="address-level2" placeholder="Pune" className={mkt.input} />
         </Field>
       </div>
-      <fieldset>
-        <legend className="mb-1 block text-xs font-semibold text-[var(--mkt-text-secondary)]">Best way to reach you</legend>
-        <div className="grid grid-cols-3 gap-2">
-          {["WhatsApp", "Call", "Email"].map((o, i) => (
-            <label key={o} className="cursor-pointer">
-              <input type="radio" name="contactVia" value={o} defaultChecked={i === 0} className="peer sr-only" />
-              <span className="block rounded-xl border border-[var(--mkt-border-strong)] py-2 text-center text-sm font-medium text-[var(--mkt-text-secondary)] transition peer-checked:border-[var(--mkt-accent-2)] peer-checked:bg-[var(--mkt-accent-soft)] peer-checked:text-[var(--mkt-accent-text)] peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--mkt-accent-2)]/40">
-                {o}
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <Field label="What do you need? (optional)">
-        <textarea name="needs" rows={2} maxLength={1000} placeholder="e.g. Online appointments, gallery and a WhatsApp button" className={`${mkt.input} resize-none`} />
-      </Field>
       {requestState.step === "error" && <p className="text-sm text-red-500">{requestState.message}</p>}
       <button
         type="submit"

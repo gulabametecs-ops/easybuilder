@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useActionState, useState } from "react";
 import {
   Settings, Sparkles, Globe, Building2, Lock, Users, Info, ExternalLink,
@@ -85,7 +86,8 @@ export function SettingsManager(props: {
   cancelRequested: boolean;
   supportEmail: string;
 }) {
-  const [tab, setTab] = useState<TabId>("plan");
+  const wanted = useSearchParams().get("tab");
+  const [tab, setTab] = useState<TabId>(() => (TABS.some((t) => t.id === wanted) ? wanted : "plan") as TabId);
   const {
     planName, serviceCount, serviceLimit, expiry, status, liveUrl, subdomain,
     customDomain, domainStatus, aTarget, cnameTarget, businessName, planId,
