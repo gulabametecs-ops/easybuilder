@@ -13,7 +13,7 @@ export default async function ProductsPage() {
   if (!authed) return null;
   const demoId = await getDemoSessionId();
   const [rows, settings] = await Promise.all([
-    db.product.findMany({ where: demoVisibleWhere(authed.tenant.id, demoId), orderBy: [{ featured: "desc" }, { order: "asc" }] }),
+    db.product.findMany({ where: demoVisibleWhere(authed.tenant.id, demoId), orderBy: [{ featured: "desc" }, { order: "asc" }], include: { variants: { orderBy: { order: "asc" } } } }),
     getStoreSettings(authed.tenant.id, demoId),
   ]);
   const products = rows.map((r) => ({ ...mapProduct(r), published: r.published, mine: !demoId || r.demoSessionId === demoId }));

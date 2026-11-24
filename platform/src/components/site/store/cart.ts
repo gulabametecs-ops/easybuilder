@@ -58,11 +58,12 @@ export function useCart(): CartItem[] {
   return useSyncExternalStore(subscribe, snapshot, () => EMPTY);
 }
 
-export const lineKey = (productId: string, options: Record<string, string>) =>
-  `${productId}|${Object.entries(options).sort().map(([k, v]) => `${k}=${v}`).join("&")}`;
+export const lineKey = (productId: string, options: Record<string, string>, variantId?: string | null) =>
+  variantId ? `${productId}|v=${variantId}` : `${productId}|${Object.entries(options).sort().map(([k, v]) => `${k}=${v}`).join("&")}`;
 
+/** `variantId` is set for products with variant rows (lib/store PublicVariant). */
 export function addToCart(item: Omit<CartItem, "key" | "qty">, qty = 1) {
-  const key = lineKey(item.productId, item.options);
+  const key = lineKey(item.productId, item.options, item.variantId);
   const items = [...snapshot()];
   const i = items.findIndex((x) => x.key === key);
   if (i >= 0) items[i] = { ...items[i], ...item, qty: Math.min(MAX_QTY, items[i].qty + qty) };

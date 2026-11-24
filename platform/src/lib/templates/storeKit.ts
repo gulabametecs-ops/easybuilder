@@ -40,7 +40,7 @@ export function storeTemplate(s: StoreSpec): TemplateDef {
   const grid = (c: Partial<SectionContentMap["productGrid"]>, style: SectionStyle = {}): SectionSeed<"productGrid"> => ({
     type: "productGrid",
     content: {
-      eyebrow: "", title: "", titleHighlight: "", subtitle: "", category: "all", featuredOnly: false, showFilters: false,
+      eyebrow: "", title: "", titleHighlight: "", subtitle: "", category: "all", collection: "", featuredOnly: false, showFilters: false,
       limit: 8, buttonLabel: "View all products", buttonHref: "/shop", emptyText: "New products are on the way — check back soon.", ...c,
     },
     style: { ...card, ...style },
@@ -132,7 +132,7 @@ export function storeTemplate(s: StoreSpec): TemplateDef {
       columns: [
         { title: "Shop", links: [{ label: "All Products", href: "/shop" }, ...s.categories.map((c) => ({ label: c, href: shopHref(c) }))] },
         { title: "Help", links: [
-          { label: "My Cart", href: "/cart" }, { label: "Shipping & Returns", href: "/shipping-returns" },
+          { label: "My Cart", href: "/cart" }, { label: "My Account", href: "/account" }, { label: "Shipping & Returns", href: "/shipping-returns" },
           { label: "About Us", href: "/about" }, { label: "Contact Us", href: "/contact" },
         ] },
       ],

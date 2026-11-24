@@ -10,7 +10,10 @@ import { sendEmail } from "@/lib/email";
 import { escapeHtml } from "@/lib/sanitizeHtml";
 import { getActiveDemoSessionForTenant, isDemoSubdomain } from "@/lib/demoSession";
 import { getStoreSettings } from "@/lib/storeServer";
-import { MAX_QTY, inr, mapProduct, orderLabel, orderSummaryText, paymentMethods, priceOrder, waLink } from "@/lib/store";
+import { MAX_QTY, inr, orderLabel, orderSummaryText, paymentMethods, priceCatalog, waLink } from "@/lib/store";
+import { catalogLines, decrementStock, OutOfStockError } from "@/lib/storeCatalog";
+import { getStoreCustomer } from "@/lib/storeCustomer";
+import { addTimeline, newTrackToken, notifyCustomer } from "@/lib/fulfilment";
 
 // Public checkout for store sites. Prices, shipping and stock are recomputed from the DB.
 
@@ -24,7 +27,7 @@ const OrderSchema = z.object({
   note: z.string().trim().max(500).default(""),
   paymentMethod: z.enum(["cod", "upi", "whatsapp"]),
   lines: z
-    .array(z.object({ productId: z.string().min(1).max(40), qty: z.number().int().min(1).max(MAX_QTY), options: z.record(z.string().max(60), z.string().max(80)).default({}) }))
+    .array(z.object({ productId: z.string().min(1).max(40), variantId: z.string().max(40).nullish(), qty: z.number().int().min(1).max(MAX_QTY), options: z.record(z.string().max(60), z.string().max(80)).default({}) }))
     .min(1, "Your cart is empty.")
     .max(50),
 });
@@ -51,46 +54,50 @@ export async function placeStoreOrder(input: PlaceOrderInput): Promise<PlaceOrde
   const settings = await getStoreSettings(tenant.id, demo?.id ?? null);
   if (!paymentMethods(settings).includes(d.paymentMethod)) return { ok: false, error: "That payment option isn't available. Please choose another." };
 
-  const ids = [...new Set(d.lines.map((l) => l.productId))];
-  const rows = await db.product.findMany({
-    where: { tenantId: tenant.id, published: true, id: { in: ids }, ...(demo ? { OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] } : { demoSessionId: null }) },
-  });
-  const priced = priceOrder(d.lines, rows.map(mapProduct), settings);
+  const priced = priceCatalog(await catalogLines(tenant.id, d.lines, { demoSessionId: demo?.id ?? null }), settings);
   if (!priced.ok) return priced;
+
+  // Link the order to the shopper's account (signed in, else an account with the same email).
+  const signedIn = await getStoreCustomer();
+  if (signedIn?.blocked) return { ok: false, error: "This account can't place orders. Please contact the store." };
+  const customerId = signedIn?.id
+    ?? (d.email ? (await db.storeCustomer.findFirst({ where: { tenantId: tenant.id, email: d.email.toLowerCase(), ...(demo ? { demoSessionId: demo.id } : {}) }, select: { id: true } }))?.id : undefined)
+    ?? null;
 
   // Order numbers count up per store from 1001; retry once if two orders race for the same number.
   let order: { id: string; orderNo: number } | null = null;
   for (let attempt = 0; attempt < 3 && !order; attempt++) {
     const last = await db.storeOrder.aggregate({ where: { tenantId: tenant.id }, _max: { orderNo: true } });
     try {
-      order = await db.storeOrder.create({
+      order = await db.$transaction(async (tx) => {
+        const created = await tx.storeOrder.create({
         data: {
           tenantId: tenant.id,
           orderNo: Math.max(1000, last._max.orderNo ?? 1000) + 1,
           customerName: d.name, phone: d.phone, email: d.email, address: d.address, city: d.city, pincode: d.pincode, note: d.note,
           items: JSON.stringify(priced.items), subtotal: priced.subtotal, shipping: priced.shipping, discount: 0, total: priced.total,
-          paymentMethod: d.paymentMethod, demoSessionId: demo?.id ?? null,
+          paymentMethod: d.paymentMethod, demoSessionId: demo?.id ?? null, customerId,
+          trackToken: newTrackToken(), timeline: addTimeline("[]", "new", "Order placed"),
         },
         select: { id: true, orderNo: true },
+        });
+        // Stock goes down on real stores only — demo tenants are shared by every visitor.
+        if (!demo) await decrementStock(tx, priced.lines);
+        return created;
       });
     } catch (e) {
+      if (e instanceof OutOfStockError) return { ok: false, error: e.message };
       if (attempt === 2) throw e;
     }
   }
   if (!order) return { ok: false, error: "Could not place the order. Please try again." };
-
-  // Stock goes down on real stores only — demo tenants are shared by every visitor.
-  if (!demo) {
-    for (const i of priced.items) {
-      await db.product.updateMany({ where: { id: i.productId, tenantId: tenant.id }, data: { stock: { decrement: i.qty } } });
-    }
-  }
 
   const summary = orderSummaryText({ bizName: tenant.name, orderNo: order.orderNo, ...priced, paymentMethod: d.paymentMethod, customerName: d.name, phone: d.phone, address: d.address, city: d.city, pincode: d.pincode });
   if (!demo) {
     const owners = await db.user.findMany({ where: { tenantId: tenant.id, role: { in: ["owner", "admin"] } }, select: { email: true } });
     const html = `<p>New order <strong>${orderLabel(order.orderNo)}</strong> on <strong>${escapeHtml(tenant.name)}</strong> — ${inr(priced.total)}</p><pre style="font-family:inherit">${escapeHtml(summary)}</pre><p>Open Admin → Orders to confirm it.</p>`;
     await Promise.all(owners.map((o) => sendEmail(o.email, `New order ${orderLabel(order!.orderNo)} — ${inr(priced.total)}`, html))).catch(() => {});
+    await notifyCustomer(order.id, "placed");
   }
 
   revalidatePath("/admin/orders");

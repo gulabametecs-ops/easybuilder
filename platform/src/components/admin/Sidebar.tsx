@@ -35,6 +35,10 @@ import {
   Package,
   UserRound,
   Store,
+  Truck,
+  Undo2,
+  LayoutGrid,
+  MessageSquareText,
 } from "lucide-react";
 import { sectorModules, type SectorModules } from "@/lib/adminNav";
 import { BrandMark } from "@/components/BrandLogo";
@@ -76,7 +80,11 @@ function navGroups(
       items: [
         { href: "/admin/orders", label: "Orders", icon: ShoppingBag, badge: newOrders },
         { href: "/admin/products", label: "Products", icon: Package },
+        { href: "/admin/collections", label: "Collections", icon: LayoutGrid },
+        { href: "/admin/reviews", label: "Reviews", icon: MessageSquareText },
         { href: "/admin/customers", label: "Customers", icon: UserRound },
+        { href: "/admin/returns", label: "Returns", icon: Undo2 },
+        { href: "/admin/shipping", label: "Shipping", icon: Truck },
         { href: "/admin/store-settings", label: "Store settings", icon: Store },
       ],
     }),

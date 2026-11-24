@@ -32,6 +32,7 @@ import { PropertyListBlock } from "./sections/PropertyBlocks";
 import { CauseListBlock } from "./sections/CauseBlocks";
 import { ProductGridBlock, ProductCategoriesBlock } from "./sections/StoreBlocks";
 import type { PublicProduct } from "@/lib/store";
+import type { PublicCollection } from "@/lib/storeServer";
 import type { PublicCause } from "@/lib/cause";
 
 type ServiceRow = { id: string; category: string; title: string; description: string; image: string; slug?: string };
@@ -50,6 +51,7 @@ export type RenderContext = {
   events?: PublicEvent[];
   properties?: PublicProperty[];
   products?: PublicProduct[];
+  collections?: PublicCollection[];
   causes?: PublicCause[];
   payments?: PublicPayments;
   integrations?: SiteIntegrations;
@@ -123,7 +125,7 @@ function renderBlock(section: { type: string; content: string }, ctx: RenderCont
     case "propertyList":
       return <PropertyListBlock c={parseSectionContent("propertyList", section.content)} properties={ctx.properties} />;
     case "productGrid":
-      return <ProductGridBlock c={parseSectionContent("productGrid", section.content)} products={ctx.products} />;
+      return <ProductGridBlock c={parseSectionContent("productGrid", section.content)} products={ctx.products} collections={ctx.collections} />;
     case "productCategories":
       return <ProductCategoriesBlock c={parseSectionContent("productCategories", section.content)} products={ctx.products} />;
     case "volunteerForm":

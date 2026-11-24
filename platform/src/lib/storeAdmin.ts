@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { demoVisibleWhere } from "./demoSession";
 import type { OrderItem } from "./store";
+import { parseTimeline } from "./fulfilment";
 
 // Server-side order reads for the store admin (orders, customers, dashboard).
 
@@ -17,6 +18,11 @@ export async function adminOrders(tenantId: string, demoId: string | null, take 
       id: r.id, orderNo: r.orderNo, customerName: r.customerName, phone: r.phone, email: r.email, address: r.address, city: r.city, pincode: r.pincode,
       items, subtotal: r.subtotal, shipping: r.shipping, discount: r.discount, total: r.total,
       paymentMethod: r.paymentMethod, paymentStatus: r.paymentStatus, status: r.status, note: r.note, createdAt: r.createdAt.toISOString(),
+      // Fulfilment (shipping / returns / invoice)
+      state: r.state, addressLine2: r.addressLine2, codFee: r.codFee, refundAmount: r.refundAmount, shippingProvider: r.shippingProvider, courier: r.courier,
+      awb: r.awb, trackingUrl: r.trackingUrl, shipmentRef: r.shipmentRef, weightGrams: r.weightGrams, timeline: parseTimeline(r.timeline),
+      cancelReason: r.cancelReason, returnStatus: r.returnStatus, returnReason: r.returnReason, invoiceNo: r.invoiceNo, trackToken: r.trackToken,
+      deliveredAt: r.deliveredAt?.toISOString() ?? null,
     };
   });
 }

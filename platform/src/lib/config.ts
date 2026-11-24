@@ -243,6 +243,8 @@ export type SectionContentMap = {
     subtitle: string;
     /** "all" or one product category */
     category: string;
+    /** optional collection slug (Admin → Collections): shows that collection's products in its order */
+    collection: string;
     featuredOnly: boolean;
     /** category chips + search box above the grid (use on the Shop page) */
     showFilters: boolean;

@@ -261,6 +261,7 @@ export const SECTION_DEFAULTS: { [K in SectionType]: SectionContentMap[K] } = {
     titleHighlight: "Bestsellers",
     subtitle: "Handpicked favourites, delivered to your door.",
     category: "all",
+    collection: "",
     featuredOnly: false,
     showFilters: false,
     limit: 8,

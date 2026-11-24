@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { db } from "./db";
 import { getActiveDemoSession, loadDemoOverlay } from "./demoSession";
-import { mapProduct, parseStoreSettings, type OrderItem, type PublicProduct, type StoreSettings } from "./store";
+import { jsonList, mapProduct, parseStoreSettings, type OrderItem, type PublicProduct, type StoreSettings } from "./store";
 
 // Server-only storefront reads. Demo sandboxes see seed rows + their own rows only.
 
@@ -12,18 +12,65 @@ async function productWhere(tenantId: string, extra: Record<string, unknown> = {
     : { tenantId, published: true, ...extra };
 }
 
-export const getSiteProducts = cache(async (tenantId: string): Promise<PublicProduct[]> => {
-  const rows = await db.product.findMany({
-    where: await productWhere(tenantId),
-    orderBy: [{ featured: "desc" }, { order: "asc" }, { createdAt: "desc" }],
+async function reviewStats(tenantId: string, productIds?: string[]) {
+  const demo = await getActiveDemoSession();
+  const rows = await db.productReview.groupBy({
+    by: ["productId"],
+    where: { tenantId, status: "approved", ...(productIds ? { productId: { in: productIds } } : {}), ...(demo ? { OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] } : { demoSessionId: null }) },
+    _avg: { rating: true },
+    _count: { _all: true },
   });
-  return rows.map(mapProduct);
+  return new Map(rows.map((r) => [r.productId, { rating: r._avg.rating ?? 0, count: r._count._all }]));
+}
+
+const withVariants = { variants: { orderBy: { order: "asc" as const } } };
+
+export const getSiteProducts = cache(async (tenantId: string): Promise<PublicProduct[]> => {
+  const [rows, stats] = await Promise.all([
+    db.product.findMany({
+      where: await productWhere(tenantId),
+      orderBy: [{ featured: "desc" }, { order: "asc" }, { createdAt: "desc" }],
+      include: withVariants,
+    }),
+    reviewStats(tenantId),
+  ]);
+  return rows.map((r) => mapProduct(r, stats.get(r.id)));
 });
 
 export const getSiteProductBySlug = cache(async (tenantId: string, slug: string): Promise<PublicProduct | null> => {
-  const row = await db.product.findFirst({ where: await productWhere(tenantId, { slug }) });
-  return row ? mapProduct(row) : null;
+  const row = await db.product.findFirst({ where: await productWhere(tenantId, { slug }), include: withVariants });
+  if (!row) return null;
+  return mapProduct(row, (await reviewStats(tenantId, [row.id])).get(row.id));
 });
+
+/** Published products by id, in the given order (wishlist, recently viewed). */
+export async function getSiteProductsByIds(tenantId: string, ids: string[]): Promise<PublicProduct[]> {
+  const byId = new Map((await getSiteProducts(tenantId)).map((p) => [p.id, p]));
+  return ids.map((id) => byId.get(id)).filter((p): p is PublicProduct => !!p);
+}
+
+export type PublicCollection = { id: string; slug: string; title: string; description: string; image: string; productIds: string[] };
+
+export const getSiteCollections = cache(async (tenantId: string): Promise<PublicCollection[]> => {
+  const demo = await getActiveDemoSession();
+  const rows = await db.collection.findMany({
+    where: { tenantId, published: true, ...(demo ? { OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] } : { demoSessionId: null }) },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+  });
+  return rows.map((r) => ({ id: r.id, slug: r.slug, title: r.title, description: r.description, image: r.image, productIds: jsonList<string>(r.productIds) }));
+});
+
+/** Approved reviews for a product page, newest first. */
+export async function getProductReviews(tenantId: string, productId: string) {
+  const demo = await getActiveDemoSession();
+  const rows = await db.productReview.findMany({
+    where: { tenantId, productId, status: "approved", ...(demo ? { OR: [{ demoSessionId: null }, { demoSessionId: demo.id }] } : { demoSessionId: null }) },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
+  return rows.map((r) => ({ id: r.id, name: r.name, rating: r.rating, title: r.title, body: r.body, verified: r.verified, createdAt: r.createdAt.toISOString() }));
+}
+export type PublicReview = Awaited<ReturnType<typeof getProductReviews>>[number];
 
 /** Store settings; a demo sandbox's edits live in its overlay (the demo tenant is shared). */
 export const getStoreSettings = cache(async (tenantId: string, demoSessionId?: string | null): Promise<StoreSettings> => {
@@ -44,7 +91,7 @@ export async function seedDemoOrders(tenantId: string) {
     await db.siteConfig.update({ where: { tenantId }, data: { store: JSON.stringify({ upiId: "demo-store@upi", whatsappNumber: "919999999999" }) } });
   }
   if (await db.storeOrder.count({ where: { tenantId } })) return;
-  const products = (await db.product.findMany({ where: { tenantId }, orderBy: { order: "asc" }, take: 8 })).map(mapProduct);
+  const products = (await db.product.findMany({ where: { tenantId }, orderBy: { order: "asc" }, take: 8 })).map((r) => mapProduct(r));
   if (!products.length) return;
   const people = [
     ["Ananya Sharma", "Pune", "411001"], ["Rohit Verma", "Jaipur", "302001"], ["Fatima Khan", "Lucknow", "226001"],

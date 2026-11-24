@@ -5,7 +5,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { releaseMediaIn } from "@/lib/usage";
 import { requireTenantId, getDemoSessionId, ownedWhere, getDemoWriteContext, persistDemoOverlay } from "./guard";
-import { ORDER_STATUSES, parseStoreSettings, slugifyProduct, waDigits } from "@/lib/store";
+import { ORDER_STATUSES, parseStoreSettings, slugifyProduct, variantMatrix, variantTitle, waDigits, type OrderItem, type VariantDraft } from "@/lib/store";
+import { restoreStock } from "@/lib/storeCatalog";
+import { addTimeline, notifyCustomer } from "@/lib/fulfilment";
 
 // Store admin (products, orders, store settings). Sandbox-aware: demo visitors create rows
 // tagged with their session and can only change those; settings go to the demo overlay.
@@ -31,6 +33,24 @@ const ProductSchema = z.object({
   badge: text(30),
   featured: z.boolean().default(false),
   published: z.boolean().default(true),
+  sku: text(80),
+  weightGrams: z.number().int().min(0).max(1_000_000).default(0),
+  hsn: z.string().trim().max(12).regex(/^\d*$/, "HSN is digits only").default(""),
+  gstRate: z.number().int().refine((n) => [0, 3, 5, 12, 18, 28].includes(n), "GST must be 0, 3, 5, 12, 18 or 28%").default(0),
+  tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
+  trackStock: z.boolean().default(true),
+  allowBackorder: z.boolean().default(false),
+  seoTitle: text(120),
+  seoDescription: text(320),
+  variants: z.array(z.object({
+    id: z.string().max(40).optional(),
+    options: z.record(z.string().max(40), z.string().max(60)),
+    sku: text(80),
+    price: money,
+    mrp: money,
+    stock: z.number().int().min(0).max(1_000_000).default(0),
+    image: url.default(""),
+  })).max(300).default([]),
 });
 export type ProductInput = z.input<typeof ProductSchema>;
 
@@ -61,14 +81,23 @@ export async function saveProduct(input: ProductInput): Promise<Result> {
     const i = parsed.error.issues[0];
     return { ok: false, error: `${i.path.join(".") || "Input"}: ${i.message}` };
   }
-  const { id, slug: rawSlug, images, options, ...rest } = parsed.data;
+  const { id, slug: rawSlug, images, options, tags, variants: rawVariants, ...rest } = parsed.data;
   if (rest.mrp && rest.mrp < rest.price) return { ok: false, error: "MRP can't be lower than the selling price." };
+  // Keep only variants that match a real option combination (the editor sends the full matrix).
+  const cleanOptions = options.map((o) => ({ name: o.name, values: [...new Set(o.values)] }));
+  const matrix = variantMatrix(cleanOptions, rawVariants.map((v) => ({ ...v, title: "" })));
+  const variants = rawVariants.length ? matrix.filter((m) => rawVariants.some((v) => variantTitle(v.options) === m.title)) : [];
+  const badVariant = variants.find((v) => v.mrp && v.mrp < (v.price || rest.price));
+  if (badVariant) return { ok: false, error: `${badVariant.title}: MRP can't be lower than the selling price.` };
   const slug = await uniqueSlug(tenantId, slugifyProduct(rawSlug || rest.name), id);
   const data = {
     ...rest,
     slug,
     images: JSON.stringify(images.filter(Boolean)),
-    options: JSON.stringify(options.map((o) => ({ name: o.name, values: [...new Set(o.values)] }))),
+    options: JSON.stringify(cleanOptions),
+    tags: JSON.stringify([...new Set(tags.map((t) => t.toLowerCase()))]),
+    // Variant products: the product row's stock mirrors the variant total (lists, low-stock, sorting).
+    ...(variants.length ? { stock: variants.reduce((n, v) => n + v.stock, 0) } : {}),
   };
   let savedId = id;
   if (id) {
@@ -81,8 +110,23 @@ export async function saveProduct(input: ProductInput): Promise<Result> {
     const row = await db.product.create({ data: { tenantId, ...data, order: (max._max.order ?? 0) + 1, demoSessionId: await getDemoSessionId() } });
     savedId = row.id;
   }
+  await saveVariants(tenantId, savedId!, variants);
   revalidateStore(slug);
   return { ok: true, id: savedId!, slug };
+}
+
+/** Upsert the product's variants: matched ids are updated, new combos created, the rest removed. */
+async function saveVariants(tenantId: string, productId: string, variants: VariantDraft[]) {
+  const existing = new Set((await db.productVariant.findMany({ where: { productId, tenantId }, select: { id: true } })).map((r) => r.id));
+  const keep = variants.filter((v) => v.id && existing.has(v.id)).map((v) => v.id!);
+  await db.$transaction(async (tx) => {
+    await tx.productVariant.deleteMany({ where: { productId, tenantId, id: { notIn: keep } } });
+    for (const [order, v] of variants.entries()) {
+      const data = { title: v.title, options: JSON.stringify(v.options), sku: v.sku, price: v.price, mrp: v.mrp, stock: v.stock, image: v.image, order };
+      if (v.id && existing.has(v.id)) await tx.productVariant.update({ where: { id: v.id }, data });
+      else await tx.productVariant.create({ data: { ...data, productId, tenantId } });
+    }
+  });
 }
 
 export async function deleteProducts(ids: string[]): Promise<Done> {
@@ -123,20 +167,27 @@ export async function setProductStock(id: string, stock: number): Promise<Done> 
 // ─── Orders ──────────────────────────────────────────────────────────────────
 const STATUS_IDS = ORDER_STATUSES.map((s) => s.id) as [string, ...string[]];
 
-export async function updateOrder(id: string, patch: { status?: string; paymentStatus?: string }): Promise<Done> {
+export async function updateOrder(id: string, patch: { status?: string; paymentStatus?: string; note?: string }): Promise<Done> {
   const tenantId = await requireTenantId({ demoOk: true });
-  const data = z
-    .object({ status: z.enum(STATUS_IDS).optional(), paymentStatus: z.enum(["pending", "paid", "refunded"]).optional() })
+  const { note, ...data } = z
+    .object({ status: z.enum(STATUS_IDS).optional(), paymentStatus: z.enum(["pending", "paid", "refunded"]).optional(), note: z.string().trim().max(300).default("") })
     .parse(patch);
-  const before = await db.storeOrder.findFirst({ where: await ownedWhere(id, tenantId), select: { status: true, items: true, demoSessionId: true } });
+  const before = await db.storeOrder.findFirst({ where: await ownedWhere(id, tenantId), select: { id: true, status: true, items: true, demoSessionId: true, timeline: true, paymentStatus: true } });
   if (!before) return { ok: false, error: "Sample orders are read-only in the demo — place a test order on your store to try the workflow." };
-  await db.storeOrder.updateMany({ where: await ownedWhere(id, tenantId), data });
+  // Every change lands in the order timeline (shown in admin + on the customer's track page).
+  const changed = data.status && data.status !== before.status ? data.status : data.paymentStatus && data.paymentStatus !== before.paymentStatus ? `payment_${data.paymentStatus}` : "";
+  const extra = !changed ? {} : {
+    timeline: addTimeline(before.timeline, changed, note),
+    ...(data.status === "cancelled" ? { cancelReason: note } : {}),
+    ...(data.status === "delivered" ? { deliveredAt: new Date() } : {}),
+  };
+  await db.storeOrder.updateMany({ where: await ownedWhere(id, tenantId), data: { ...data, ...extra } });
+  if (changed === "shipped" || changed === "delivered" || changed === "cancelled") await notifyCustomer(before.id, changed);
   // Cancelling puts the stock back (real stores only — demo orders never took stock).
   if (data.status && !before.demoSessionId && (data.status === "cancelled") !== (before.status === "cancelled")) {
-    const sign = data.status === "cancelled" ? 1 : -1;
-    for (const i of JSON.parse(before.items || "[]") as { productId: string; qty: number }[]) {
-      await db.product.updateMany({ where: { id: i.productId, tenantId }, data: { stock: { increment: sign * i.qty } } });
-    }
+    const items = (JSON.parse(before.items || "[]") as OrderItem[]).filter((i) => i && i.productId);
+    const owned = new Set((await db.product.findMany({ where: { tenantId, id: { in: items.map((i) => i.productId) } }, select: { id: true } })).map((r) => r.id));
+    await db.$transaction((tx) => restoreStock(tx, items.filter((i) => owned.has(i.productId)), data.status === "cancelled" ? 1 : -1));
   }
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
@@ -166,8 +217,12 @@ export async function saveStoreSettings(input: StoreSettingsInput): Promise<Done
     const i = parsed.error.issues[0];
     return { ok: false, error: `${i.path.join(".") || "Input"}: ${i.message}` };
   }
-  const value = JSON.stringify({ ...parsed.data, whatsappNumber: waDigits(parsed.data.whatsappNumber) });
   const demo = await getDemoWriteContext();
+  // Merge: the same JSON also holds shipping settings + courier credentials (Admin → Shipping).
+  const prevRaw = demo?.overlay.siteConfig?.store ?? (await db.siteConfig.findUnique({ where: { tenantId }, select: { store: true } }))?.store;
+  let prev: Record<string, unknown> = {};
+  try { prev = JSON.parse(prevRaw || "{}") ?? {}; } catch { /* start fresh */ }
+  const value = JSON.stringify({ ...prev, ...parsed.data, whatsappNumber: waDigits(parsed.data.whatsappNumber) });
   if (demo) {
     demo.overlay.siteConfig = { ...demo.overlay.siteConfig, store: value };
     await persistDemoOverlay(demo.sessionId, demo.overlay);

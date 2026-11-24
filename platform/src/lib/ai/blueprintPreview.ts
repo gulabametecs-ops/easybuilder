@@ -1,4 +1,5 @@
 import type { WebsiteBlueprint } from "./blueprintSchema";
+import { mapProduct } from "@/lib/store";
 import { designToTheme, resolvePageSections, slugify } from "./hydrate";
 import { designHeader, designFooter } from "@/lib/designs";
 import { canonicalPageSlug } from "./completeHome";
@@ -114,9 +115,9 @@ export function blueprintToPreview(blueprint: WebsiteBlueprint, pageSlug = "home
     footer,
     phones: header.topbar.phones,
     notices: [],
-    products: (blueprint.products ?? []).map((p, i) => ({
+    products: (blueprint.products ?? []).map((p, i) => mapProduct({
       id: `ai-product-${i}`, slug: slugify(p.name), name: p.name, category: p.category, price: p.price, mrp: p.mrp ?? 0,
-      images: [], description: p.description, stock: 99, options: p.options ?? [], badge: p.badge ?? "", featured: p.featured ?? i < 8,
+      images: "[]", description: p.description, stock: 99, options: JSON.stringify(p.options ?? []), badge: p.badge ?? "", featured: p.featured ?? i < 8,
     })),
   };
 
