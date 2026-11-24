@@ -165,8 +165,8 @@ export function PagesManager({ pages, pageLimit = 0 }: { pages: PageRow[]; pageL
 
                 {p.sectionTypes.length > 0 && (
                   <div className="flex flex-wrap gap-1">
-                    {p.sectionTypes.slice(0, 4).map((t) => (
-                      <span key={t} className="rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[7.5rem]">
+                    {p.sectionTypes.slice(0, 4).map((t, i) => (
+                      <span key={`${t}-${i}`} className="rounded-md bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[7.5rem]">
                         {labelOf(t)}
                       </span>
                     ))}

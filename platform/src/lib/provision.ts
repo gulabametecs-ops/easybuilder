@@ -1,6 +1,7 @@
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import { getTemplate } from "./templates";
+import type { TemplateDef } from "./templates/types";
 import { designTheme, designHeader, designFooter, designSeeds } from "./designs";
 import type { SectionStyle } from "./config";
 import { img } from "./img";
@@ -17,6 +18,8 @@ export type ProvisionInput = {
   subscriptionEndsAt?: Date | null;
   /** Design preset id (see lib/designs.ts); empty = template as designed. */
   design?: string;
+  /** Client-specific template (scripts/sites/*) instead of the vertical's. */
+  template?: TemplateDef;
 };
 
 // Creates a fully-populated tenant from the default template.
@@ -24,7 +27,7 @@ export type ProvisionInput = {
 export async function createTenantFromTemplate(input: ProvisionInput) {
   const { businessName, subdomain, ownerEmail } = input;
   const biz = businessName;
-  const tpl = getTemplate(input.vertical ?? "home-services");
+  const tpl = input.template ?? getTemplate(input.vertical ?? "home-services");
   const design = input.design ?? "";
   const passwordHash = input.ownerPasswordHash ?? (input.ownerPassword ? await bcrypt.hash(input.ownerPassword, 10) : "");
   if (!passwordHash) throw new Error("No password provided for the owner account");
@@ -335,7 +338,8 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
         html: `<h2>Terms &amp; Conditions</h2><p>Welcome to ${biz}. By using our website and services, you agree to the following terms.</p><h3>Services</h3><p>We provide the services listed on this website. Pricing and availability may change without notice.</p><h3>Bookings & Payments</h3><p>Any quotes provided are estimates. Final charges are confirmed before work begins.</p><h3>Cancellations</h3><p>Please contact us in advance to reschedule or cancel a booking.</p><h3>Liability</h3><p>We take care in delivering quality service. Our liability is limited to the value of the service provided.</p><h3>Contact</h3><p>For any questions about these terms, please contact us using the details in the footer.</p>`,
       },
     ];
-    for (const [i, l] of legal.entries()) {
+    const own = new Set(tpl.pages(biz).map((p) => p.slug));
+    for (const [i, l] of legal.filter((x) => !own.has(x.slug)).entries()) {
       const p = await tx.page.create({
         data: { tenantId: tenant.id, slug: l.slug, title: l.title, isSystem: true, showInNav: false, order: 100 + i },
       });

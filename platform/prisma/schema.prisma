@@ -59,6 +59,7 @@ model Tenant {
   storeCoupons StoreCoupon[]
   storeCustomers StoreCustomer[]
   abandonedCarts AbandonedCart[]
+  quoteRequests QuoteRequest[]
 }
 
 // ─── Login accounts for a tenant's admin panel ───────────────────────────────
@@ -740,6 +741,12 @@ model Product {
   allowBackorder Boolean @default(false) // sell when stock is 0
   seoTitle      String   @default("") @db.MediumText
   seoDescription String  @default("") @db.MediumText
+  // B2B catalogue / enquiry mode
+  specs         String   @default("[]") @db.MediumText // JSON { label, value }[] — material, dimensions, thickness, finish…
+  moq           Int      @default(0) // minimum order quantity; 0 = none
+  unit          String   @default("") @db.MediumText // "piece", "set", "metre"
+  customizable  Boolean  @default(false)
+  catalogueUrl  String   @default("") @db.MediumText // product PDF catalogue / spec sheet
   variants      ProductVariant[]
   reviews       ProductReview[]
   demoSessionId String?
@@ -806,6 +813,41 @@ model StoreOrder {
 }
 
 // Per-combination stock/price for products with options (Size x Colour). Products without options have none.
+// Multi-product bulk quote / custom project enquiries (B2B enquiry-mode stores).
+model QuoteRequest {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refNo         Int // shown as e.g. Q-1001, unique per store
+  kind          String   @default("bulk") @db.MediumText // bulk | project
+  name          String   @db.MediumText
+  company       String   @default("") @db.MediumText
+  phone         String   @db.MediumText
+  whatsapp      String   @default("") @db.MediumText
+  email         String   @default("") @db.MediumText
+  gstin         String   @default("") @db.MediumText
+  city          String   @default("") @db.MediumText
+  state         String   @default("") @db.MediumText
+  items         String   @default("[]") @db.MediumText // JSON { productId, name, sku, qty, note }[]
+  expectedDate  String   @default("") @db.MediumText
+  projectType   String   @default("") @db.MediumText // hotel, restaurant, hospital…
+  location      String   @default("") @db.MediumText
+  estQuantity   String   @default("") @db.MediumText
+  details       String   @default("") @db.MediumText // project details / description
+  customSpecs   String   @default("") @db.MediumText
+  attachments   String   @default("[]") @db.MediumText // JSON { url, name, size }[] — drawings, BOQ, images, PDFs
+  status        String   @default("new") @db.MediumText // new | contacted | quoted | won | lost
+  quoteAmount   Int      @default(0)
+  adminNote     String   @default("") @db.MediumText
+  demoSessionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, refNo])
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
 model ProductVariant {
   id        String  @id @default(cuid())
   productId String
