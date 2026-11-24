@@ -70,6 +70,7 @@ const CATEGORY_REP: Record<string, string> = {
   "Community & Non-profit": "ngo-charity",
   "Events & Training": "events-training",
   "Corporate & Professional Services": "it-services",
+  "Online Store / E-commerce": "fashion-store",
 };
 function categoryPhoto(category: string): string | null {
   const id = DEMO_PHOTOS[CATEGORY_REP[category] ?? ""]?.[0]?.id;

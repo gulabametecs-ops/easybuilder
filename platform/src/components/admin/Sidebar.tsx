@@ -31,6 +31,10 @@ import {
   Building2,
   HandHeart,
   Plug,
+  ShoppingBag,
+  Package,
+  UserRound,
+  Store,
 } from "lucide-react";
 import { sectorModules, type SectorModules } from "@/lib/adminNav";
 import { BrandMark } from "@/components/BrandLogo";
@@ -49,9 +53,12 @@ type NavGroup = { label: string; items: NavItem[] };
 
 function navGroups(
   mods: SectorModules,
-  { newLeads = 0, pendingAppts = 0, newVolunteers = 0 }: { newLeads?: number; pendingAppts?: number; newVolunteers?: number } = {},
+  { newLeads = 0, pendingAppts = 0, newVolunteers = 0, newOrders = 0 }: { newLeads?: number; pendingAppts?: number; newVolunteers?: number; newOrders?: number } = {},
 ): NavGroup[] {
   const show = (on: boolean) => <T,>(item: T): T[] => (on ? [item] : []);
+  // Online stores sell products, not booked services — keep those pages reachable by URL only
+  // (and still listed if something is waiting there).
+  const services = !mods.store;
   return [
     {
       label: "Overview",
@@ -59,17 +66,26 @@ function navGroups(
         { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
         { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
         { href: "/admin/leads", label: "Leads", icon: Inbox, badge: newLeads },
-        { href: "/admin/appointments", label: "Appointments", icon: CalendarClock, badge: pendingAppts },
+        ...show(services || pendingAppts > 0)({ href: "/admin/appointments", label: "Appointments", icon: CalendarClock, badge: pendingAppts }),
         // Keep Volunteers visible if requests are waiting, whatever the sector.
         ...show(mods.volunteers || newVolunteers > 0)({ href: "/admin/volunteers", label: "Volunteers", icon: HeartHandshake, badge: newVolunteers }),
       ],
     },
+    ...show(mods.store)({
+      label: "Store",
+      items: [
+        { href: "/admin/orders", label: "Orders", icon: ShoppingBag, badge: newOrders },
+        { href: "/admin/products", label: "Products", icon: Package },
+        { href: "/admin/customers", label: "Customers", icon: UserRound },
+        { href: "/admin/store-settings", label: "Store settings", icon: Store },
+      ],
+    }),
     {
       label: "Website",
       items: [
         { href: "/admin/appearance", label: "Appearance", icon: Palette },
         { href: "/admin/pages", label: "Pages & Sections", icon: FileStack },
-        { href: "/admin/services", label: "Services", icon: Wrench },
+        ...show(services)({ href: "/admin/services", label: "Services", icon: Wrench }),
         ...show(mods.properties)({ href: "/admin/properties", label: "Properties", icon: Building2 }),
         { href: "/admin/people", label: "People", icon: Users },
         ...show(mods.events)({ href: "/admin/events", label: "Events", icon: CalendarDays }),
@@ -103,12 +119,13 @@ function navGroups(
 const isActive = (pathname: string, item: { href: string; exact?: boolean }) =>
   item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-const ALL_MODS: SectorModules = { notices: true, results: true, volunteers: true, events: true, properties: true, causes: true };
+const ALL_MODS: SectorModules = { notices: true, results: true, volunteers: true, events: true, properties: true, causes: true, store: true };
 
 /** Current page name for the top header (derived from the nav, so labels live in one place). */
 export function AdminPageTitle() {
   const pathname = usePathname();
-  const items = navGroups(ALL_MODS).flatMap((g) => g.items.map((i) => ({ label: i.label, href: i.href, exact: i.exact, group: g.label })));
+  // Store sites hide Services/Appointments, so look titles up in both menus.
+  const items = [...navGroups(ALL_MODS), ...navGroups({ ...ALL_MODS, store: false })].flatMap((g) => g.items.map((i) => ({ label: i.label, href: i.href, exact: i.exact, group: g.label })));
   const hit =
     items.find((i) => isActive(pathname, i)) ??
     (pathname === "/admin/help" ? { label: "Help & support", group: "Support" } : null);
@@ -127,6 +144,7 @@ export function Sidebar({
   newLeads = 0,
   pendingAppts = 0,
   newVolunteers = 0,
+  newOrders = 0,
   vertical = "",
 }: {
   bizName: string;
@@ -137,10 +155,11 @@ export function Sidebar({
   newLeads?: number;
   pendingAppts?: number;
   newVolunteers?: number;
+  newOrders?: number;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const groups = navGroups(sectorModules(vertical), { newLeads, pendingAppts, newVolunteers });
+  const groups = navGroups(sectorModules(vertical), { newLeads, pendingAppts, newVolunteers, newOrders });
 
   // Drawer: close on Escape, and stop the page behind it from scrolling.
   useEffect(() => {
@@ -229,7 +248,7 @@ export function Sidebar({
             </span>
             <div className="min-w-0">
               <p className="font-bold text-slate-900 dark:text-white truncate text-sm leading-tight">{bizName}</p>
-              <p className="text-[11px] text-slate-500 truncate">Business admin</p>
+              <p className="text-[11px] text-slate-500 truncate">{vertical && sectorModules(vertical).store ? "Store admin" : "Business admin"}</p>
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ import {
   QrCode, Search, Sparkles, Star, Tags, Target, Wallet, X, XCircle, type LucideIcon,
 } from "lucide-react";
 import {
-  COPY_HINT, INTEGRATIONS, INTEGRATION_CATEGORIES, PROVIDER_URL, fieldError, integrationStatus, recommendedFor,
+  BENEFIT, COPY_HINT, FREE_IDS, HOW_TO, INTEGRATIONS, INTEGRATION_CATEGORIES, PROVIDER_URL, fieldError, integrationStatus, recommendedFor,
   smartExtract, type IntegrationCategory, type IntegrationDef, type IntegrationStatus, type IntegrationsConfig,
 } from "@/lib/integrations";
 import { saveIntegration, toggleIntegration, disconnectIntegration, type IntegrationResult } from "@/lib/actions/integrations";
@@ -21,6 +21,16 @@ const ICONS: Record<string, LucideIcon> = {
 
 type PaymentsView = { razorpayKeyId: string; upiId: string; upiQrImage: string };
 type Flash = IntegrationResult & { link?: string };
+
+const CAT_BLURB: Record<IntegrationCategory, string> = {
+  payments: "Get paid online — UPI, cards and payment links.",
+  chat: "Talk to visitors live and answer questions fast.",
+  analytics: "Know who visits and measure your ads.",
+  booking: "Let customers book a slot themselves.",
+  reviews: "Collect more Google reviews.",
+  verification: "Prove you own your site to Google, Bing & Meta.",
+  marketing: "Grow your email list.",
+};
 
 const STATUS: Record<IntegrationStatus, { label: string; cls: string }> = {
   connected: { label: "Connected", cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" },
@@ -77,6 +87,9 @@ export function IntegrationsManager({
   const live = (d: IntegrationDef) => statusOf(d) !== "none";
   const connectedCount = INTEGRATIONS.filter(live).length;
   const recommended = recommendedFor(sector.category).map((id) => INTEGRATIONS.find((d) => d.id === id)!).filter(Boolean);
+  const recIds = new Set(recommended.map((d) => d.id));
+  const recDone = recommended.filter(live).length;
+  const recPct = recommended.length ? Math.round((recDone / recommended.length) * 100) : 0;
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -101,6 +114,52 @@ export function IntegrationsManager({
     ...INTEGRATION_CATEGORIES.map((c) => ({ ...c, count: INTEGRATIONS.filter((d) => d.category === c.id).length })),
   ];
 
+  const card = (d: IntegrationDef) => {
+            const st = statusOf(d);
+            const entry = integrations[d.id];
+            const togglable = (st === "connected" || st === "off") && !legacy.includes(d.id);
+            const isOnNow = st === "connected";
+            return (
+              <div key={d.id} className="group relative rounded-2xl bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+                <button type="button" onClick={() => setOpenId(d.id)} className="absolute inset-0 rounded-2xl" aria-label={`Configure ${d.name}`} />
+                <div className="flex items-start gap-3">
+                  <Tile def={d} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</p>
+                    <p className="flex flex-wrap items-center gap-1 mt-0.5">
+                      {recIds.has(d.id) && <span className="rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 px-1.5 py-px text-[10px] font-bold">★ For you</span>}
+                      {FREE_IDS.has(d.id) && <span className="rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 px-1.5 py-px text-[10px] font-bold">Free</span>}
+                      {!recIds.has(d.id) && !FREE_IDS.has(d.id) && <span className="text-[11px] uppercase tracking-wide text-slate-400">{INTEGRATION_CATEGORIES.find((c) => c.id === d.category)?.label}</span>}
+                    </p>
+                  </div>
+                  {togglable && (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isOnNow}
+                      aria-label={isOnNow ? `Turn off ${d.name}` : `Turn on ${d.name}`}
+                      disabled={readOnly || pending}
+                      onClick={() => run(() => toggleIntegration(d.id, !isOnNow))}
+                      className={`relative z-10 w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${isOnNow ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isOnNow ? "translate-x-4" : ""}`} />
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mt-3 line-clamp-2 min-h-[2.5rem]">{BENEFIT[d.id] ?? d.description}</p>
+                <div className="mt-4 flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0 ${STATUS[st].cls} ${st === "none" ? "px-0" : ""}`}>
+                      {st === "connected" && <Check className="w-3 h-3" />} {STATUS[st].label}
+                    </span>
+                    {entry?.updatedAt && st !== "none" && <span className="text-[11px] text-slate-400 truncate">· {ago(entry.updatedAt)}</span>}
+                  </span>
+                  <span className="text-xs font-semibold text-lime-600 dark:text-lime-400 group-hover:underline shrink-0">{st === "none" ? "Connect" : "Manage"} →</span>
+                </div>
+              </div>
+            );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header + summary */}
@@ -111,6 +170,16 @@ export function IntegrationsManager({
             <p className="text-xs font-semibold tracking-widest text-sky-300 flex items-center gap-1.5"><Puzzle className="w-3.5 h-3.5" /> INTEGRATIONS</p>
             <h1 className="text-2xl sm:text-3xl font-bold mt-2">Connect your favourite tools</h1>
             <p className="text-sm text-slate-300 mt-1 max-w-xl">Paste a link or code from the provider — we pick out what&apos;s needed and it goes live on your website.</p>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl bg-white/10 ring-1 ring-white/15 px-4 py-3 lg:order-last">
+            <span className="relative w-12 h-12 shrink-0 rounded-full grid place-items-center" style={{ background: `conic-gradient(#a3e635 ${recPct * 3.6}deg, rgba(255,255,255,.15) 0)` }}>
+              <span className="absolute inset-1 rounded-full bg-[#1e2a6b]" />
+              <span className="relative text-xs font-bold">{recPct}%</span>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold">Setup for {sector.name}</span>
+              <span className="block text-xs text-slate-300">{recDone} of {recommended.length} recommended tools connected</span>
+            </span>
           </div>
           <label className="relative block w-full lg:w-80">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -155,7 +224,7 @@ export function IntegrationsManager({
               const st = statusOf(d);
               return (
                 <button key={d.id} type="button" onClick={() => setOpenId(d.id)}
-                  className="snap-start shrink-0 w-60 text-left rounded-2xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-900/60 ring-1 ring-slate-200 dark:ring-slate-800 p-4 hover:ring-sky-300 dark:hover:ring-lime-700 transition">
+                  className="snap-start shrink-0 w-64 text-left rounded-2xl bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-900/60 ring-1 ring-slate-200 dark:ring-slate-800 p-4 hover:ring-sky-300 dark:hover:ring-lime-700 transition">
                   <div className="flex items-center gap-3">
                     <Tile def={d} size="w-9 h-9" />
                     <div className="min-w-0">
@@ -165,6 +234,7 @@ export function IntegrationsManager({
                       </p>
                     </div>
                   </div>
+                  {BENEFIT[d.id] && <p className="mt-2.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{BENEFIT[d.id]}</p>}
                 </button>
               );
             })}
@@ -200,49 +270,29 @@ export function IntegrationsManager({
           <button type="button" onClick={() => { setQuery(""); setCat("all"); }} className="mt-3 text-sm font-semibold text-lime-600 hover:underline">Show all</button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {list.map((d) => {
-            const st = statusOf(d);
-            const entry = integrations[d.id];
-            const togglable = (st === "connected" || st === "off") && !legacy.includes(d.id);
-            const isOnNow = st === "connected";
-            return (
-              <div key={d.id} className="group relative rounded-2xl bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-slate-800 p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                <button type="button" onClick={() => setOpenId(d.id)} className="absolute inset-0 rounded-2xl" aria-label={`Configure ${d.name}`} />
-                <div className="flex items-start gap-3">
-                  <Tile def={d} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{d.name}</p>
-                    <p className="text-[11px] uppercase tracking-wide text-slate-400">{INTEGRATION_CATEGORIES.find((c) => c.id === d.category)?.label}</p>
+        cat === "all" && !query ? (
+          <div className="space-y-7">
+            {/* Categories with a recommended tool come first. */}
+            {[...INTEGRATION_CATEGORIES].sort((x, y) => Number(recommended.some((d) => d.category === y.id)) - Number(recommended.some((d) => d.category === x.id))).map((c) => {
+              const items = list.filter((d) => d.category === c.id);
+              if (!items.length) return null;
+              return (
+                <section key={c.id}>
+                  <div className="flex items-end justify-between gap-3 mb-3">
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900 dark:text-white">{c.label}</h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{CAT_BLURB[c.id]}</p>
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-400 shrink-0">{items.filter(live).length}/{items.length} on</span>
                   </div>
-                  {togglable && (
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={isOnNow}
-                      aria-label={isOnNow ? `Turn off ${d.name}` : `Turn on ${d.name}`}
-                      disabled={readOnly || pending}
-                      onClick={() => run(() => toggleIntegration(d.id, !isOnNow))}
-                      className={`relative z-10 w-10 h-6 rounded-full transition-colors disabled:opacity-50 ${isOnNow ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"}`}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${isOnNow ? "translate-x-4" : ""}`} />
-                    </button>
-                  )}
-                </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mt-3 line-clamp-2 min-h-[2.5rem]">{d.description}</p>
-                <div className="mt-4 flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 min-w-0">
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0 ${STATUS[st].cls} ${st === "none" ? "px-0" : ""}`}>
-                      {st === "connected" && <Check className="w-3 h-3" />} {STATUS[st].label}
-                    </span>
-                    {entry?.updatedAt && st !== "none" && <span className="text-[11px] text-slate-400 truncate">· {ago(entry.updatedAt)}</span>}
-                  </span>
-                  <span className="text-xs font-semibold text-lime-600 dark:text-lime-400 group-hover:underline shrink-0">{st === "none" ? "Connect" : "Manage"} →</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map(card)}</div>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{list.map(card)}</div>
+        )
       )}
 
       {open && (
@@ -340,6 +390,12 @@ function Drawer({
             </p>
           )}
 
+          {BENEFIT[def.id] && (
+            <p className="rounded-xl bg-gradient-to-r from-sky-50 to-violet-50 dark:from-sky-500/10 dark:to-violet-500/10 px-3.5 py-2.5 text-sm text-slate-700 dark:text-slate-200 flex items-start gap-2">
+              <Sparkles className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" /> <span><b>Why connect:</b> {BENEFIT[def.id]}{FREE_IDS.has(def.id) && " Free to start."}</span>
+            </p>
+          )}
+
           {/* 3-step wizard */}
           <ol className="space-y-3">
             <Step n={1} title={`Open ${def.name}`}>
@@ -352,6 +408,16 @@ function Drawer({
             </Step>
             <Step n={2} title="Copy">
               <p className="text-xs text-slate-500 dark:text-slate-400">{COPY_HINT[def.id]}</p>
+              {HOW_TO[def.id] && (
+                <details className="mt-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 px-3 py-2 group">
+                  <summary className="cursor-pointer list-none text-xs font-semibold text-slate-700 dark:text-slate-200 inline-flex items-center gap-1">
+                    Step-by-step: how to get this <ChevronDown className="w-3.5 h-3.5 transition group-open:rotate-180" />
+                  </summary>
+                  <ol className="mt-2 space-y-1.5 list-decimal pl-4 text-xs text-slate-600 dark:text-slate-300">
+                    {HOW_TO[def.id].map((h) => <li key={h}>{h}</li>)}
+                  </ol>
+                </details>
+              )}
             </Step>
             <Step n={3} title="Paste here">
               <div className="relative">

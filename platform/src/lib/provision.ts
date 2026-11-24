@@ -254,6 +254,32 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
       });
     }
 
+    const products = tpl.products?.(biz) ?? [];
+    if (products.length) {
+      const seen = new Set<string>();
+      await tx.product.createMany({
+        data: products.map((p, i) => {
+          let slug = svcSlug(p.name);
+          while (seen.has(slug)) slug = `${svcSlug(p.name)}-${i}`;
+          seen.add(slug);
+          return {
+            tenantId: tenant.id,
+            slug,
+            name: p.name,
+            category: p.category,
+            price: p.price,
+            mrp: p.mrp ?? 0,
+            description: p.description,
+            stock: p.stock ?? 20,
+            options: JSON.stringify(p.options ?? []),
+            badge: p.badge ?? "",
+            featured: !!p.featured,
+            order: i,
+          };
+        }),
+      });
+    }
+
     const events = tpl.events?.(biz) ?? [];
     if (events.length) {
       const seenSlugs = new Set<string>();

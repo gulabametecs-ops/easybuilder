@@ -3,7 +3,7 @@
 import {
   LayoutTemplate, LayoutGrid, AlignLeft, BarChart3, Images, ListOrdered, Megaphone, Users, Tag, Sparkles,
   Quote, HelpCircle, Play, MapPin, FileText, Mail, Bell, Trophy, Download, CreditCard, Clock, Type, Timer,
-  PanelTop, CalendarClock, Building2, HandHeart, Wallet, X, type LucideIcon,
+  PanelTop, CalendarClock, Building2, HandHeart, Wallet, ShoppingBag, X, type LucideIcon,
 } from "lucide-react";
 import { SECTION_META } from "@/lib/sectionDefaults";
 import type { SectionType } from "@/lib/config";
@@ -13,7 +13,7 @@ const SECTION_ICON: Record<string, LucideIcon> = {
   gallery: Images, steps: ListOrdered, cta: Megaphone, team: Users, priceList: Tag, features: Sparkles,
   testimonials: Quote, faq: HelpCircle, logos: Users, video: Play, imageBanner: Images, contactInfo: MapPin,
   quoteForm: FileText, contactForm: Mail, appointmentForm: CalendarClock, richText: Type, pricingPlans: CreditCard,
-  openingHours: Clock, countdown: Timer, map: MapPin, noticeBoard: Bell, toppers: Trophy, downloads: Download, propertyList: Building2, causeList: HandHeart, payOnline: Wallet,
+  openingHours: Clock, countdown: Timer, map: MapPin, noticeBoard: Bell, toppers: Trophy, downloads: Download, propertyList: Building2, productGrid: ShoppingBag, productCategories: LayoutGrid, causeList: HandHeart, payOnline: Wallet,
 };
 
 const CATEGORIES: { name: string; types: SectionType[] }[] = [
@@ -27,7 +27,7 @@ const CATEGORIES: { name: string; types: SectionType[] }[] = [
   },
   {
     name: "Services & pricing",
-    types: ["serviceCategories", "priceList", "pricingPlans", "propertyList"],
+    types: ["serviceCategories", "priceList", "pricingPlans", "propertyList", "productGrid", "productCategories"],
   },
   {
     name: "Nonprofit & donations",

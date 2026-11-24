@@ -56,6 +56,22 @@ export const websiteBlueprintSchema = z.object({
     )
     .max(40)
     .optional(),
+  /** Online stores (lib/store.ts): the catalogue, created as Product rows on apply. */
+  products: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        category: z.string().max(80),
+        price: z.number().int().min(1).max(10_000_000),
+        mrp: z.number().int().min(0).max(10_000_000).optional(),
+        description: z.string().max(1000),
+        options: z.array(z.object({ name: z.string().min(1).max(40), values: z.array(z.string().min(1).max(60)).min(1).max(20) })).max(3).optional(),
+        badge: z.string().max(30).optional(),
+        featured: z.boolean().optional(),
+      }),
+    )
+    .max(40)
+    .optional(),
   pages: z.array(blueprintPageSchema).min(1).max(12),
   questions: z.array(z.string().max(200)).max(8).optional(),
 });

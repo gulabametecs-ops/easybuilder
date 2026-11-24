@@ -1,6 +1,7 @@
 import type { WebsiteBlueprint } from "./blueprintSchema";
 import { slugify } from "./hydrate";
 import { normalizeSectionContent } from "./mapSectionContent";
+import { isStoreBlueprint } from "./storeIntent";
 
 const SLUG_ALIASES: Record<string, string> = {
   "about-us": "about",
@@ -34,6 +35,9 @@ function filled(v: unknown): boolean {
 
 function pickHomeTypes(type: string): string[] {
   const t = type.toLowerCase();
+  if (isStoreBlueprint({ website: { type } })) {
+    return ["hero", "productCategories", "productGrid", "features", "testimonials", "faq"];
+  }
   if (t.includes("restaurant") || t.includes("cafe") || t.includes("hotel")) {
     return ["hero", "about", "priceList", "gallery", "testimonials", "cta"];
   }
@@ -63,6 +67,7 @@ function industryCopy(bp: WebsiteBlueprint): Record<string, Record<string, unkno
   const isNgo = /ngo|charity|nonprofit|foundation|trust/.test(type) || /ngo|charity/.test(name.toLowerCase());
 
   const programs = cats.length ? cats : isNgo ? ["Education", "Community Outreach"] : ["Our Services"];
+  const isStore = isStoreBlueprint(bp);
 
   return {
     hero: normalizeSectionContent("hero", {
@@ -72,16 +77,22 @@ function industryCopy(bp: WebsiteBlueprint): Record<string, Record<string, unkno
       description: desc,
       primaryBtn: isNgo
         ? { label: "Donate", href: "/contact" }
-        : { label: "Contact Us", href: "/contact" },
+        : isStore ? { label: "Shop Now", href: "/shop" } : { label: "Contact Us", href: "/contact" },
       secondaryBtn: isNgo
         ? { label: "Our Programs", href: "/programs" }
-        : { label: "Learn more", href: "/about" },
+        : isStore ? { label: "Bestsellers", href: "/shop" } : { label: "Learn more", href: "/about" },
       features: isNgo
         ? [
             { icon: "users", title: "Children first", text: "Classroom support and care." },
             { icon: "heart", title: "Community led", text: "Local teams on the ground." },
           ]
-        : [
+        : isStore
+          ? [
+              { icon: "truck", title: "Fast delivery", text: "" },
+              { icon: "shield", title: "COD & UPI", text: "" },
+              { icon: "check", title: "Easy returns", text: "" },
+            ]
+          : [
             { icon: "badge-check", title: "Trusted", text: "Clear communication." },
             { icon: "clock", title: "Responsive", text: "We reply when you reach out." },
           ],
@@ -95,7 +106,16 @@ function industryCopy(bp: WebsiteBlueprint): Record<string, Record<string, unkno
       buttonLabel: "Read more",
       buttonHref: "/about",
     }),
-    features: {
+    productGrid: { eyebrow: "BESTSELLERS", title: "Customer", titleHighlight: "Favourites", subtitle: "", category: "all", featuredOnly: false, showFilters: false, limit: 8, buttonLabel: "View all products", buttonHref: "/shop" },
+    productCategories: { eyebrow: "BROWSE", title: "Shop by", titleHighlight: "Category" },
+    features: isStore ? {
+      items: [
+        { icon: "truck", title: "Fast Delivery", text: "Dispatched within 24 hours, delivered across India." },
+        { icon: "shield", title: "Secure Checkout", text: "Pay by UPI, cash on delivery or order on WhatsApp." },
+        { icon: "check", title: "Easy Returns", text: "Unused products can be returned within 7 days." },
+        { icon: "headset", title: "Real Support", text: "Questions? A real person replies on WhatsApp." },
+      ],
+    } : {
       items: [
         { icon: "badge-check", title: "Clear process", text: `How ${name} works with you, step by step.` },
         { icon: "users", title: "People first", text: "Friendly support when you reach out." },

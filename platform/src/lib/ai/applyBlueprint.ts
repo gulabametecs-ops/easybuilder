@@ -104,6 +104,25 @@ export async function applyBlueprint(opts: ApplyBlueprintOptions): Promise<Apply
       }
     }
 
+    // Online store: the plan's catalogue replaces the template's sample products on a full apply.
+    if (blueprint.products?.length) {
+      if (mode === "overwrite") await tx.product.deleteMany({ where: { tenantId, demoSessionId: null } });
+      const existing = new Set((await tx.product.findMany({ where: { tenantId }, select: { slug: true } })).map((p) => p.slug));
+      const maxP = await tx.product.aggregate({ where: { tenantId }, _max: { order: true } });
+      let order = (maxP._max.order ?? -1) + 1;
+      await tx.product.createMany({
+        data: blueprint.products.map((p, i) => {
+          let slug = slugify(p.name);
+          for (let n = 2; existing.has(slug); n++) slug = `${slugify(p.name)}-${n}`;
+          existing.add(slug);
+          return {
+            tenantId, slug, name: p.name, category: p.category, price: p.price, mrp: p.mrp ?? 0, description: p.description,
+            options: JSON.stringify(p.options ?? []), badge: p.badge ?? "", featured: p.featured ?? i < 8, stock: 20, order: order++,
+          };
+        }),
+      });
+    }
+
     for (const [idx, pageDef] of blueprint.pages.entries()) {
       const slug = canonicalPageSlug(pageDef.slug || pageDef.name, pageDef.name);
       const sections = resolvePageSections(pageDef, blueprint.design);

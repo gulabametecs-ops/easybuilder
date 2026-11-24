@@ -53,6 +53,8 @@ model Tenant {
   referralCommissions ReferralCommission[]
   referralWithdrawals ReferralWithdrawal[]
   pageViews    PageView[]
+  products     Product[]
+  storeOrders  StoreOrder[]
 }
 
 // ─── Login accounts for a tenant's admin panel ───────────────────────────────
@@ -83,6 +85,7 @@ model SiteConfig {
   adminPrefs   String   @default("{}") @db.MediumText // JSON: notifyLeads, notifyAppointments, etc.
   payments     String   @default("{}") @db.MediumText // JSON: tenant Razorpay / UPI / bank / QR
   integrations String   @default("{}") @db.MediumText // JSON: third-party integrations (chat, analytics, pay links…)
+  store        String   @default("{}") @db.MediumText // JSON: online-store settings (shipping, COD, UPI, WhatsApp) — lib/store.ts
   updatedAt    DateTime @updatedAt
 }
 
@@ -113,9 +116,11 @@ model Campaign {
   spend     Int      @default(0)
   clicks    Int      @default(0)
   leads     Int      @default(0)
+  demoSessionId String? // demo sandbox — deleted when session expires
   createdAt DateTime @default(now())
 
   @@index([tenantId])
+  @@index([demoSessionId])
 }
 
 // ─── Notices / circulars (managed from the admin panel) ───────────────────────
@@ -702,4 +707,60 @@ model PageView {
   views    Int    @default(0)
 
   @@unique([tenantId, day, path])
+}
+
+// ─── Online store (e-commerce sectors, lib/store.ts) ──────────────────────────
+model Product {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug          String   @default("")
+  name          String   @db.MediumText
+  category      String   @default("") @db.MediumText
+  price         Int      @default(0) // INR (whole rupees)
+  mrp           Int      @default(0) // INR "compare at" price; 0 = no strike-through
+  images        String   @default("[]") @db.MediumText // JSON string[]
+  description   String   @default("") @db.MediumText
+  stock         Int      @default(0)
+  options       String   @default("[]") @db.MediumText // JSON { name, values[] }[] e.g. Size / Colour
+  badge         String   @default("") @db.MediumText // "Bestseller", "New"…
+  featured      Boolean  @default(false)
+  published     Boolean  @default(true)
+  order         Int      @default(0)
+  demoSessionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+model StoreOrder {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderNo       Int
+  customerName  String   @db.MediumText
+  phone         String   @db.MediumText
+  email         String   @default("") @db.MediumText
+  address       String   @default("") @db.MediumText
+  city          String   @default("") @db.MediumText
+  pincode       String   @default("") @db.MediumText
+  items         String   @default("[]") @db.MediumText // JSON snapshot { productId, name, price, qty, options, image }[]
+  subtotal      Int      @default(0) // INR
+  shipping      Int      @default(0)
+  discount      Int      @default(0)
+  total         Int      @default(0)
+  paymentMethod String   @default("cod") @db.MediumText // cod | upi | whatsapp | online
+  paymentStatus String   @default("pending") @db.MediumText // pending | paid | refunded
+  status        String   @default("new") @db.MediumText // new | confirmed | packed | shipped | delivered | cancelled
+  note          String   @default("") @db.MediumText
+  demoSessionId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, orderNo])
+  @@index([tenantId])
+  @@index([demoSessionId])
 }

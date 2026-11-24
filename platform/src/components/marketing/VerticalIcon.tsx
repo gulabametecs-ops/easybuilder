@@ -58,6 +58,11 @@ import {
   TrendingUp,
   ShieldCheck,
   Laptop,
+  Shirt,
+  ShoppingBasket,
+  Smartphone,
+  Gift,
+  ShoppingBag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -121,6 +126,11 @@ const MAP: Record<string, LucideIcon> = {
   "trending-up": TrendingUp,
   "shield-check": ShieldCheck,
   laptop: Laptop,
+  shirt: Shirt,
+  "shopping-basket": ShoppingBasket,
+  smartphone: Smartphone,
+  gift: Gift,
+  "shopping-bag": ShoppingBag,
 };
 
 export function VerticalIcon({ name, className }: { name: string; className?: string }) {

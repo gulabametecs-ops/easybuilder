@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireTenantId, getDemoSessionId, requireAuth } from "./guard";
+import { requireTenantId, getDemoSessionId, requireAuth, getDemoWriteContext, persistDemoOverlay, ownedWhere } from "./guard";
+import { patchSiteConfigOverlay } from "@/lib/demoOverlay";
 import { demoVisibleWhere, isDemoSubdomain } from "@/lib/demoSession";
 import { sendEmail } from "@/lib/email";
 import { parseJson, type HeaderConfig } from "@/lib/config";
@@ -70,41 +71,32 @@ function normalizeAdImage(raw: string): string {
 }
 
 // ─── Ad campaigns ─────────────────────────────────────────────────────────────
-export async function createCampaign(formData: FormData) {
-  const tenantId = await requireTenantId();
-  const name = s(formData, "name", MAX_NAME);
-  if (!name) return;
+// Campaign actions are sandbox-aware: demo visitors create rows tagged with their session (wiped on expiry).
+export async function createCampaign(formData: FormData): Promise<MktState> {
+  const tenantId = await requireTenantId({ demoOk: true });
   const data = campaignPayload(formData);
-  await db.campaign.create({
-    data: {
-      tenantId,
-      ...data,
-      name,
-      status: "draft",
-    },
-  });
+  if (!data.name) return { ok: false, message: "Add a campaign name in step 1 (Basics)." };
+  await db.campaign.create({ data: { tenantId, ...data, status: "draft", demoSessionId: await getDemoSessionId() } });
   revalidatePath("/admin/marketing");
+  return { ok: true, message: "Campaign saved as draft." };
 }
 
-export async function updateCampaign(formData: FormData) {
-  const tenantId = await requireTenantId();
+export async function updateCampaign(formData: FormData): Promise<MktState> {
+  const tenantId = await requireTenantId({ demoOk: true });
   const id = s(formData, "id", 64);
-  if (!id) return;
   const data = campaignPayload(formData);
-  if (!data.name) return;
-  await db.campaign.updateMany({
-    where: { id, tenantId },
-    data,
-  });
+  if (!id || !data.name) return { ok: false, message: "Add a campaign name in step 1 (Basics)." };
+  await db.campaign.updateMany({ where: await ownedWhere(id, tenantId), data });
   revalidatePath("/admin/marketing");
+  return { ok: true, message: "Campaign updated." };
 }
 
 export async function updateCampaignMetrics(formData: FormData) {
-  const tenantId = await requireTenantId();
+  const tenantId = await requireTenantId({ demoOk: true });
   const id = s(formData, "id", 64);
   if (!id) return;
   await db.campaign.updateMany({
-    where: { id, tenantId },
+    where: await ownedWhere(id, tenantId),
     data: {
       spend: n(formData, "spend", 100_000_000),
       clicks: n(formData, "clicks", 100_000_000),
@@ -115,35 +107,36 @@ export async function updateCampaignMetrics(formData: FormData) {
 }
 
 export async function setCampaignStatus(id: string, status: string) {
-  const tenantId = await requireTenantId();
+  const tenantId = await requireTenantId({ demoOk: true });
   if (!id || !STATUSES.has(status)) return;
-  await db.campaign.updateMany({ where: { id, tenantId }, data: { status } });
+  await db.campaign.updateMany({ where: await ownedWhere(id, tenantId), data: { status } });
   revalidatePath("/admin/marketing");
 }
 
 export async function deleteCampaign(id: string) {
-  const tenantId = await requireTenantId();
+  const tenantId = await requireTenantId({ demoOk: true });
   if (!id) return;
-  await db.campaign.deleteMany({ where: { id, tenantId } });
+  await db.campaign.deleteMany({ where: await ownedWhere(id, tenantId) });
   revalidatePath("/admin/marketing");
 }
 
 // Promo / announcement bar shown at the top of the public site.
 export async function savePromo(_prev: MktState, formData: FormData): Promise<MktState> {
-  const authed = await requireAuth();
+  const authed = await requireAuth({ demoOk: true });
   if (!["owner", "admin"].includes(authed.session.role)) {
     return { ok: false, message: "Only owners and admins can change the promo banner." };
   }
   const tenantId = authed.tenant.id;
-  const tenant = await db.tenant.findUnique({ where: { id: tenantId } });
+  const demo = await getDemoWriteContext();
   const cfg = await db.siteConfig.findUnique({ where: { tenantId } });
-  const header = parseJson<HeaderConfig>(cfg?.header, defaultHeader(tenant?.name ?? "Business"));
+  const header = parseJson<HeaderConfig>(demo?.overlay.siteConfig?.header ?? cfg?.header, defaultHeader(authed.tenant.name));
   header.announcement = {
     show: formData.get("show") === "on",
     text: s(formData, "text", MAX_PROMO_TEXT),
     link: safeHref(s(formData, "link", MAX_URL)),
   };
-  await db.siteConfig.update({ where: { tenantId }, data: { header: JSON.stringify(header) } });
+  if (demo) await persistDemoOverlay(demo.sessionId, patchSiteConfigOverlay(demo.overlay, { header: JSON.stringify(header) }));
+  else await db.siteConfig.update({ where: { tenantId }, data: { header: JSON.stringify(header) } });
   revalidatePath("/admin/marketing");
   revalidatePath("/");
   return { ok: true, message: header.announcement.show ? "Promo banner is now live on your website." : "Promo banner hidden." };

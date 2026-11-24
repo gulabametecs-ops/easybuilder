@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { runRenewalReminders } from "@/lib/reminders";
-import { runRetention } from "@/lib/retention";
-import { sweepExpiredDemoSessions } from "@/lib/demoSession";
-import { sweepAiPreviews } from "@/lib/ai/previewCleanup";
+import { runDailyJobs } from "@/lib/dailyJobs";
 
-// Daily cron (configured in vercel.json). CRON_SECRET is required in production.
+// Daily cron (vercel.json on Vercel; self-hosted servers also run it in-process, see src/instrumentation.ts).
+// CRON_SECRET is required in production.
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   const isProd = process.env.NODE_ENV === "production";
@@ -21,12 +19,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // ponytail: retention purge piggybacks on the one daily cron instead of a second schedule.
-  const [result, retention, , aiPreviews] = await Promise.all([
-    runRenewalReminders(),
-    runRetention(),
-    sweepExpiredDemoSessions(),
-    sweepAiPreviews({ force: true }),
-  ]);
-  return NextResponse.json({ ...result, retention, aiPreviews });
+  // Same jobs the self-hosted server runs on its own timer (src/instrumentation.ts).
+  return NextResponse.json(await runDailyJobs());
 }

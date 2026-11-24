@@ -12,6 +12,7 @@ import { Sidebar, AdminPageTitle } from "@/components/admin/Sidebar";
 import { ThemeToggle } from "@/components/marketing/ThemeToggle";
 import { DemoTimerBar } from "@/components/site/DemoTimerBar";
 import { PageIntro } from "@/components/PageIntro";
+import { isStoreVertical } from "@/lib/store";
 
 export const metadata = { title: "Admin" };
 
@@ -63,10 +64,11 @@ export default async function DashLayout({ children }: { children: React.ReactNo
 
   const demoId = demoSession?.id ?? null;
   const scope = demoVisibleWhere(authed.tenant.id, demoId);
-  const [newLeads, pendingAppts, newVolunteers] = await Promise.all([
+  const [newLeads, pendingAppts, newVolunteers, newOrders] = await Promise.all([
     db.lead.count({ where: { ...scope, status: "new" } }),
     db.appointment.count({ where: { ...scope, status: "pending" } }),
     db.volunteer.count({ where: { ...scope, status: "new" } }),
+    isStoreVertical(authed.tenant.vertical) ? db.storeOrder.count({ where: { ...scope, status: "new" } }) : 0,
   ]);
 
   return (
@@ -79,6 +81,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
         newLeads={newLeads}
         pendingAppts={pendingAppts}
         newVolunteers={newVolunteers}
+        newOrders={newOrders}
         vertical={authed.tenant.vertical}
       />
       <div className="flex-1 min-w-0 flex flex-col min-h-0 admin-shell">

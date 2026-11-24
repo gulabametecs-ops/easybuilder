@@ -70,6 +70,7 @@ import { hrStaffing } from "./hrStaffing";
 import { businessConsulting } from "./businessConsulting";
 import { insuranceAdvisor } from "./insuranceAdvisor";
 import { coworkingSpace } from "./coworkingSpace";
+import { fashionStore, groceryStore, electronicsStore, giftsStore, beautyStore, homeDecorStore, generalStore } from "./stores";
 
 // The original home-services template, assembled from template.ts.
 const homeServices: TemplateDef = {
@@ -148,6 +149,13 @@ export const TEMPLATES: Record<string, TemplateDef> = {
   "business-consulting": businessConsulting,
   "insurance-advisor": insuranceAdvisor,
   "coworking-space": coworkingSpace,
+  "fashion-store": fashionStore,
+  "grocery-store": groceryStore,
+  "electronics-store": electronicsStore,
+  "gifts-store": giftsStore,
+  "beauty-store": beautyStore,
+  "home-decor-store": homeDecorStore,
+  "online-store": generalStore,
 };
 
 export function getTemplate(vertical: string): TemplateDef {

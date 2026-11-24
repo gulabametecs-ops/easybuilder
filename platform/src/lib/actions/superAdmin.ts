@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { deleteDemoUploads } from "@/lib/demoMedia";
 import { getSuperSession } from "@/lib/superAuth";
 import { createImpersonationToken } from "@/lib/auth";
 import { ROOT_DOMAIN } from "@/lib/domains";
@@ -196,7 +197,11 @@ export async function cancelSubscription(tenantId: string, reason?: string) {
 // Permanently delete a client and all its data.
 export async function deleteTenant(tenantId: string) {
   await requireSuper();
-  await db.tenant.delete({ where: { id: tenantId } });
+  const tenant = await db.tenant.delete({ where: { id: tenantId }, select: { id: true } });
+  // The DB cascade removes every row; the uploaded files live outside the DB, so remove their folder too.
+  if (/^[a-z0-9]+$/i.test(tenant.id)) {
+    await deleteDemoUploads(`uploads/${tenant.id}`).catch((e) => console.error("[deleteTenant] uploads cleanup failed", tenant.id, e));
+  }
   revalidatePath("/super/clients");
   redirect("/super/clients");
 }

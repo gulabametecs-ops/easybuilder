@@ -108,6 +108,20 @@ export type PropertySeed = {
   featured?: boolean;
 };
 
+export type ProductSeed = {
+  name: string;
+  category: string;
+  price: number; // INR
+  mrp?: number;
+  description: string;
+  stock?: number;
+  options?: { name: string; values: string[] }[];
+  badge?: string;
+  featured?: boolean;
+  /** Unsplash photo id — DEMO sites only (lib/demoImages); purchased sites keep blank slots. */
+  photo?: string;
+};
+
 // A complete website blueprint for one vertical/sector.
 export type TemplateDef = {
   theme: ThemeConfig;
@@ -122,5 +136,7 @@ export type TemplateDef = {
   events?: (biz: string) => EventSeed[];
   properties?: (biz: string) => PropertySeed[];
   causes?: (biz: string) => CauseSeed[];
+  /** Online-store sectors (lib/store.ts): sample catalogue. */
+  products?: (biz: string) => ProductSeed[];
   pages: (biz: string) => PageSeed[];
 };

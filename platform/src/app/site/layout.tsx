@@ -26,6 +26,8 @@ import { parseJson, type ThemeConfig, type HeaderConfig, type FooterConfig, type
 import { defaultTheme, defaultHeader, defaultFooter, defaultSeo } from "@/lib/template";
 import { ROOT_DOMAIN } from "@/lib/domains";
 import { designTheme, designHeader, designFooter } from "@/lib/designs";
+import { isStoreVertical } from "@/lib/store";
+import { CartFab } from "@/components/site/sections/StoreBlocks";
 
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getCurrentTenant();
@@ -145,6 +147,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         <main className="flex-1">{children}</main>
         <IntegrationStrip review={integrations.review} mailchimp={integrations.mailchimp} />
         <SiteFooter footer={config.footer} bizName={tenant.name} />
+        {isStoreVertical(tenant.vertical) && <CartFab />}
         <FloatingButtons phone={phone} whatsapp={whatsapp} booking={integrations.booking?.display === "floating" ? integrations.booking : null} />
       </div>
       {!isDemo && <PageViewBeacon />}

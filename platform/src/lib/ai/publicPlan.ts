@@ -4,6 +4,8 @@ import { enrichBlueprint } from "./enrichBlueprint";
 import { normalizeBlueprint } from "./normalizeBlueprint";
 import { type WebsiteBlueprint } from "./blueprintSchema";
 import { applyBrandToBlueprint, normalizeHexColor, type PublicPlanBrand } from "./applyBrand";
+import { isStoreBlueprint, storeSector } from "./storeIntent";
+import { getTemplate } from "@/lib/templates";
 
 const MAX_PROMPT = 4000;
 
@@ -13,6 +15,14 @@ export { applyBrandToBlueprint, normalizeHexColor };
 export type PublicAiPlanResult =
   | { ok: true; blueprint: WebsiteBlueprint; questions?: string[] }
   | { ok: false; error: string };
+
+/** A store plan whose catalogue came back thin gets the closest store sector's sample products (editable later). */
+export function withSampleProducts(bp: WebsiteBlueprint, prompt: string): WebsiteBlueprint {
+  if (!isStoreBlueprint(bp) || (bp.products?.length ?? 0) >= 3) return bp;
+  const sector = storeSector(`${prompt} ${bp.website.description ?? ""} ${bp.website.name}`);
+  const products = (getTemplate(sector).products?.("") ?? []).map(({ name, category, price, mrp, description, options, badge, featured }) => ({ name, category, price, mrp, description, options, badge, featured }));
+  return { ...bp, products };
+}
 
 /** Plan a website from a public marketing prompt (no tenant context). */
 export async function planWebsiteFromPublicPrompt(
@@ -55,7 +65,7 @@ ${BLUEPRINT_JSON_INSTRUCTION}`,
       return { ok: false, error: "AI returned an invalid plan. Please try rephrasing your prompt." };
     }
 
-    const blueprint = applyBrandToBlueprint(enrichBlueprint(parsed, text), brand);
+    const blueprint = withSampleProducts(applyBrandToBlueprint(enrichBlueprint(parsed, text), brand), text);
     return { ok: true, blueprint, questions: blueprint.questions };
   } catch (e) {
     const msg = e instanceof GroqError ? friendlyGroqError(e) : "AI planning failed. Please try again.";

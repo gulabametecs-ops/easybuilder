@@ -1,3 +1,5 @@
+import { isStoreVertical } from "./store";
+
 // Which sector-specific admin modules a business sees in its sidebar.
 // Pages stay reachable by URL; this only keeps the menu relevant (a gym doesn't need "Results").
 const SCHOOLS = ["play-school", "primary-school", "school", "school-coaching", "coaching"];
@@ -6,7 +8,7 @@ const COMMUNITY = ["ngo-charity", "social-foundation", "animal-welfare", "senior
 
 export const REAL_ESTATE = ["real-estate-broker", "pg-hostel", "builder-developer"];
 
-export type SectorModules = { notices: boolean; results: boolean; volunteers: boolean; events: boolean; properties: boolean; causes: boolean };
+export type SectorModules = { notices: boolean; results: boolean; volunteers: boolean; events: boolean; properties: boolean; causes: boolean; store: boolean };
 
 export function sectorModules(vertical: string): SectorModules {
   return {
@@ -16,5 +18,6 @@ export function sectorModules(vertical: string): SectorModules {
     events: [...COMMUNITY, "events-training"].includes(vertical),
     properties: REAL_ESTATE.includes(vertical),
     causes: COMMUNITY.includes(vertical),
+    store: isStoreVertical(vertical),
   };
 }

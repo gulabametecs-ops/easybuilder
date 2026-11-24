@@ -4,6 +4,55 @@
 export type DemoPhoto = { id: string; services?: string[]; kind?: string };
 
 export const DEMO_PHOTOS: Record<string, DemoPhoto[]> = {
+  // Online-store sectors: lifestyle shots for hero/banners (product photos come from the template's `photo` ids).
+  "fashion-store": [
+    {"id":"1490481651871-ab68de25d43d"},
+    {"id":"1483985988355-763728e1935b"},
+    {"id":"1445205170230-053b83016050"},
+    {"id":"1515886657613-9f3515b0c78f"},
+    {"id":"1595777457583-95e059d581b8"},
+  ],
+  "grocery-store": [
+    {"id":"1542838132-92c53300491e"},
+    {"id":"1488459716781-31db52582fe9"},
+    {"id":"1604719312566-8912e9227c6a"},
+    {"id":"1540420773420-3366772f4999"},
+    {"id":"1610832958506-aa56368176cf"},
+  ],
+  "electronics-store": [
+    {"id":"1550009158-9ebf69173e03"},
+    {"id":"1496181133206-80ce9b88a853"},
+    {"id":"1505740420928-5e560c06d30e"},
+    {"id":"1511707171634-5f897ff02aa9"},
+  ],
+  "gifts-store": [
+    {"id":"1513885535751-8b9238bd345a"},
+    {"id":"1549465220-1a8b9238cd48"},
+    {"id":"1602874801007-bd458bb1b8b6"},
+    {"id":"1578749556568-bc2c40e68b61"},
+    {"id":"1530103862676-de8c9debad1d"},
+  ],
+  "beauty-store": [
+    {"id":"1522335789203-aabd1fc54bc9"},
+    {"id":"1596462502278-27bfdc403348"},
+    {"id":"1598440947619-2c35fc9aa908"},
+    {"id":"1571781926291-c477ebfd024b"},
+    {"id":"1512496015851-a90fb38ba796"},
+  ],
+  "home-decor-store": [
+    {"id":"1586023492125-27b2c045efd7"},
+    {"id":"1524758631624-e2822e304c36"},
+    {"id":"1615873968403-89e068629265"},
+    {"id":"1556020685-ae41abfc9365"},
+    {"id":"1555041469-a586c61ea9bc"},
+  ],
+  "online-store": [
+    {"id":"1607082348824-0a96f2a4b9da"},
+    {"id":"1481437156560-3205f6a55735"},
+    {"id":"1607083206869-4c7672e72a8a"},
+    {"id":"1556742049-0cfed4f6a45d"},
+    {"id":"1472851294608-062f824d29cc"},
+  ],
   "animal-welfare": [
     {"id":"1450778869180-41d0601e046e","services":["Pet Adoption","Sponsor-a-Pet"]},
     {"id":"1601758124510-52d02ddb7cbd","services":["Pet Adoption","Foster Care Network"]},

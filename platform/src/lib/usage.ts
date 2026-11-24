@@ -88,7 +88,7 @@ export async function recordUpload(tenantId: string, url: string, bytes: number,
 export async function isMediaReferenced(tenantId: string, url: string): Promise<boolean> {
   const c = { contains: url.split("/").pop() || url };
   const counts = await Promise.all([
-    db.siteConfig.count({ where: { tenantId, OR: [{ theme: c }, { header: c }, { footer: c }, { seo: c }, { customCss: c }, { payments: c }] } }),
+    db.siteConfig.count({ where: { tenantId, OR: [{ theme: c }, { header: c }, { footer: c }, { seo: c }, { customCss: c }, { payments: c }, { store: c }] } }),
     db.section.count({ where: { page: { tenantId }, OR: [{ content: c }, { style: c }] } }),
     db.page.count({ where: { tenantId, seoImage: c } }),
     db.service.count({ where: { tenantId, OR: [{ image: c }, { description: c }, { longDescription: c }] } }),
@@ -99,6 +99,7 @@ export async function isMediaReferenced(tenantId: string, url: string): Promise<
     db.campaign.count({ where: { tenantId, adImage: c } }),
     db.property.count({ where: { tenantId, OR: [{ coverImage: c }, { gallery: c }, { floorPlans: c }, { brochureUrl: c }, { description: c }] } }),
     db.cause.count({ where: { tenantId, OR: [{ coverImage: c }, { gallery: c }, { story: c }] } }),
+    db.product.count({ where: { tenantId, OR: [{ images: c }, { description: c }] } }),
   ]);
   return counts.some((n) => n > 0);
 }

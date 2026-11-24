@@ -23,6 +23,7 @@ import { applySectionsOverlay } from "@/lib/demoOverlay";
 import { designSections } from "@/lib/designs";
 import { cookies } from "next/headers";
 import { TenantPrivacy } from "@/components/site/TenantPrivacy";
+import { getSiteProducts } from "@/lib/storeServer";
 
 export const dynamic = "force-dynamic";
 
@@ -126,7 +127,8 @@ export default async function SitePage({ params, searchParams }: Props) {
 
   const needsProperties = sections.some((s) => s.type === "propertyList");
   const needsCauses = sections.some((s) => s.type === "causeList");
-  const [config, servicesByCategory, galleryByCategory, notices, people, events, properties, causes] = await Promise.all([
+  const needsProducts = sections.some((s) => s.type === "productGrid" || s.type === "productCategories");
+  const [config, servicesByCategory, galleryByCategory, notices, people, events, properties, causes, products] = await Promise.all([
     getTenantConfig(tenant.id, tenant.name),
     getServicesGrouped(tenant.id),
     getGalleryGrouped(tenant.id),
@@ -135,6 +137,7 @@ export default async function SitePage({ params, searchParams }: Props) {
     getSiteEvents(tenant.id),
     needsProperties ? getSiteProperties(tenant.id) : Promise.resolve([]),
     needsCauses ? getSiteCauses(tenant.id) : Promise.resolve([]),
+    needsProducts ? getSiteProducts(tenant.id) : Promise.resolve([]),
   ]);
 
   const ctx: RenderContext = {
@@ -147,6 +150,7 @@ export default async function SitePage({ params, searchParams }: Props) {
     people,
     events,
     properties,
+    products,
     causes,
     payments: config.payments,
     integrations: siteIntegrations(config.integrations, config.seo),

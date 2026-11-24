@@ -15,6 +15,7 @@ export type DemoOverlay = {
     footer?: string;
     seo?: string;
     customCss?: string;
+    store?: string; // store settings JSON (lib/store.ts)
   };
   sections?: Record<string, { content?: string; style?: string; visible?: boolean; deleted?: boolean }>;
   addedSections?: Record<
@@ -120,6 +121,9 @@ export async function cleanupDemoSessionData(sessionId: string, clearCookies = t
     wipeSessionRows(db.cause, sessionId),
     wipeSessionRows(db.volunteer, sessionId),
     wipeSessionRows(db.siteDonation, sessionId),
+    wipeSessionRows(db.campaign, sessionId),
+    wipeSessionRows(db.product, sessionId),
+    wipeSessionRows(db.storeOrder, sessionId),
   ]);
 
   await db.demoSession.update({

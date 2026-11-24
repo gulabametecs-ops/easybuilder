@@ -11,6 +11,7 @@ import {
 import { savePromo, sendEmailBlast, type MktState } from "@/lib/actions/marketing";
 import { sectorIdeas, type SectorIdeas, type UpcomingOccasion } from "@/lib/marketingIdeas";
 import { CampaignsTab, type Campaign } from "./CampaignsTab";
+import { festTemplateId } from "@/lib/adTemplates";
 import { AdminWorkspace, fieldCls, labelCls } from "./AdminWorkspace";
 import { DevicePreviewFrame } from "./DevicePreviewFrame";
 
@@ -43,7 +44,7 @@ const GOALS: { label: string; what: string; icon: typeof Rocket; tint: string; g
   { label: "Run an offer", what: "Show a discount banner on your website", icon: Gift, tint: "from-amber-500 to-orange-500", go: "promo" },
   { label: "Get Google reviews", what: "Send happy customers a ready review request", icon: Star, tint: "from-yellow-400 to-amber-500", go: "posts", kind: "review" },
   { label: "Share on WhatsApp / Instagram", what: "Copy a ready-made post in one tap", icon: MessageCircle, tint: "from-fuchsia-500 to-pink-500", go: "posts", kind: "all" },
-  { label: "Run an ad", what: "Reach new people nearby on Google or Facebook", icon: Rocket, tint: "from-blue-500 to-violet-500", go: "ads" },
+  { label: "Run an ad", what: "Ready-made ad templates — launch in 2 clicks", icon: Rocket, tint: "from-blue-500 to-violet-500", go: "ads" },
   { label: "Message my customers", what: "Send an offer to people who already enquired", icon: Send, tint: "from-sky-500 to-cyan-500", go: "blast" },
 ];
 
@@ -83,6 +84,7 @@ export function MarketingManager({
   const ideas = useMemo(() => sectorIdeas(vertical), [vertical]);
   const [offer, setOffer] = useState(ideas.offers[0]);
   const [promoDraft, setPromoDraft] = useState<{ text: string; n: number } | null>(null);
+  const [adTpl, setAdTpl] = useState<{ id: string; n: number } | null>(null);
   const top = useRef<HTMLDivElement>(null);
 
   // Each tool opens at its top, even when reached from a card further down the page.
@@ -91,6 +93,7 @@ export function MarketingManager({
   const go = (t: TabId, kind?: PostKind) => { if (kind) setPostKind(kind); setTab(t); };
   const applyOffer = (text: string) => { setPromoDraft((d) => ({ text, n: (d?.n ?? 0) + 1 })); setTab("promo"); };
   const postAbout = (text: string) => { setOffer(text); go("posts", "all"); };
+  const adFor = (id: string) => { setAdTpl((d) => ({ id, n: (d?.n ?? 0) + 1 })); setTab("ads"); };
 
   return (
     <AdminWorkspace
@@ -118,7 +121,7 @@ export function MarketingManager({
         <HomeTab
           campaigns={campaigns} leads={leads} announcement={announcement} bizName={bizName} insights={insights}
           ideas={ideas} occasions={occasions} hasAnalytics={hasAnalytics} reviewLink={reviewLink}
-          onGo={go} onOffer={applyOffer} onPost={postAbout}
+          onGo={go} onOffer={applyOffer} onPost={postAbout} onAd={adFor}
         />
       )}
       {tab === "ads" && (
@@ -133,7 +136,10 @@ export function MarketingManager({
               "Target 5–10 km around your business — most customers come from nearby.",
             ]}
           />
-          <CampaignsTab campaigns={campaigns} siteUrl={siteUrl} services={services} bizName={bizName} vertical={vertical} />
+          <CampaignsTab
+            key={adTpl?.n ?? 0} startTemplate={adTpl?.id} occasions={occasions}
+            campaigns={campaigns} siteUrl={siteUrl} services={services} bizName={bizName} vertical={vertical}
+          />
         </div>
       )}
       {tab === "posts" && (
@@ -263,7 +269,7 @@ type Sug = { title: string; why: string; cta: string; icon: typeof Rocket } & (
 );
 
 function HomeTab({
-  campaigns, leads, announcement, bizName, insights, ideas, occasions, hasAnalytics, reviewLink, onGo, onOffer, onPost,
+  campaigns, leads, announcement, bizName, insights, ideas, occasions, hasAnalytics, reviewLink, onGo, onOffer, onPost, onAd,
 }: {
   campaigns: Campaign[];
   leads: Lead[];
@@ -277,6 +283,7 @@ function HomeTab({
   onGo: (id: TabId, kind?: PostKind) => void;
   onOffer: (text: string) => void;
   onPost: (text: string) => void;
+  onAd: (templateId: string) => void;
 }) {
   const [all, setAll] = useState(false);
   const reviewAsked = useReviewAsked();
@@ -429,6 +436,7 @@ function HomeTab({
                     <div className="flex flex-wrap gap-1.5">
                       <button type="button" onClick={() => onOffer(o.offer)} className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 text-[11px] font-bold"><Gift className="w-3 h-3" /> Use as offer</button>
                       <button type="button" onClick={() => onPost(o.offer)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:border-lime-400"><FileText className="w-3 h-3" /> Write a post</button>
+                      <button type="button" onClick={() => onAd(festTemplateId(o.name))} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:border-lime-400"><Rocket className="w-3 h-3" /> Run an ad</button>
                     </div>
                   </li>
                 ))}

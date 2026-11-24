@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   Plus, Trash2, Pencil, X, Copy, Check, ExternalLink, Rocket, Play, Pause, CheckCheck,
-  Target, Sparkles, MapPin, Users, Search, ChevronDown, ChevronUp,
+  Target, Sparkles, MapPin, Users, Search, ChevronDown, ChevronUp, CopyPlus, CalendarDays, Wand2, IndianRupee,
 } from "lucide-react";
 import { createCampaign, updateCampaign, updateCampaignMetrics, setCampaignStatus, deleteCampaign } from "@/lib/actions/marketing";
 import { suggestHeadlines, suggestAdTexts, suggestInterests } from "@/lib/adSuggest";
+import { adTemplates, type AdTemplate } from "@/lib/adTemplates";
+import { istToday, type UpcomingOccasion } from "@/lib/marketingIdeas";
 import { ImageInput } from "./ImageInput";
 import { Card } from "./ui";
 
@@ -42,14 +44,47 @@ const STATUS_CLS: Record<string, string> = {
 const slug = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "campaign";
 const inr = (v: number) => "₹" + v.toLocaleString("en-IN");
 const jparse = (s: string): string[] => { try { const v = JSON.parse(s || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
+const fmtDate = (ymd: string) => (ymd ? new Date(`${ymd}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" }) : "");
 
-export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }: { campaigns: Campaign[]; siteUrl: string; services: string[]; bizName: string; vertical: string }) {
+type Draft = { c: Partial<Campaign>; label: string; n: number };
+const fromTemplate = (t: AdTemplate, n: number): Draft => ({ c: { ...t.draft, interests: JSON.stringify(t.draft.interests) }, label: `${t.emoji} ${t.title}`, n });
+
+const GROUP_LABEL: Record<AdTemplate["group"], { label: string; cls: string }> = {
+  sector: { label: "For your business", cls: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300" },
+  festival: { label: "Festival", cls: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" },
+  goal: { label: "Popular", cls: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" },
+};
+
+export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical, occasions = [], startTemplate }: {
+  campaigns: Campaign[]; siteUrl: string; services: string[]; bizName: string; vertical: string;
+  occasions?: UpcomingOccasion[];
+  /** Template id to open pre-filled (e.g. from a festival card on Start here). */
+  startTemplate?: string;
+}) {
   const [pending, start] = useTransition();
-  const [adding, setAdding] = useState(false);
+  const templates = useMemo(() => adTemplates({ vertical, bizName, services, occasions, today: istToday() }), [vertical, bizName, services, occasions]);
+  const [draft, setDraft] = useState<Draft | null>(() => {
+    const t = startTemplate ? templates.find((x) => x.id === startTemplate) : undefined;
+    return t ? fromTemplate(t, 1) : null;
+  });
+  const [adding, setAdding] = useState(draft !== null);
+  const formTop = useRef<HTMLDivElement>(null);
+  const openDraft = (d: Draft | null) => {
+    setDraft(d);
+    setAdding(true);
+    setMsg(null);
+    requestAnimationFrame(() => formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+  const applyTemplate = (t: AdTemplate) => openDraft(fromTemplate(t, (draft?.n ?? 0) + 1));
+  const duplicate = (c: Campaign) => {
+    const { id: _id, spend: _s, clicks: _c, leads: _l, status: _st, ...rest } = c;
+    openDraft({ c: { ...rest, name: `${c.name} (copy)` }, label: `Copy of “${c.name}”`, n: (draft?.n ?? 0) + 1 });
+  };
   const [editing, setEditing] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
+  const [msg, setMsg] = useState<{ ok: boolean; message: string } | null>(null);
 
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0);
   const totalLeads = campaigns.reduce((s, c) => s + c.leads, 0);
@@ -71,33 +106,48 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
   }, [campaigns, q, statusFilter, platformFilter]);
 
   return (
-    <div className={pending ? "opacity-70" : ""}>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
-        <Stat label="Campaigns" value={String(campaigns.length)} />
-        <Stat label="Active" value={String(active)} />
-        <Stat label="Total spend" value={inr(totalSpend)} />
-        <Stat label="Leads / cost" value={totalLeads ? `${totalLeads} · ${inr(Math.round(totalSpend / totalLeads))}` : "—"} />
+    <div className={`space-y-4 ${pending ? "opacity-70" : ""}`}>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <Stat icon={Rocket} tint="from-blue-500 to-violet-500" label="Campaigns" value={String(campaigns.length)} />
+        <Stat icon={Play} tint="from-emerald-500 to-teal-500" label="Running now" value={String(active)} />
+        <Stat icon={IndianRupee} tint="from-amber-500 to-orange-500" label="Total spend" value={inr(totalSpend)} />
+        <Stat icon={Target} tint="from-fuchsia-500 to-pink-500" label="Leads · cost each" value={totalLeads ? `${totalLeads} · ${inr(Math.round(totalSpend / totalLeads))}` : "—"} />
       </div>
 
-      {!adding ? (
-        <button onClick={() => setAdding(true)} className="admin-grad mb-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-md shadow-blue-600/20 hover:opacity-90">
-          <Plus className="w-4 h-4" /> New campaign
-        </button>
-      ) : (
-        <Card className="p-4 sm:p-5 mb-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-slate-900 dark:text-white">New ad campaign</h3>
-            <button type="button" onClick={() => setAdding(false)} aria-label="Close"><X className="w-4 h-4 text-slate-400" /></button>
+      <div ref={formTop} className="scroll-mt-4" />
+      {msg && (
+        <p role="status" className={`rounded-xl px-3 py-2 text-sm font-medium ${msg.ok ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300" : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"}`}>{msg.message}</p>
+      )}
+      {adding ? (
+        <Card className="p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-slate-900 dark:text-white">New ad campaign</h3>
+              {draft && (
+                <p className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 px-2.5 py-1 text-xs font-semibold">
+                  <Wand2 className="w-3.5 h-3.5 shrink-0" /> {draft.label} filled in — check the 3 steps, change anything, then press Create.
+                </p>
+              )}
+            </div>
+            <button type="button" onClick={() => { setAdding(false); setDraft(null); }} aria-label="Close"><X className="w-4 h-4 text-slate-400" /></button>
           </div>
-          <form action={(fd) => { start(() => createCampaign(fd)); setAdding(false); }} className="space-y-4">
-            <CampaignFields siteUrl={siteUrl} services={services} bizName={bizName} vertical={vertical} />
+          <form action={(fd) => start(async () => { const r = await createCampaign(fd); setMsg(r); if (r.ok) { setAdding(false); setDraft(null); } })} className="space-y-4">
+            <CampaignFields key={draft?.n ?? 0} siteUrl={siteUrl} services={services} bizName={bizName} vertical={vertical} c={draft?.c} />
             <button className="admin-grad rounded-xl text-sm font-semibold px-5 py-2.5 shadow-md shadow-blue-600/20 hover:opacity-90">Create campaign</button>
           </form>
         </Card>
+      ) : (
+        <TemplateGallery templates={templates} onUse={applyTemplate} onBlank={() => openDraft(null)} />
       )}
 
       {campaigns.length > 0 && (
-        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <h3 className="text-sm font-bold text-slate-800 dark:text-white">Your campaigns</h3>
+          <span className="text-[11px] text-slate-400">{filtered.length} of {campaigns.length}</span>
+        </div>
+      )}
+      {campaigns.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -122,14 +172,12 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
       )}
 
       {campaigns.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 dark:border-white/15 bg-gradient-to-br from-lime-50/60 to-violet-50/60 dark:from-lime-500/[0.05] dark:to-violet-500/[0.05] p-8 sm:p-10 text-center">
-          <span className="admin-grad inline-flex w-14 h-14 rounded-2xl items-center justify-center mb-4 shadow-lg shadow-blue-600/20">
-            <Rocket className="w-6 h-6" />
-          </span>
-          <p className="text-base font-bold text-slate-800 dark:text-white">No campaigns yet</p>
-          <p className="text-sm text-slate-500 mt-1 mb-4 max-w-sm mx-auto">Pick a service and audience, then launch ads on Google, Meta or Instagram with a tracked link.</p>
-          <button type="button" onClick={() => setAdding(true)} className="admin-grad inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-md shadow-blue-600/20 hover:opacity-90"><Plus className="w-4 h-4" /> Create first campaign</button>
-        </div>
+        !adding && (
+          <div className="rounded-2xl border border-dashed border-slate-300 dark:border-white/15 p-5 text-center">
+            <p className="text-sm font-bold text-slate-800 dark:text-white">No campaigns yet</p>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Pick a template above — we fill in the headline, text, audience and budget. You just check and press Create.</p>
+          </div>
+        )
       ) : filtered.length === 0 ? (
         <p className="text-xs text-slate-400 py-6 text-center">No campaigns match your filters.</p>
       ) : (
@@ -137,7 +185,7 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
           {filtered.map((c) => (
             <Card key={c.id} className="p-4 sm:p-5">
               {editing === c.id ? (
-                <form action={(fd) => { start(() => updateCampaign(fd)); setEditing(null); }} className="space-y-4">
+                <form action={(fd) => start(async () => { const r = await updateCampaign(fd); setMsg(r); if (r.ok) setEditing(null); })} className="space-y-4">
                   <input type="hidden" name="id" value={c.id} />
                   <CampaignFields siteUrl={siteUrl} services={services} bizName={bizName} vertical={vertical} c={c} />
                   <div className="flex gap-2">
@@ -150,6 +198,7 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
                   c={c}
                   siteUrl={siteUrl}
                   onEdit={() => setEditing(c.id)}
+                  onDuplicate={() => duplicate(c)}
                   onStatus={(st) => start(() => setCampaignStatus(c.id, st))}
                   onDelete={() => { if (confirm(`Delete campaign "${c.name}"?`)) start(() => deleteCampaign(c.id)); }}
                   onMetrics={(fd) => start(() => updateCampaignMetrics(fd))}
@@ -163,11 +212,68 @@ export function CampaignsTab({ campaigns, siteUrl, services, bizName, vertical }
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function TemplateGallery({ templates, onUse, onBlank }: { templates: AdTemplate[]; onUse: (t: AdTemplate) => void; onBlank: () => void }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? templates : templates.slice(0, 6);
   return (
-    <div className="rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 px-3 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="text-lg font-extrabold text-slate-900 dark:text-white mt-0.5">{value}</p>
+    <section className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-100 dark:border-white/10 flex flex-wrap items-center gap-2.5">
+        <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white flex items-center justify-center shrink-0"><Wand2 className="w-4 h-4" /></span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-slate-800 dark:text-white">Ready-made ad templates</p>
+          <p className="text-[11px] text-slate-400">One click fills everything — text, audience, budget & dates</p>
+        </div>
+        <button type="button" onClick={onBlank} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+          <Plus className="w-3.5 h-3.5" /> Start blank
+        </button>
+      </div>
+      <div className="p-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+        {shown.map((t) => {
+          const p = PLATFORMS[t.draft.platform] ?? PLATFORMS.local;
+          const g = GROUP_LABEL[t.group];
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onUse(t)}
+              className="group text-left rounded-xl border border-slate-200 dark:border-white/10 bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800/40 p-3.5 hover:shadow-md hover:-translate-y-0.5 hover:border-blue-400/60 transition flex flex-col"
+            >
+              <div className="flex items-start gap-2.5">
+                <span className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/10 flex items-center justify-center text-xl shrink-0" aria-hidden>{t.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <span className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ${g.cls}`}>{g.label}</span>
+                  <p className="text-sm font-bold text-slate-800 dark:text-white mt-0.5 leading-snug">{t.title}</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex-1">{t.why}</p>
+              <p className="mt-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 line-clamp-1">“{t.draft.headline}”</p>
+              <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px]">
+                <span className="inline-flex items-center gap-1.5 text-slate-500 dark:text-slate-400 min-w-0">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${p.dot}`} /> <span className="truncate">{p.label} · ₹{t.perDay}/day</span>
+                </span>
+                <span className="shrink-0 font-bold text-blue-600 dark:text-blue-400 group-hover:underline">Use →</span>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {templates.length > 6 && (
+        <button type="button" onClick={() => setAll((v) => !v)} className="w-full border-t border-slate-100 dark:border-white/10 px-4 py-2.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-white/5 inline-flex items-center justify-center gap-1">
+          {all ? "Show fewer" : `Show all ${templates.length} templates`} <ChevronDown className={`w-3.5 h-3.5 transition ${all ? "rotate-180" : ""}`} />
+        </button>
+      )}
+    </section>
+  );
+}
+
+function Stat({ label, value, icon: Ic, tint }: { label: string; value: string; icon: React.ElementType; tint: string }) {
+  return (
+    <div className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 px-3 py-2.5 shadow-sm min-w-0">
+      <div className="flex items-center gap-1.5">
+        <span className={`w-5 h-5 rounded-md bg-gradient-to-br ${tint} text-white flex items-center justify-center shrink-0`}><Ic className="w-3 h-3" /></span>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 truncate">{label}</p>
+      </div>
+      <p className="text-lg font-extrabold text-slate-900 dark:text-white mt-1 truncate">{value}</p>
     </div>
   );
 }
@@ -188,7 +294,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   );
 }
 
-function CampaignFields({ siteUrl, services, bizName, vertical, c }: { siteUrl: string; services: string[]; bizName: string; vertical: string; c?: Campaign }) {
+function CampaignFields({ siteUrl, services, bizName, vertical, c }: { siteUrl: string; services: string[]; bizName: string; vertical: string; c?: Partial<Campaign> }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState(c?.name ?? "");
   const [platform, setPlatform] = useState(c?.platform ?? "google");
@@ -197,8 +303,8 @@ function CampaignFields({ siteUrl, services, bizName, vertical, c }: { siteUrl: 
   const [adImage, setAdImage] = useState(c?.adImage ?? "");
   const [gender, setGender] = useState(c?.gender ?? "all");
   const [age, setAge] = useState<[number, number]>([c?.ageMin ?? 18, c?.ageMax ?? 65]);
-  const [interests, setInterests] = useState<string[]>(c ? jparse(c.interests) : []);
-  const [locations, setLocations] = useState<string[]>(c ? jparse(c.locations) : []);
+  const [interests, setInterests] = useState<string[]>(jparse(c?.interests ?? ""));
+  const [locations, setLocations] = useState<string[]>(jparse(c?.locations ?? ""));
   const [radius, setRadius] = useState(c?.radiusKm ?? 0);
   const [budget, setBudget] = useState(c?.budget ?? 0);
   const [startDate, setStartDate] = useState(c?.startDate ?? "");
@@ -296,6 +402,7 @@ function CampaignFields({ siteUrl, services, bizName, vertical, c }: { siteUrl: 
                 <label className="block"><span className={lbl}>Start</span><input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputCls} /></label>
                 <label className="block"><span className={lbl}>End</span><input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} /></label>
               </div>
+              <BudgetHint budget={budget} startDate={startDate} endDate={endDate} onPick={setBudget} />
               <button type="button" onClick={() => setStep(1)} className="text-xs font-bold text-lime-700 dark:text-lime-400 hover:underline">Next: Audience →</button>
             </>
           )}
@@ -494,7 +601,23 @@ function ReachEstimate({ budget, radius, interests, platform }: { budget: number
   );
 }
 
-function CampaignCard({ c, siteUrl, onEdit, onStatus, onDelete, onMetrics }: { c: Campaign; siteUrl: string; onEdit: () => void; onStatus: (s: string) => void; onDelete: () => void; onMetrics: (fd: FormData) => void }) {
+function BudgetHint({ budget, startDate, endDate, onPick }: { budget: number; startDate: string; endDate: string; onPick: (n: number) => void }) {
+  const days = startDate && endDate ? Math.round((Date.parse(endDate) - Date.parse(startDate)) / 86_400_000) + 1 : 0;
+  return (
+    <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5 text-xs text-slate-600 dark:text-slate-300 space-y-2">
+      {budget > 0 && days > 0 && <p><b className="text-slate-800 dark:text-white">≈ {inr(Math.round(budget / days))}/day</b> for {days} day{days === 1 ? "" : "s"}.</p>}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-slate-400">Quick budget:</span>
+        {[1000, 2000, 5000, 10000].map((v) => (
+          <button key={v} type="button" onClick={() => onPick(v)} className={`rounded-full border px-2.5 py-1 font-semibold ${budget === v ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300" : "border-slate-200 dark:border-slate-600 hover:border-slate-300"}`}>{inr(v)}</button>
+        ))}
+      </div>
+      <p className="text-[11px] text-slate-400">Tip: start with ₹200–500/day for one week. You pay Google/Facebook directly — we only help you plan and track.</p>
+    </div>
+  );
+}
+
+function CampaignCard({ c, siteUrl, onEdit, onDuplicate, onStatus, onDelete, onMetrics }: { c: Campaign; siteUrl: string; onEdit: () => void; onDuplicate: () => void; onStatus: (s: string) => void; onDelete: () => void; onMetrics: (fd: FormData) => void }) {
   const [showMetrics, setShowMetrics] = useState(false);
   const p = PLATFORMS[c.platform] ?? PLATFORMS.local;
   const base = c.targetUrl || `${siteUrl}/contact`;
@@ -503,6 +626,11 @@ function CampaignCard({ c, siteUrl, onEdit, onStatus, onDelete, onMetrics }: { c
   const cpl = c.leads ? "₹" + Math.round(c.spend / c.leads) : "—";
   const interests = jparse(c.interests);
   const locations = jparse(c.locations);
+  const rate = c.clicks ? ((c.leads / c.clicks) * 100).toFixed(1) + "%" : "—";
+  const used = c.budget ? Math.min(100, Math.round((c.spend / c.budget) * 100)) : 0;
+  const today = istToday();
+  const daysLeft = c.endDate && c.endDate >= today ? Math.round((Date.parse(c.endDate) - Date.parse(today)) / 86_400_000) : null;
+  const hasMetrics = c.spend > 0 || c.clicks > 0 || c.leads > 0;
   const audience = `${c.gender === "all" ? "All" : c.gender[0].toUpperCase() + c.gender.slice(1)} · ${c.ageMin}–${c.ageMax} yrs`;
 
   return (
@@ -515,9 +643,17 @@ function CampaignCard({ c, siteUrl, onEdit, onStatus, onDelete, onMetrics }: { c
             {c.service && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300">{c.service}</span>}
             <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${STATUS_CLS[c.status] ?? STATUS_CLS.draft}`}><span className={`w-1.5 h-1.5 rounded-full bg-current ${c.status === "active" ? "animate-pulse" : ""}`} />{c.status}</span>
           </div>
-          <p className="text-xs text-slate-400 capitalize">{c.objective}{c.budget ? ` · ${inr(c.budget)}` : ""}</p>
+          <p className="text-xs text-slate-400 flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+            <span className="capitalize">Goal: {c.objective}</span>
+            {c.budget > 0 && <span>Budget {inr(c.budget)}</span>}
+            {(c.startDate || c.endDate) && (
+              <span className="inline-flex items-center gap-1"><CalendarDays className="w-3 h-3" /> {fmtDate(c.startDate) || "…"} – {fmtDate(c.endDate) || "…"}</span>
+            )}
+            {daysLeft !== null && c.status === "active" && <span className="font-semibold text-emerald-600 dark:text-emerald-400">{daysLeft === 0 ? "Ends today" : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}</span>}
+          </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={onDuplicate} title="Duplicate" aria-label="Duplicate" className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 hover:opacity-80"><CopyPlus className="w-4 h-4" /></button>
           <button type="button" onClick={onEdit} title="Edit" className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 hover:opacity-80"><Pencil className="w-4 h-4" /></button>
           <button type="button" onClick={onDelete} title="Delete" className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/60"><Trash2 className="w-4 h-4" /></button>
         </div>
@@ -569,8 +705,28 @@ function CampaignCard({ c, siteUrl, onEdit, onStatus, onDelete, onMetrics }: { c
         </button>
       </div>
 
-      {(c.spend > 0 || c.clicks > 0 || c.leads > 0) && !showMetrics && (
-        <p className="text-[11px] text-slate-400 mb-1">Spend {inr(c.spend)} · {c.clicks} clicks · {c.leads} leads · CPC {cpc} · CPL {cpl}</p>
+      {hasMetrics && !showMetrics && (
+        <div className="mt-1">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+            {[["Spent", inr(c.spend)], ["Clicks", String(c.clicks)], ["Leads", String(c.leads)], ["Per click", cpc], ["Per lead", cpl], ["Click → lead", rate]].map(([k, v]) => (
+              <div key={k} className="rounded-lg bg-slate-50 dark:bg-slate-800/60 px-2 py-1.5 min-w-0">
+                <p className="text-[10px] text-slate-400 truncate">{k}</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{v}</p>
+              </div>
+            ))}
+          </div>
+          {c.budget > 0 && (
+            <div className="mt-2">
+              <div className="flex justify-between text-[10px] text-slate-400 mb-1"><span>Budget used</span><span>{used}%</span></div>
+              <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                <div className={`h-full rounded-full ${used >= 90 ? "bg-rose-500" : "admin-grad"}`} style={{ width: `${used}%` }} />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {!hasMetrics && c.status === "active" && !showMetrics && (
+        <p className="text-[11px] text-slate-400 mt-1">💡 Once your ad runs, copy spend, clicks and leads from Google/Facebook into “Track results” to see what each lead costs.</p>
       )}
 
       {showMetrics && (

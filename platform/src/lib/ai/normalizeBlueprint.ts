@@ -10,6 +10,14 @@ const SECTION_ALIASES: Record<string, string> = {
   services: "serviceCategories",
   properties: "propertyList",
   listings: "propertyList",
+  products: "productGrid",
+  productgrid: "productGrid",
+  shop: "productGrid",
+  catalog: "productGrid",
+  catalogue: "productGrid",
+  productlist: "productGrid",
+  productcategories: "productCategories",
+  shopbycategory: "productCategories",
   propertylist: "propertyList",
   causes: "causeList",
   campaigns: "causeList",
@@ -215,6 +223,37 @@ export function normalizeBlueprint(raw: unknown): WebsiteBlueprint | null {
     }
   }
 
+  // Store catalogue: prices may arrive as "₹1,299" strings; drop rows without a usable price.
+  const money = (v: unknown) => Math.round(typeof v === "number" ? v : Number(String(v ?? "").replace(/[^\d.]/g, "")) || 0);
+  const productsIn = Array.isArray(root.products) ? root.products : [];
+  const products = productsIn
+    .filter((p): p is Record<string, unknown> => !!p && typeof p === "object" && !Array.isArray(p))
+    .slice(0, 40)
+    .map((row, i) => {
+      const price = money(row.price);
+      const mrp = money(row.mrp ?? row.compareAt ?? row.originalPrice);
+      const options = (Array.isArray(row.options) ? row.options : [])
+        .filter((o): o is Record<string, unknown> => !!o && typeof o === "object")
+        .map((o) => ({
+          name: clip(o.name, 40),
+          values: (Array.isArray(o.values) ? o.values : typeof o.values === "string" ? o.values.split(",") : [])
+            .map((v: unknown) => clip(v, 60)).filter(Boolean).slice(0, 20),
+        }))
+        .filter((o) => o.name && o.values.length)
+        .slice(0, 3);
+      return {
+        name: clip(row.name ?? row.title, 200),
+        category: clip(row.category, 80, "Products") || "Products",
+        price,
+        mrp: mrp > price ? mrp : undefined,
+        description: clip(row.description, 1000),
+        options: options.length ? options : undefined,
+        badge: clip(row.badge, 30) || undefined,
+        featured: typeof row.featured === "boolean" ? row.featured : i < 8,
+      };
+    })
+    .filter((p) => p.name && p.price > 0 && p.price <= 10_000_000);
+
   const questionsIn = Array.isArray(root.questions) ? root.questions : [];
   const questions = questionsIn
     .map((q) => clip(typeof q === "object" && q && "q" in (q as object) ? (q as { q: unknown }).q : q, 200))
@@ -247,6 +286,7 @@ export function normalizeBlueprint(raw: unknown): WebsiteBlueprint | null {
         }
       : undefined,
     services: services.length ? services : undefined,
+    products: products.length ? products : undefined,
     pages,
     questions: questions.length ? questions : undefined,
   };

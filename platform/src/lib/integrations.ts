@@ -550,6 +550,54 @@ export const COPY_HINT: Record<string, string> = {
   mailchimp: "Copy the embedded form code — we take just the form URL.",
 };
 
+/** One plain-language line: what the owner gets out of it. */
+export const BENEFIT: Record<string, string> = {
+  razorpay: "Take card, UPI & netbanking payments right on your website.",
+  upi: "Customers scan & pay you directly — zero fees.",
+  razorpayPage: "Add a “Pay now” button that opens your Razorpay page.",
+  paypal: "Get paid by customers abroad.",
+  stripe: "Simple international card payments.",
+  instamojo: "Quick payment link — good for small shops & courses.",
+  cashfree: "Payment link with low fees for Indian businesses.",
+  tawk: "Chat with visitors live, free forever — on your phone too.",
+  crisp: "Live chat + shared inbox for your team.",
+  tidio: "Live chat with ready auto-replies.",
+  ga4: "See how many people visit, from where and what they read.",
+  gtm: "Manage all your tracking codes in one place.",
+  metaPixel: "Show Facebook/Instagram ads again to people who visited you.",
+  clarity: "Watch recordings of how visitors use your site — free.",
+  hotjar: "Heatmaps: see where visitors click and scroll.",
+  linkedin: "Track visitors from LinkedIn ads (B2B).",
+  googleAds: "Count calls & enquiries that came from your Google ads.",
+  calendly: "Let customers book a time slot by themselves.",
+  calcom: "Free, open-source booking page.",
+  googleReviews: "A “Review us on Google” button — more stars, more trust.",
+  googleVerify: "Prove you own the site so Google shows it in search.",
+  bingVerify: "Get listed on Bing search.",
+  pinterestVerify: "Claim your site on Pinterest.",
+  facebookVerify: "Needed for some Facebook/Instagram ad features.",
+  mailchimp: "Collect visitor emails for your newsletter.",
+};
+
+/** Free to start (no paid plan needed). */
+export const FREE_IDS = new Set(["upi", "tawk", "crisp", "tidio", "ga4", "gtm", "metaPixel", "clarity", "hotjar", "calendly", "calcom", "googleReviews", "googleVerify", "bingVerify", "pinterestVerify", "facebookVerify", "mailchimp", "linkedin"]);
+
+/** Detailed "how do I get this?" steps for the popular ones (others use COPY_HINT). */
+export const HOW_TO: Record<string, string[]> = {
+  ga4: ["Open analytics.google.com and sign in with your Gmail.", "Click Admin (gear icon) → Create → Property. Enter your business name.", "Choose “Web”, type your website address and press Create stream.", "Copy the Measurement ID that starts with G- and paste it here."],
+  gtm: ["Open tagmanager.google.com and create an account + container (Web).", "Copy the GTM-XXXXXXX ID shown at the top of the workspace.", "Paste it here."],
+  metaPixel: ["Open Meta Events Manager (business.facebook.com/events_manager2).", "Click Connect data sources → Web → name your pixel.", "Copy the Pixel ID (a long number) and paste it here."],
+  clarity: ["Open clarity.microsoft.com and sign in (Google login works).", "Add new project → type your website address.", "Choose “Install manually”, copy the code and paste it here — we pick out the ID."],
+  googleAds: ["In Google Ads go to Goals → Conversions → New conversion action → Website.", "Choose “Install the tag yourself”.", "Copy the Google tag (starts with AW-) and paste it here."],
+  tawk: ["Sign up free at tawk.to and add your website.", "Go to Administration → Chat Widget.", "Copy the Widget Code (or the Direct Chat Link) and paste it here.", "Install the tawk.to app on your phone to reply to visitors."],
+  googleReviews: ["Open business.google.com (Google Business Profile) and select your business.", "Click “Ask for reviews” (or “Get more reviews”).", "Copy the link and paste it here."],
+  upi: ["Open GPay / PhonePe / Paytm → tap your profile photo.", "Copy your UPI ID (looks like name@okhdfcbank).", "Paste it here. Optional: upload a screenshot of your QR code."],
+  razorpay: ["Log in to dashboard.razorpay.com → Account & Settings → API Keys.", "Generate live keys (complete KYC first).", "Copy the Key ID (rzp_live_…) and the Key secret, paste both here."],
+  calendly: ["Sign up free at calendly.com and create an event (e.g. 30-min call).", "Click “Copy link” on the event.", "Paste the link here and choose button or section."],
+  googleVerify: ["Open Google Search Console → Add property → URL prefix → your website address.", "Choose the “HTML tag” method and copy the whole <meta> tag.", "Paste it here, press Connect, then click Verify in Search Console."],
+  mailchimp: ["In Mailchimp go to Audience → Signup forms → Embedded forms.", "Copy the embed code.", "Paste it here — we take only the form address."],
+};
+
 // ─── Sector recommendations (lib/verticals.ts categories) ────────────────────
 const RECOMMENDED: Record<string, string[]> = {
   "Community & Non-profit": ["razorpay", "upi", "tawk", "ga4", "mailchimp"],
@@ -562,6 +610,7 @@ const RECOMMENDED: Record<string, string[]> = {
   "Trade & Manufacturing": ["tawk", "ga4", "linkedin", "googleVerify"],
   "Events & Training": ["calendly", "razorpayPage", "googleReviews", "metaPixel"],
   "Corporate & Professional Services": ["calendly", "linkedin", "googleReviews", "ga4"],
+  "Online Store / E-commerce": ["upi", "razorpay", "metaPixel", "ga4"],
 };
 export function recommendedFor(category: string): string[] {
   return RECOMMENDED[category] ?? ["ga4", "googleReviews", "tawk", "googleVerify"];

@@ -6,7 +6,7 @@ import {
   LayoutTemplate, LayoutGrid, AlignLeft, BarChart3, Images, ListOrdered, Megaphone, Users, Tag,
   Sparkles, Quote, HelpCircle, Play, MapPin, FileText, Mail, Bell, Trophy, Download, CreditCard,
   Clock, Type, Timer, PanelTop, CalendarClock, Building2, HandHeart, Wallet, ArrowLeft, ChevronUp, ChevronDown, Copy,
-  Layers, type LucideIcon,
+  Layers, ShoppingBag, type LucideIcon,
 } from "lucide-react";
 import { toggleSection, deleteSection, moveSection, addSection, reorderSections, duplicateSection } from "@/lib/actions/content";
 import { SECTION_META } from "@/lib/sectionDefaults";
@@ -33,7 +33,7 @@ const SECTION_ICON: Record<string, LucideIcon> = {
   gallery: Images, steps: ListOrdered, cta: Megaphone, team: Users, priceList: Tag, features: Sparkles,
   testimonials: Quote, faq: HelpCircle, logos: Users, video: Play, imageBanner: Images, contactInfo: MapPin,
   quoteForm: FileText, contactForm: Mail, appointmentForm: CalendarClock, richText: Type, pricingPlans: CreditCard,
-  openingHours: Clock, countdown: Timer, map: MapPin, noticeBoard: Bell, toppers: Trophy, downloads: Download, propertyList: Building2, causeList: HandHeart, payOnline: Wallet,
+  openingHours: Clock, countdown: Timer, map: MapPin, noticeBoard: Bell, toppers: Trophy, downloads: Download, propertyList: Building2, productGrid: ShoppingBag, productCategories: LayoutGrid, causeList: HandHeart, payOnline: Wallet,
 };
 
 export function VisualBuilder({

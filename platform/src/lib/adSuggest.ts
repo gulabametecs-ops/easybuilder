@@ -38,6 +38,11 @@ const INTEREST_SETS: { match: string[]; interests: string[] }[] = [
   { match: ["restaurant", "hotel", "food", "cafe", "cater"], interests: ["Foodies", "Dining Out", "Family Outings", "Food Delivery", "Events & Parties", "Local Cuisine"] },
   { match: ["hospital", "clinic", "dental", "health", "doctor", "medical"], interests: ["Health & Wellness", "Fitness", "Families", "Senior Care", "Preventive Health"] },
   { match: ["wholesale", "shop", "retail", "product", "manufactur", "bulk"], interests: ["Small Business Owners", "Retailers", "Bulk Buyers", "Entrepreneurs", "B2B", "Distributors"] },
+  { match: ["ca-firm", "law", "consult", "insurance", "it-services", "digital-marketing", "hr-staffing", "coworking"], interests: ["Small Business Owners", "Entrepreneurs", "Startups", "Working Professionals", "Finance", "B2B"] },
+  { match: ["salon", "spa", "beauty", "makeup", "bridal", "jewel", "wedding", "photo"], interests: ["Beauty & Personal Care", "Fashion", "Weddings", "Skincare", "Shopping", "Self Care"] },
+  { match: ["gym", "yoga", "fitness", "nutrition"], interests: ["Fitness", "Health & Wellness", "Weight Loss", "Yoga", "Healthy Eating", "Sports"] },
+  { match: ["real-estate", "builder", "construction", "interior", "pg-hostel", "property"], interests: ["Real Estate", "Home Buyers", "Interior Design", "Investment", "Newly Married", "Working Professionals"] },
+  { match: ["ngo", "foundation", "charity", "welfare", "food-bank", "animal", "environment"], interests: ["Charity & Causes", "Volunteering", "Social Impact", "Community Service", "Donors"] },
   { match: ["skill", "music", "dance", "karate", "art", "class"], interests: ["Hobbies", "Self Improvement", "Parents", "Youth", "Fitness", "Performing Arts"] },
 ];
 

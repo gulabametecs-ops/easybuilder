@@ -1,7 +1,7 @@
 import type { TemplateDef, SectionSeed } from "./types";
 import type { SectionContentMap } from "../config";
 
-// Digital marketing agency: loud violet + highlighter yellow on near-black, Syne,
+// Digital marketing agency: loud violet + highlighter yellow on near-black, Instrument Sans,
 // bold header, marquee hero, monthly retainers, results-first case studies.
 const PHONE = "98330 72614";
 
@@ -18,7 +18,7 @@ const retainers: SectionSeed<"pricingPlans"> = {
     plans: [
       { name: "Starter", price: "₹24,999", period: "/month", features: ["Instagram + Facebook management", "12 posts & 4 reels a month", "Google Business Profile", "Monthly report"], featured: false, buttonLabel: "Choose Starter", buttonHref: "/free-audit" },
       { name: "Growth", price: "₹54,999", period: "/month", features: ["Everything in Starter", "Meta & Google Ads management", "Landing page + tracking setup", "Local SEO (10 keywords)", "Fortnightly review call"], featured: true, buttonLabel: "Choose Growth", buttonHref: "/free-audit" },
-      { name: "Performance", price: "₹1,10,000", period: "/month", features: ["Full-funnel ads (Meta, Google, YouTube)", "SEO for 30 keywords + content", "CRO & A/B testing", "Dedicated growth manager"], featured: false, buttonLabel: "Choose Performance", buttonHref: "/free-audit" },
+      { name: "Performance", price: "₹1.1 L", period: "/month", features: ["Full-funnel ads (Meta, Google, YouTube)", "SEO for 30 keywords + content", "CRO & A/B testing", "Dedicated growth manager"], featured: false, buttonLabel: "Choose Performance", buttonHref: "/free-audit" },
     ],
   },
   style: { background: "dark", cardRadius: "lg", cardShadow: "lg" },
@@ -27,7 +27,7 @@ const retainers: SectionSeed<"pricingPlans"> = {
 export const digitalMarketing: TemplateDef = {
   theme: {
     colors: { primary: "#7c3aed", primaryDark: "#6d28d9", secondary: "#13072e", accent: "#facc15", dark: "#13072e", light: "#faf5ff", text: "#3f3f46", heading: "#13072e" },
-    font: "Syne", radius: "1rem",
+    font: "Instrument Sans", radius: "1rem",
   },
   header: (biz) => ({
     design: "bold",

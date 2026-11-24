@@ -25,7 +25,10 @@ function slugify(input: string): string {
 // ─── Pages ───────────────────────────────────────────────────────────────────
 export type LimitResult = { error: string } | undefined;
 
+const DEMO_PAGES_MSG = "Adding new pages is part of the full version — buy a plan to unlock it. You can edit every existing page in this demo.";
+
 export async function createPage(formData: FormData): Promise<LimitResult> {
+  if (await getDemoSessionId()) return { error: DEMO_PAGES_MSG };
   const { tenant } = await requireAuth();
   const tenantId = tenant.id;
   const over = await limitError(tenant, "pages");
@@ -92,6 +95,7 @@ export async function deletePage(id: string) {
 
 // Duplicate a page (with all its sections) into a new custom page.
 export async function duplicatePage(id: string): Promise<LimitResult> {
+  if (await getDemoSessionId()) return { error: DEMO_PAGES_MSG };
   const { tenant } = await requireAuth();
   const tenantId = tenant.id;
   const over = await limitError(tenant, "pages");
@@ -120,10 +124,23 @@ export async function duplicatePage(id: string): Promise<LimitResult> {
 
 // ─── Sections ────────────────────────────────────────────────────────────────
 export async function addSection(pageId: string, type: string) {
+  const t = type as SectionType;
+  const demo = await getDemoWriteContext();
+  if (demo) {
+    // Sandbox: the new section lives only in this visitor's overlay, appended at the end.
+    const page = await db.page.findFirst({ where: { id: pageId, tenantId: demo.tenantId }, include: { sections: { select: { id: true }, orderBy: { order: "asc" } } } });
+    if (!page) throw new Error("Not found");
+    const newId = `demo_${Date.now().toString(36)}`;
+    let next = addOverlaySection(demo.overlay, newId, { pageId, type: t, order: 10_000, visible: true, content: JSON.stringify(SECTION_DEFAULTS[t] ?? {}), style: "{}" });
+    const order = next.sectionOrder?.[pageId];
+    if (order) next = setSectionOrderOverlay(next, pageId, [...order, newId]);
+    await persistDemoOverlay(demo.sessionId, next);
+    revalidatePath(`/admin/pages/${pageId}`);
+    return;
+  }
   const tenantId = await requireTenantId();
   const page = await db.page.findFirst({ where: { id: pageId, tenantId } });
   if (!page) throw new Error("Not found");
-  const t = type as SectionType;
   const max = await db.section.aggregate({ where: { pageId }, _max: { order: true } });
   await db.section.create({
     data: {

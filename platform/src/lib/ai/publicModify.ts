@@ -23,12 +23,13 @@ type BlueprintPatch = {
   website?: Partial<WebsiteBlueprint["website"]>;
   design?: WebsiteBlueprint["design"];
   services?: WebsiteBlueprint["services"];
+  products?: WebsiteBlueprint["products"];
   pages?: Page[];
   removePages?: string[];
 };
 
 const PATCH_INSTRUCTION = `Return ONE raw JSON object (no markdown) containing ONLY what changes:
-{"design"?:{...},"website"?:{...},"services"?:[...],"pages"?:[<complete page objects you changed or added>],"removePages"?:["slug"]}
+{"design"?:{...},"website"?:{...},"services"?:[...],"products"?:[<full product list, online stores only>],"pages"?:[<complete page objects you changed or added>],"removePages"?:["slug"]}
 
 Rules:
 - Colour / style / font changes: return only "design" (e.g. {"design":{"primaryColor":"#2563eb","secondaryColor":"#0f172a","style":"modern"}}). Do NOT return pages for these.
@@ -74,6 +75,7 @@ export function mergeBlueprintPatch(bp: WebsiteBlueprint, patch: BlueprintPatch,
     website: { ...bp.website, ...(patch.website ?? {}), name: patch.website?.name || bp.website.name },
     design: safeDesign(bp.design, patch.design),
     services: patch.services?.length ? patch.services : bp.services,
+    products: patch.products?.length ? patch.products : bp.products,
     pages,
   };
 }

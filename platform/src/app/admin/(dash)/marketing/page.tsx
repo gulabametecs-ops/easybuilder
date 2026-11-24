@@ -3,7 +3,8 @@ import { getTenantConfig } from "@/lib/tenant";
 import { db } from "@/lib/db";
 import { ROOT_DOMAIN } from "@/lib/domains";
 import { MarketingManager } from "@/components/admin/MarketingManager";
-import { getDemoSessionId } from "@/lib/actions/guard";
+import { getDemoWriteContext } from "@/lib/actions/guard";
+import { parseJson, type HeaderConfig } from "@/lib/config";
 import { demoVisibleWhere } from "@/lib/demoSession";
 import { lastDays } from "@/lib/analytics";
 import { VERTICALS } from "@/lib/verticals";
@@ -17,7 +18,8 @@ export default async function MarketingPage() {
   if (!authed) return null;
   const { tenant } = authed;
 
-  const demoId = await getDemoSessionId();
+  const demo = await getDemoWriteContext();
+  const demoId = demo?.sessionId ?? null;
   const scope = demoVisibleWhere(tenant.id, demoId);
   const days14 = lastDays(14);
   const days30 = lastDays(30);
@@ -29,7 +31,7 @@ export default async function MarketingPage() {
       orderBy: { createdAt: "desc" },
       select: { name: true, phone: true, email: true },
     }),
-    db.campaign.findMany({ where: { tenantId: tenant.id }, orderBy: { createdAt: "desc" } }),
+    db.campaign.findMany({ where: demoVisibleWhere(tenant.id, demoId), orderBy: { createdAt: "desc" } }),
     db.service.findMany({ where: { tenantId: tenant.id }, orderBy: { order: "asc" }, select: { title: true } }),
     db.pageView.groupBy({ by: ["day"], where: { tenantId: tenant.id, day: { gte: days14[0] } }, _sum: { views: true } }),
     db.pageView.groupBy({
@@ -53,7 +55,8 @@ export default async function MarketingPage() {
   const sector = VERTICALS.find((v) => v.id === tenant.vertical)?.name ?? "";
 
   const siteUrl = tenant.customDomain ? `https://${tenant.customDomain}` : `http://${tenant.subdomain}.${ROOT_DOMAIN}`;
-  const ann = config.header.announcement ?? { show: false, text: "", link: "" };
+  const header = demo?.overlay.siteConfig?.header ? parseJson<HeaderConfig>(demo.overlay.siteConfig.header, config.header) : config.header;
+  const ann = header.announcement ?? { show: false, text: "", link: "" };
   const si = siteIntegrations(config.integrations, config.seo);
   const reviewEntry = config.integrations.googleReviews;
   const reviewLink = reviewEntry?.enabled ? reviewEntry.values.url ?? "" : "";

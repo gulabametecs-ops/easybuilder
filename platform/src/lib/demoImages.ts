@@ -4,6 +4,8 @@ import { VERTICALS, categoryOf, getVertical } from "./verticals";
 import { getTemplate } from "./templates";
 import { VERTICAL_ICON_SVG } from "./verticalIconSvg";
 import { DEMO_PHOTOS } from "./demoPhotoLibrary";
+import { isStoreVertical } from "./store";
+import { seedDemoOrders } from "./storeServer";
 
 // DEMO WEBSITES ONLY: fill every empty image slot with a hand-checked Unsplash photo — first the
 // curated per-sector library (demoPhotoLibrary.ts, service-matched where tagged), else the sector's
@@ -209,4 +211,15 @@ export async function fillDemoImages(tenantId: string, vertical: string, opts: {
   }
   for (const r of await db.cause.findMany({ where: { tenantId }, select: { id: true, coverImage: true } }))
     if (empty(r.coverImage)) await db.cause.update({ where: { id: r.id }, data: { coverImage: pick(1200, 750) } });
+
+  // Store sectors: each sample product gets its own hand-checked photo, then a few sample orders.
+  if (isStoreVertical(vertical)) {
+    const photoOf = new Map((getTemplate(vertical).products?.("") ?? []).map((p) => [p.name, p.photo]));
+    for (const r of await db.product.findMany({ where: { tenantId }, select: { id: true, name: true, images: true } })) {
+      const photo = photoOf.get(r.name);
+      if (photo && (r.images === "[]" || refreshing)) await db.product.update({ where: { id: r.id }, data: { images: JSON.stringify([url(photo, 900, 900)]) } });
+    }
+    // ponytail: orders are seeded here because this is the "demo sites only" hook every demo path already calls.
+    await seedDemoOrders(tenantId);
+  }
 }

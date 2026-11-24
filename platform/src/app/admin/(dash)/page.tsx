@@ -19,6 +19,8 @@ import { parseAdminPrefs } from "@/lib/adminPrefs";
 import { getTemplate } from "@/lib/templates";
 import { defaultTheme } from "@/lib/template";
 import { DESIGNS, designTheme } from "@/lib/designs";
+import { isStoreVertical } from "@/lib/store";
+import { StoreDashboard } from "@/components/admin/store/StoreDashboard";
 
 export default async function DashboardPage() {
   const authed = await getAuthedSession();
@@ -27,6 +29,10 @@ export default async function DashboardPage() {
   const tenantId = tenant.id;
   const demoId = await getDemoSessionId();
   const scope = demoVisibleWhere(tenantId, demoId);
+  if (isStoreVertical(tenant.vertical)) {
+    const url = tenant.customDomain ? `https://${tenant.customDomain}` : `http://${tenant.subdomain}.${ROOT_DOMAIN}`;
+    return <StoreDashboard tenant={tenant} userName={session.name ?? ""} demoId={demoId} liveUrl={url} />;
+  }
 
   const now = new Date();
   const day7 = new Date(now.getTime() - 7 * 24 * 3600 * 1000);

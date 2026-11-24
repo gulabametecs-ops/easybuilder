@@ -151,6 +151,13 @@ async function main() {
     { subdomain: "demo-consulting", vertical: "business-consulting", name: "Northstar Advisory Partners", email: "demo@consulting.test" },
     { subdomain: "demo-insurance", vertical: "insurance-advisor", name: "SurakshaPlus Advisors", email: "demo@insurance.test" },
     { subdomain: "demo-cowork", vertical: "coworking-space", name: "HiveWorks Coworking", email: "demo@cowork.test" },
+    { subdomain: "demo-fashion", vertical: "fashion-store", name: "Rangoli Threads", email: "demo@fashion.test" },
+    { subdomain: "demo-grocery", vertical: "grocery-store", name: "FreshKart Kirana", email: "demo@grocery.test" },
+    { subdomain: "demo-electronics", vertical: "electronics-store", name: "GadgetHub India", email: "demo@electronics.test" },
+    { subdomain: "demo-gifts", vertical: "gifts-store", name: "Kalakriti Gifts", email: "demo@gifts.test" },
+    { subdomain: "demo-beauty", vertical: "beauty-store", name: "Glow Theory Beauty", email: "demo@beauty.test" },
+    { subdomain: "demo-homedecor", vertical: "home-decor-store", name: "Woodnest Living", email: "demo@homedecor.test" },
+    { subdomain: "demo-store", vertical: "online-store", name: "ShopNest", email: "demo@store.test" },
   ];
 
   for (const d of demos) {

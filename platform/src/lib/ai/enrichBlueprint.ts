@@ -1,6 +1,9 @@
 import type { WebsiteBlueprint } from "./blueprintSchema";
 import { canonicalPageSlug, completeHomePage } from "./completeHome";
 import { dedupePages } from "./dedupePages";
+import { detectStoreIntent, isStoreBlueprint, storeSector, storeifyBlueprint } from "./storeIntent";
+import { VERTICALS } from "@/lib/verticals";
+import { isStoreVertical } from "@/lib/store";
 
 type PageSeed = { name: string; slug: string; pageTemplateId: string };
 
@@ -232,6 +235,10 @@ export function inferVerticalId(
   prompt = "",
 ): string {
   const t = `${prompt} ${blueprint.website?.type ?? ""} ${blueprint.website?.description ?? ""} ${blueprint.website?.name ?? ""}`.toLowerCase();
+  // Online stores first: "online saree shop" must not become a service site.
+  if (isStoreBlueprint(blueprint)) return storeSector(t);
+  const store = detectStoreIntent(t);
+  if (store.isStore && store.vertical) return store.vertical;
   if (/section 8|social foundation|financial literacy|grassroots/.test(t)) return "social-foundation";
   if (/\bngo\b|nonprofit|non-profit|charity|foundation|\btrust\b|volunteer|donat/.test(t)) return "ngo-charity";
   if (/\bgym\b|fitness|crossfit|yoga|workout|personal train/.test(t)) return "gym-fitness";
@@ -245,8 +252,25 @@ export function inferVerticalId(
   if (/restaurant|cafe|hotel|food|dining/.test(t)) return "restaurant-hotel";
   if (/clinic|hospital|doctor|dental|health/.test(t)) return "hospital-clinic";
   if (/coaching|tuition/.test(t)) return "coaching";
-  if (/agency|marketing|seo/.test(t)) return "education-consultancy";
-  return "home-services";
+  if (/digital marketing|marketing agency|\bseo\b|social media agency|advertising/.test(t)) return "digital-marketing";
+  return verticalByName(t) ?? "home-services";
+}
+
+const NAME_STOP = new Set(["services", "service", "store", "school", "company", "centre", "center", "studio", "consultants", "agency", "shop"]);
+
+/** Any live sector whose own name (or a part of it, like "interior design") appears in the text. */
+function verticalByName(t: string): string | null {
+  let best: { id: string; len: number } | null = null;
+  for (const v of VERTICALS) {
+    if (v.status !== "live" || isStoreVertical(v.id)) continue; // stores need an e-commerce signal (detectStoreIntent)
+    for (const raw of v.name.toLowerCase().split(/\s*(?:&|\/|\(|\)|,|\band\b)\s*/)) {
+      const phrase = raw.trim();
+      if (phrase.length < 5 || NAME_STOP.has(phrase)) continue;
+      const re = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+      if (re.test(t) && (!best || phrase.length > best.len)) best = { id: v.id, len: phrase.length };
+    }
+  }
+  return best?.id ?? null;
 }
 /** When no category has 2+ services, show them all as one grid instead of 1-card rows. */
 function groupThinServices(services: WebsiteBlueprint["services"]): WebsiteBlueprint["services"] {
@@ -259,11 +283,23 @@ function groupThinServices(services: WebsiteBlueprint["services"]): WebsiteBluep
 
 export function enrichBlueprint(blueprint: WebsiteBlueprint, prompt: string): WebsiteBlueprint {
   blueprint = { ...blueprint, services: groupThinServices(blueprint.services) };
+  // Online store? Build the shop structure instead of a services playbook.
+  const store =
+    isStoreBlueprint(blueprint) ||
+    detectStoreIntent(`${prompt} ${blueprint.website.type ?? ""} ${blueprint.website.description ?? ""}`).isStore;
+  if (store) {
+    const shop = storeifyBlueprint(blueprint);
+    return completeHomePage({ ...shop, pages: dedupePages(shop.pages) });
+  }
+
   const playbook =
     detectPlaybook(`${prompt} ${blueprint.website.type ?? ""} ${blueprint.website.name}`) ??
     detectPlaybook(blueprint.website.description ?? "");
 
-  const seeds = playbook?.pages ?? (blueprint.pages.length < 3 ? DEFAULT_PAGES : []);
+  // Custom / unusual requests: when the AI already planned a real site (4+ pages), keep its
+  // structure — a keyword playbook only fills thin plans, it never pads a custom one.
+  const thin = blueprint.pages.length < 4;
+  const seeds = thin ? playbook?.pages ?? (blueprint.pages.length < 3 ? DEFAULT_PAGES : []) : [];
   const pages = mergePages(blueprint.pages, seeds);
 
   for (const page of pages) {

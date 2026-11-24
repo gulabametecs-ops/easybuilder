@@ -5,6 +5,7 @@ import { canonicalPageSlug } from "./completeHome";
 import type { HeaderConfig, FooterConfig } from "@/lib/config";
 import type { RenderContext } from "@/components/site/SectionRenderer";
 import { placeholderImage, IMAGE_SLOTS } from "@/lib/img";
+import { isStoreBlueprint } from "./storeIntent";
 
 export type PreviewSection = {
   id: string;
@@ -19,6 +20,7 @@ function ctaForType(type: string | undefined): { label: string; href: string } {
   if (/ngo|charity|nonprofit|foundation/.test(t)) return { label: "Donate", href: "/contact" };
   if (/restaurant|cafe|hotel/.test(t)) return { label: "Book a table", href: "/booking" };
   if (/clinic|hospital|health/.test(t)) return { label: "Book appointment", href: "/appointment" };
+  if (isStoreBlueprint({ website: { type } })) return { label: "Shop Now", href: "/shop" };
   return { label: "Contact us", href: "/contact" };
 }
 
@@ -112,6 +114,10 @@ export function blueprintToPreview(blueprint: WebsiteBlueprint, pageSlug = "home
     footer,
     phones: header.topbar.phones,
     notices: [],
+    products: (blueprint.products ?? []).map((p, i) => ({
+      id: `ai-product-${i}`, slug: slugify(p.name), name: p.name, category: p.category, price: p.price, mrp: p.mrp ?? 0,
+      images: [], description: p.description, stock: 99, options: p.options ?? [], badge: p.badge ?? "", featured: p.featured ?? i < 8,
+    })),
   };
 
   return { theme, header, footer, sections, ctx, pageName: page.name };

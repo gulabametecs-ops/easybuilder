@@ -235,6 +235,29 @@ export type SectionContentMap = {
     limit: number;
     emptyText: string;
   };
+  /** Live products from Admin → Products (lib/store.ts), with add-to-cart. */
+  productGrid: {
+    eyebrow: string;
+    title: string;
+    titleHighlight: string;
+    subtitle: string;
+    /** "all" or one product category */
+    category: string;
+    featuredOnly: boolean;
+    /** category chips + search box above the grid (use on the Shop page) */
+    showFilters: boolean;
+    /** 0 = all */
+    limit: number;
+    buttonLabel: string;
+    buttonHref: string;
+    emptyText: string;
+  };
+  /** "Shop by category" tiles, built from product categories (first product photo per category). */
+  productCategories: {
+    eyebrow: string;
+    title: string;
+    titleHighlight: string;
+  };
   donatePay: {
     eyebrow: string;
     title: string;
