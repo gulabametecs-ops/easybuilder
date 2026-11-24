@@ -124,6 +124,11 @@ export async function cleanupDemoSessionData(sessionId: string, clearCookies = t
     wipeSessionRows(db.campaign, sessionId),
     wipeSessionRows(db.product, sessionId),
     wipeSessionRows(db.storeOrder, sessionId),
+    wipeSessionRows(db.collection, sessionId),
+    wipeSessionRows(db.productReview, sessionId),
+    wipeSessionRows(db.storeCoupon, sessionId),
+    wipeSessionRows(db.storeCustomer, sessionId),
+    wipeSessionRows(db.abandonedCart, sessionId),
   ]);
 
   await db.demoSession.update({

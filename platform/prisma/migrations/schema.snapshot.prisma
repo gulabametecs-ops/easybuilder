@@ -55,6 +55,10 @@ model Tenant {
   pageViews    PageView[]
   products     Product[]
   storeOrders  StoreOrder[]
+  collections  Collection[]
+  storeCoupons StoreCoupon[]
+  storeCustomers StoreCustomer[]
+  abandonedCarts AbandonedCart[]
 }
 
 // ─── Login accounts for a tenant's admin panel ───────────────────────────────
@@ -727,6 +731,17 @@ model Product {
   featured      Boolean  @default(false)
   published     Boolean  @default(true)
   order         Int      @default(0)
+  sku           String   @default("") @db.MediumText
+  weightGrams   Int      @default(0) // used for shipping rates / courier booking
+  hsn           String   @default("") @db.MediumText // GST HSN code (invoice)
+  gstRate       Int      @default(0) // GST % included in price (0, 5, 12, 18, 28)
+  tags          String   @default("[]") @db.MediumText // JSON string[]
+  trackStock    Boolean  @default(true)
+  allowBackorder Boolean @default(false) // sell when stock is 0
+  seoTitle      String   @default("") @db.MediumText
+  seoDescription String  @default("") @db.MediumText
+  variants      ProductVariant[]
+  reviews       ProductReview[]
   demoSessionId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -756,11 +771,162 @@ model StoreOrder {
   paymentStatus String   @default("pending") @db.MediumText // pending | paid | refunded
   status        String   @default("new") @db.MediumText // new | confirmed | packed | shipped | delivered | cancelled
   note          String   @default("") @db.MediumText
+  // Shopify-style extras
+  customerId    String? // StoreCustomer when signed in / matched by email
+  state         String   @default("") @db.MediumText
+  addressLine2  String   @default("") @db.MediumText // landmark / area
+  tax           Int      @default(0) // GST included in total (for invoice)
+  codFee        Int      @default(0)
+  couponCode    String   @default("") @db.MediumText
+  paymentRef    String   @default("") @db.MediumText // gateway order id (e.g. Razorpay order_...)
+  paymentId     String   @default("") @db.MediumText // gateway payment id
+  refundAmount  Int      @default(0)
+  shippingProvider String @default("manual") @db.MediumText // manual | shiprocket | delhivery
+  courier       String   @default("") @db.MediumText // courier name shown to customer
+  awb           String   @default("") @db.MediumText // tracking / AWB number
+  trackingUrl   String   @default("") @db.MediumText
+  shipmentRef   String   @default("") @db.MediumText // partner shipment / order id
+  weightGrams   Int      @default(0)
+  timeline      String   @default("[]") @db.MediumText // JSON { at, status, note }[]
+  cancelReason  String   @default("") @db.MediumText
+  returnStatus  String   @default("none") @db.MediumText // none | requested | approved | rejected | received | refunded
+  returnReason  String   @default("") @db.MediumText
+  invoiceNo     String   @default("") @db.MediumText
+  trackToken    String   @default("") @db.VarChar(64) // secret for the public /track page link
+  deliveredAt   DateTime?
   demoSessionId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([tenantId, orderNo])
+  @@index([customerId])
+  @@index([trackToken])
   @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+// Per-combination stock/price for products with options (Size x Colour). Products without options have none.
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tenantId  String
+  title     String  @db.MediumText // "M / Red"
+  options   String  @default("{}") @db.MediumText // JSON { [optionName]: value }
+  sku       String  @default("") @db.MediumText
+  price     Int     @default(0) // 0 = use product price
+  mrp       Int     @default(0)
+  stock     Int     @default(0)
+  image     String  @default("") @db.MediumText
+  order     Int     @default(0)
+
+  @@index([productId])
+  @@index([tenantId])
+}
+
+// Manual product groups ("Summer sale", "Under 999") shown at /collections/<slug>.
+model Collection {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug          String   @default("")
+  title         String   @db.MediumText
+  description   String   @default("") @db.MediumText
+  image         String   @default("") @db.MediumText
+  productIds    String   @default("[]") @db.MediumText // JSON string[] in display order
+  published     Boolean  @default(true)
+  order         Int      @default(0)
+  demoSessionId String?
+  createdAt     DateTime @default(now())
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+model ProductReview {
+  id            String   @id @default(cuid())
+  tenantId      String
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name          String   @db.MediumText
+  rating        Int      @default(5) // 1-5
+  title         String   @default("") @db.MediumText
+  body          String   @default("") @db.MediumText
+  status        String   @default("pending") @db.MediumText // pending | approved | hidden
+  verified      Boolean  @default(false) // matched a delivered order
+  demoSessionId String?
+  createdAt     DateTime @default(now())
+
+  @@index([productId])
+  @@index([tenantId])
+  @@index([demoSessionId])
+}
+
+// Discount codes for a tenant's online store (platform plan coupons are `Coupon`).
+model StoreCoupon {
+  id               String    @id @default(cuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code             String    @db.VarChar(40) // stored upper-case
+  type             String    @default("percent") @db.MediumText // percent | flat | freeship
+  value            Int       @default(0) // % or rupees
+  minOrder         Int       @default(0)
+  maxDiscount      Int       @default(0) // cap for percent; 0 = none
+  startsAt         DateTime?
+  endsAt           DateTime?
+  usageLimit       Int       @default(0) // 0 = unlimited
+  perCustomerLimit Int       @default(0)
+  used             Int       @default(0)
+  firstOrderOnly   Boolean   @default(false)
+  active           Boolean   @default(true)
+  demoSessionId    String?
+  createdAt        DateTime  @default(now())
+
+  @@unique([tenantId, code])
+  @@index([demoSessionId])
+}
+
+// Shopper accounts on a store (email OTP sign-in): saved addresses, wishlist, order history.
+model StoreCustomer {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email          String    @db.VarChar(191)
+  name           String    @default("") @db.MediumText
+  phone          String    @default("") @db.MediumText
+  addresses      String    @default("[]") @db.MediumText // JSON { name, phone, line1, line2, city, state, pincode, isDefault }[]
+  wishlist       String    @default("[]") @db.MediumText // JSON productId[]
+  marketingOptIn Boolean   @default(false)
+  otpHash        String    @default("") @db.MediumText
+  otpExpiresAt   DateTime?
+  blocked        Boolean   @default(false)
+  demoSessionId  String?
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([tenantId, email])
+  @@index([demoSessionId])
+}
+
+// Checkouts started but not completed; the owner can follow up on WhatsApp / email.
+model AbandonedCart {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  token          String    @db.VarChar(64) // browser cart id
+  name           String    @default("") @db.MediumText
+  phone          String    @default("") @db.MediumText
+  email          String    @default("") @db.MediumText
+  items          String    @default("[]") @db.MediumText
+  subtotal       Int       @default(0)
+  recovered      Boolean   @default(false)
+  orderId        String?
+  reminderSentAt DateTime?
+  demoSessionId  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([tenantId, token])
   @@index([demoSessionId])
 }
