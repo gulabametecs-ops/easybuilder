@@ -13,6 +13,8 @@ export const INCREDA = {
   address: "Ground, DDA Flat No. 4, Block B-6, Pocket 5, Rohini Sector 35, North West Delhi, Delhi, 110042",
   logo: "/sites/increda-sink/logo.svg",
   favicon: "/sites/increda-sink/mark.svg",
+  phone: "9540522055",
+  whatsapp: "https://wa.me/919540522055?text=" + encodeURIComponent("Hi Increda Sink, I came from your website and would like to enquire about your products."),
 };
 
 const u = (id: string, w = 1600, h = 900) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${h}&q=80`;
@@ -97,22 +99,7 @@ const blurb: Record<string, (name: string) => string> = {
 
 const ctaSec: SectionSeed<"cta"> = {
   type: "cta",
-  content: { title: "Planning a kitchen or wash-area project?", highlight: "Get a Bulk Quotation", phones: [], buttonLabel: "Request Bulk Quote", buttonHref: "/bulk-orders" },
-};
-
-const industries: SectionSeed<"features"> = {
-  type: "features",
-  content: { items: [
-    { icon: "bed", title: "Hotels", text: "Main kitchens, banquet back-of-house and staff canteens." },
-    { icon: "utensils", title: "Restaurants", text: "Prep, pot-wash and dishwashing lines sized to your kitchen." },
-    { icon: "flame", title: "Commercial Kitchens", text: "Cloud kitchens, central kitchens and QSR outlets." },
-    { icon: "stethoscope", title: "Hospitals", text: "Hand wash stations and hygienic wash areas." },
-    { icon: "graduation", title: "Schools & Institutions", text: "Mid-day meal kitchens, hostels and mess halls." },
-    { icon: "factory", title: "Food Processing", text: "Vegetable wash, utility sinks and stainless work tables." },
-    { icon: "box", title: "Factories", text: "Industrial wash areas, canteens and utility stations." },
-    { icon: "truck", title: "Caterers", text: "Portable, durable wash and prep equipment." },
-    { icon: "hammer", title: "Contractors & Architects", text: "Project supply against drawings and BOQs." },
-  ] },
+  content: { title: "Planning a kitchen or wash-area project?", highlight: "Get a Bulk Quotation", phones: [INCREDA.phone], buttonLabel: "Request Bulk Quote", buttonHref: "/bulk-orders" },
 };
 
 const faqItems = [
@@ -245,6 +232,35 @@ const bulkHtml = `<style>
 <a class="icb-btn" href="/bulk-orders">Request Bulk Quote →</a></div>
 <div class="icb-steps">${BULK_STEPS.map(([t, d], i) => `<div class="icb-s"><b><i>0${i + 1}</i>${t}</b><p>${d}</p></div>`).join("")}</div></div></div>`;
 
+
+// Industries page: photo card per industry with what we supply there.
+const INDUSTRY_DETAIL: [string, string, string][] = [
+  ["Hotels", P.hotel, "Main kitchen wash lines, pot-wash sinks, hand wash stations and banquet back-of-house equipment."],
+  ["Restaurants", P.restaurant, "Prep sinks, pot-wash and dishwashing tables sized to your kitchen layout."],
+  ["Commercial Kitchens", P.chefKitchen, "Cloud, central and QSR kitchens — work tables, racks and multi-compartment sinks."],
+  ["Hospitals", P.hospital, "Knee, foot and sensor-operated hand wash stations and hygienic wash areas."],
+  ["Schools & Institutions", P.school, "Mid-day meal kitchens, hostels and mess halls — durable sinks and tables."],
+  ["Food Processing", P.foodPlant, "Vegetable wash sinks, utility sinks, drain tables and stainless work tables."],
+  ["Factories", P.warehouse, "Industrial wash areas, canteens, utility stations and storage racks."],
+  ["Caterers", P.catering, "Portable, easy-to-clean wash and prep equipment for events and outdoor kitchens."],
+  ["Contractors & Architects", P.welding, "Project supply against drawings and BOQs, with custom fabrication."],
+];
+const industryPageHtml = `<style>
+.icx{background:#fff;padding:72px 20px}
+.icx-wrap{max-width:1200px;margin:0 auto}
+.icx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.icx-c{display:flex;flex-direction:column;border:1px solid #e3e8ec;border-radius:16px;overflow:hidden;background:#fff;text-decoration:none;color:#16191e;transition:transform .2s,box-shadow .2s}
+.icx-c:hover{transform:translateY(-4px);box-shadow:0 24px 40px -24px rgba(22,25,30,.35)}
+.icx-c img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#e9edf0}
+.icx-c div{padding:18px 20px 20px}
+.icx-c b{display:block;font-size:18px;color:#16191e}
+.icx-c p{color:#5b636c;font-size:14px;line-height:1.55;margin:6px 0 12px}
+.icx-c em{font-style:normal;font-weight:700;font-size:13.5px;color:#1d6f91}
+@media(max-width:1000px){.icx-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.icx-grid{grid-template-columns:1fr}.icx{padding:48px 16px}}
+</style>
+<div class="icx"><div class="icx-wrap"><div class="icx-grid">${INDUSTRY_DETAIL.map(([t, id, d]) => `<a class="icx-c" href="/bulk-orders?service=${encodeURIComponent(t)}"><img src="${u(id, 800, 500)}" alt="${t}" loading="lazy"><div><b>${t}</b><p>${d}</p><em>Enquire for ${t} →</em></div></a>`).join("")}</div></div></div>`;
+
 const customHero = (html: string): SectionSeed<"hero"> => ({
   type: "hero",
   content: {
@@ -256,6 +272,7 @@ const heroSection = customHero(heroHtml);
 const categoryGrid = customHero(categoryHtml);
 const industryStrip = customHero(industryHtml);
 const bulkStrip = customHero(bulkHtml);
+const industryPage = customHero(industryPageHtml);
 
 export const incredaSink: TemplateDef = {
   theme: {
@@ -266,7 +283,7 @@ export const incredaSink: TemplateDef = {
     design: "classic",
     logoText: biz, logoImage: INCREDA.logo,
     announcement: { show: true, text: "Bulk supply & custom stainless-steel fabrication for commercial kitchens — request a quotation.", link: "/bulk-orders" },
-    topbar: { show: true, address: "Rohini Sector 35, Delhi", phones: [], email: "", social: { facebook: "", instagram: "", whatsapp: "" } },
+    topbar: { show: true, address: "Rohini Sector 35, Delhi", phones: [INCREDA.phone], email: "", social: { facebook: "", instagram: "", whatsapp: INCREDA.whatsapp } },
     nav: [
       { label: "Home", href: "/" },
       { label: "Products", href: "/products" },
@@ -296,8 +313,8 @@ export const incredaSink: TemplateDef = {
       ] },
     ],
     serviceAreas: ["Hotels", "Restaurants", "Commercial Kitchens", "Hospitals", "Schools", "Food Processing", "Factories", "Caterers", "Contractors"],
-    contact: { phones: [], email: "", address: INCREDA.address },
-    social: { facebook: "", instagram: "", whatsapp: "", location: "" },
+    contact: { phones: [INCREDA.phone], email: "", address: INCREDA.address },
+    social: { facebook: "", instagram: "", whatsapp: INCREDA.whatsapp, location: "" },
     copyright: `© {year} Increda Sink — ${INCREDA.tradeName}. All Rights Reserved.`,
   }),
   seo: () => ({
@@ -350,6 +367,12 @@ export const incredaSink: TemplateDef = {
       { type: "serviceCategories", content: { eyebrow: "ALL CATEGORIES", title: "Browse by", titleHighlight: "Category", categories: CATEGORIES }, style: { layout: "tiles" } },
       ctaSec,
     ] },
+    // Breadcrumb target of product pages (/services/<slug> → "Services"); hidden from the menu.
+    { slug: "services", title: "All Products", isSystem: true, order: 11, showInNav: false, sections: [
+      { type: "banner", content: { title: "All", titleHighlight: "Products", subtitle: "Every product we supply, by category.", image: u(P.hero), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
+      { type: "serviceCategories", content: { eyebrow: "ALL CATEGORIES", title: "Browse by", titleHighlight: "Category", categories: CATEGORIES }, style: { layout: "tiles" } },
+      ctaSec,
+    ] },
     { slug: "custom-manufacturing", title: "Custom Manufacturing", isSystem: true, order: 2, sections: [
       { type: "banner", content: { title: "Custom", titleHighlight: "Manufacturing", subtitle: "Stainless-steel sinks, tables and wash-area equipment fabricated to your drawings.", image: u(P.sparks), bgColor: "", imageOpacity: 45, overlayOpacity: 75 } },
       { type: "about", content: {
@@ -368,7 +391,7 @@ export const incredaSink: TemplateDef = {
         { title: "Delivery & Installation", text: "Delivered to site; installation support for projects.", icon: "truck" },
       ] }, style: { background: "light" } },
       { type: "gallery", content: { eyebrow: "WORKSHOP & PROJECTS", title: "Fabrication", titleHighlight: "Gallery" }, style: { layout: "grid" } },
-      { type: "cta", content: { title: "Have a drawing or BOQ?", highlight: "Send It for a Quote", phones: [], buttonLabel: "Custom Project Enquiry", buttonHref: "/custom-project" } },
+      { type: "cta", content: { title: "Have a drawing or BOQ?", highlight: "Send It for a Quote", phones: [INCREDA.phone], buttonLabel: "Custom Project Enquiry", buttonHref: "/custom-project" } },
     ] },
     { slug: "bulk-orders", title: "Bulk Orders", isSystem: true, order: 3, sections: [
       { type: "banner", content: { title: "Bulk", titleHighlight: "Orders", subtitle: "Wholesale supply, custom sizes and project support with quotation assistance.", image: u(P.warehouse), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
@@ -386,9 +409,7 @@ export const incredaSink: TemplateDef = {
     ] },
     { slug: "industries", title: "Industries We Serve", isSystem: true, order: 5, sections: [
       { type: "banner", content: { title: "Industries We", titleHighlight: "Serve", subtitle: "Wash-area and stainless-steel solutions for every kind of commercial kitchen.", image: u(P.hotel), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
-      { ...industries, style: { layout: "cards", cardRadius: "lg", cardShadow: "md" } },
-      { type: "imageBanner", content: { title: "Hospitals & Healthcare", subtitle: "Hand wash stations and hygienic wash areas for wards, kitchens and labs.", buttonLabel: "Enquire", buttonHref: "/bulk-orders", image: u(P.hospital) } },
-      { type: "imageBanner", content: { title: "Food Processing & Factories", subtitle: "Vegetable wash sinks, utility sinks, work tables and drain tables.", buttonLabel: "Enquire", buttonHref: "/bulk-orders", image: u(P.foodPlant) } },
+      industryPage,
       ctaSec,
     ] },
     { slug: "projects", title: "Projects", isSystem: true, order: 6, sections: [
@@ -397,14 +418,16 @@ export const incredaSink: TemplateDef = {
       ctaSec,
     ] },
     { slug: "catalogue", title: "Catalogue Download", isSystem: true, order: 7, showInNav: false, sections: [
+      { type: "banner", content: { title: "Catalogue", titleHighlight: "Download", subtitle: "Product catalogues and spec sheets for our range.", image: u(P.foodPlant), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
       { type: "downloads", content: { eyebrow: "DOWNLOADS", title: "Product", titleHighlight: "Catalogues", items: [
         { title: "Increda Sink Product Catalogue", description: "Complete product range — upload the PDF in Admin → Pages.", link: "", icon: "book" },
         { title: "Commercial Sinks & Wash Stations", description: "Commercial, industrial and hand wash range.", link: "", icon: "droplet" },
         { title: "Stainless Steel Fabrication", description: "Work tables, racks, trolleys, cabinets and dish tables.", link: "", icon: "grid" },
       ] } },
-      { type: "cta", content: { title: "Need a catalogue for a specific product?", highlight: "Ask Us", phones: [], buttonLabel: "Contact Us", buttonHref: "/contact" }, style: { layout: "minimal" } },
+      { type: "cta", content: { title: "Need a catalogue for a specific product?", highlight: "Ask Us", phones: [INCREDA.phone], buttonLabel: "Contact Us", buttonHref: "/contact" }, style: { layout: "minimal" } },
     ] },
     { slug: "about", title: "About Increda Sink", isSystem: true, order: 8, sections: [
+      { type: "banner", content: { title: "About", titleHighlight: "Increda Sink", subtitle: "Sinks, wash stations and stainless-steel equipment for commercial projects.", image: u(P.kitchenSink), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
       { type: "about", content: { eyebrow: "ABOUT US", title: "About", titleHighlight: "Increda Sink", body: [
         "Increda Sink supplies sinks, sanitary sinks, stainless-steel wash-area equipment and commercial kitchen equipment for commercial and industrial projects.",
         "We work with hotels, restaurants, hospitals, institutions, food processing units, caterers and contractors — supplying standard products and fabricating custom items to their requirements.",
@@ -424,18 +447,22 @@ export const incredaSink: TemplateDef = {
       ctaSec,
     ] },
     { slug: "contact", title: "Contact Us", isSystem: true, order: 9, sections: [
-      { type: "contactInfo", content: { eyebrow: "CONTACT", title: "Get in", titleHighlight: "Touch", address: INCREDA.address, phone: "", email: "", hours: "Mon–Sat: 10:00 AM – 7:00 PM", mapEmbed: "" } },
+      { type: "banner", content: { title: "Contact", titleHighlight: "Us", subtitle: "Call, WhatsApp or write to us for quotations and project enquiries.", image: u(P.warehouse), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
+      { type: "contactInfo", content: { eyebrow: "CONTACT", title: "Get in", titleHighlight: "Touch", address: INCREDA.address, phone: INCREDA.phone, email: "", hours: "Mon–Sat: 10:00 AM – 7:00 PM", mapEmbed: "" } },
       { type: "richText", content: { html: `<h3>Business details</h3><p><strong>Brand:</strong> Increda Sink<br/><strong>Legal name:</strong> ${INCREDA.legalName}<br/><strong>Trade name:</strong> ${INCREDA.tradeName}<br/><strong>Constitution:</strong> ${INCREDA.constitution}<br/><strong>GSTIN:</strong> ${INCREDA.gstin}<br/><strong>Registered address:</strong> ${INCREDA.address}</p>` } },
       { type: "contactForm", content: { title: "Send Us a Message", subtitle: "Product questions, quotations or project enquiries — we reply on the same working day." } },
     ] },
     { slug: "faq", title: "FAQ", isSystem: true, order: 10, showInNav: false, sections: [
+      { type: "banner", content: { title: "Frequently Asked", titleHighlight: "Questions", subtitle: "Bulk orders, custom sizes, GST invoices and delivery.", image: u(P.canteen), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
       { type: "faq", content: { eyebrow: "FAQ", title: "Frequently Asked", titleHighlight: "Questions", items: faqItems } },
       ctaSec,
     ] },
     { slug: "privacy", title: "Privacy Policy", isSystem: true, order: 101, showInNav: false, sections: [
+      { type: "banner", content: { title: "Privacy", titleHighlight: "Policy", subtitle: "How we handle the information you share with us.", image: u(P.hero), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
       { type: "richText", content: { html: `<h2>Privacy Policy</h2><p>This website is operated by ${INCREDA.tradeName} (trade name Increda Sink), ${INCREDA.address}.</p><h3>Information we collect</h3><p>When you submit an enquiry or quotation request we collect the details you provide — such as your name, company name, phone / WhatsApp number, email, GST number, city, state, product requirements and any files you share.</p><h3>How we use it</h3><p>We use this information only to respond to your enquiry, prepare quotations, supply products and provide support. We do not sell your information.</p><h3>Sharing</h3><p>Information may be shared with transporters or service providers only as needed to deliver your order, or where required by law.</p><h3>Retention</h3><p>Enquiry records are kept for as long as needed for business and legal (including GST) requirements.</p><h3>Your choices</h3><p>You may ask us to update or delete your information by contacting us using the details on the Contact page.</p>` } },
     ] },
     { slug: "terms", title: "Terms & Conditions", isSystem: true, order: 102, showInNav: false, sections: [
+      { type: "banner", content: { title: "Terms &", titleHighlight: "Conditions", subtitle: "Terms for quotations, custom orders and supply.", image: u(P.hero), bgColor: "", imageOpacity: 40, overlayOpacity: 75 } },
       { type: "richText", content: { html: `<h2>Terms &amp; Conditions</h2><p>These terms apply to products and services supplied by ${INCREDA.tradeName} (trade name Increda Sink), GSTIN ${INCREDA.gstin}.</p><h3>Quotations</h3><p>Quotations are valid for the period stated on them. Prices, taxes, delivery charges and timelines are confirmed in the quotation or invoice.</p><h3>Custom orders</h3><p>Custom-fabricated items are made to the dimensions and specifications approved by the customer. Approved custom orders cannot be cancelled once fabrication has started.</p><h3>Payments</h3><p>Payment terms are as stated in the quotation. All supplies are billed with a GST tax invoice.</p><h3>Delivery</h3><p>Delivery timelines are estimates and may vary for custom items and bulk orders. Please inspect goods on delivery and report transit damage promptly.</p><h3>Specifications</h3><p>Product images are for illustration. Refer to the specification sheet or quotation for exact material, dimensions and finish.</p><h3>Jurisdiction</h3><p>Any disputes are subject to the jurisdiction of courts in Delhi.</p>` } },
     ] },
   ],

@@ -147,6 +147,7 @@ export default async function SitePage({ params, searchParams }: Props) {
     serviceOptions: Array.from(servicesByCategory.keys()),
     footer: config.footer,
     phones: config.header.topbar.phones,
+    whatsapp: config.header.topbar.social.whatsapp,
     notices,
     people,
     events,

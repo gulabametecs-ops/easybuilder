@@ -46,6 +46,8 @@ export type RenderContext = {
   serviceOptions: string[];
   footer: FooterConfig;
   phones: string[];
+  /** Site WhatsApp link (header social) — enables "Send on WhatsApp" on lead forms. */
+  whatsapp?: string;
   notices: NoticeItem[];
   people?: PublicPerson[];
   events?: PublicEvent[];
@@ -150,9 +152,9 @@ function renderBlock(section: { type: string; content: string }, ctx: RenderCont
     case "contactInfo":
       return <ContactInfoBlock c={parseSectionContent("contactInfo", section.content)} />;
     case "quoteForm":
-      return <QuoteFormBlock c={parseSectionContent("quoteForm", section.content)} serviceOptions={ctx.serviceOptions} phones={ctx.phones} />;
+      return <QuoteFormBlock c={parseSectionContent("quoteForm", section.content)} serviceOptions={ctx.serviceOptions} phones={ctx.phones} whatsapp={ctx.whatsapp} />;
     case "contactForm":
-      return <ContactFormBlock c={parseSectionContent("contactForm", section.content)} serviceOptions={ctx.serviceOptions} footer={ctx.footer} />;
+      return <ContactFormBlock c={parseSectionContent("contactForm", section.content)} serviceOptions={ctx.serviceOptions} footer={ctx.footer} whatsapp={ctx.whatsapp} />;
     case "appointmentForm":
       return <AppointmentFormBlock c={parseSectionContent("appointmentForm", section.content)} serviceOptions={ctx.serviceOptions} />;
     case "richText":

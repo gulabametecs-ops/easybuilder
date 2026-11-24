@@ -13,10 +13,12 @@ export function QuoteFormBlock({
   c,
   serviceOptions,
   phones,
+  whatsapp,
 }: {
   c: SectionContentMap["quoteForm"];
   serviceOptions: string[];
   phones: string[];
+  whatsapp?: string;
 }) {
   const fs = readContentStyles(c);
   const reasons = [
@@ -57,7 +59,7 @@ export function QuoteFormBlock({
         <div className={FORM_CARD}>
           <h2 className="text-2xl sm:text-3xl font-bold mb-2" {...textStyleProps(fs.title)}>{c.title}</h2>
           <p className="text-slate-500 mb-8" {...textStyleProps(fs.subtitle)}>{c.subtitle}</p>
-          <LeadForm serviceOptions={serviceOptions} submitLabel="Submit Quote Request" />
+          <LeadForm serviceOptions={serviceOptions} submitLabel="Submit Quote Request" whatsapp={whatsapp} />
         </div>
       </div>
     </section>
@@ -69,10 +71,12 @@ export function ContactFormBlock({
   c,
   serviceOptions,
   footer,
+  whatsapp,
 }: {
   c: SectionContentMap["contactForm"];
   serviceOptions: string[];
   footer: FooterConfig;
+  whatsapp?: string;
 }) {
   const fs = readContentStyles(c);
   return (
@@ -88,7 +92,7 @@ export function ContactFormBlock({
           </ul>
         </div>
         <div className={FORM_CARD}>
-          <LeadForm serviceOptions={serviceOptions} submitLabel="Send Message" />
+          <LeadForm serviceOptions={serviceOptions} submitLabel="Send Message" whatsapp={whatsapp} />
         </div>
       </div>
     </section>
