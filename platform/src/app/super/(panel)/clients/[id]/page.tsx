@@ -10,6 +10,7 @@ import { recordManualPayment } from "@/lib/actions/superAdmin";
 import { Card, StatCard, EmptyState } from "@/components/admin/ui";
 import { Avatar, Pill, ORDER_TONE, orderLabel } from "@/components/super/kit";
 import { ClientActions } from "@/components/super/ClientActions";
+import { ClientLoginForm } from "@/components/super/ClientLoginForm";
 import { PlanUsage, LicenseTimeline } from "@/components/super/ClientUsage";
 import { getUsage, planFor } from "@/lib/usage";
 
@@ -35,7 +36,7 @@ export default async function ClientDetailPage({ params }: Props) {
   const [usage, plan] = await Promise.all([getUsage(tenant.id), planFor(tenant)]);
   const url = `${proto}://${tenant.subdomain}.${ROOT_DOMAIN}`;
   const expired = tenant.subscriptionEndsAt && new Date(tenant.subscriptionEndsAt) < new Date();
-  const owner = tenant.users[0];
+  const owner = tenant.users.find((u) => u.role === "owner") ?? tenant.users[0];
 
   return (
     <>
@@ -141,6 +142,11 @@ export default async function ClientDetailPage({ params }: Props) {
         <div className="space-y-6">
           <LicenseTimeline endsAt={tenant.subscriptionEndsAt} status={tenant.status} />
           <PlanUsage usage={usage} limits={plan.limits} planName={plan.tier?.name ?? tenant.plan} />
+          <Card className="p-5 h-fit">
+            <h3 className="font-semibold text-slate-900 mb-1">Owner login</h3>
+            <p className="text-sm text-slate-500 mb-4">Set the client&apos;s admin login email or a new password.</p>
+            <ClientLoginForm tenantId={tenant.id} email={owner?.email ?? ""} />
+          </Card>
           <Card className="p-5 h-fit">
             <h3 className="font-semibold text-slate-900 mb-4">Manage license</h3>
             <ClientActions tenantId={tenant.id} status={tenant.status} plan={tenant.plan} />

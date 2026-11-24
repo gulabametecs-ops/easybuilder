@@ -488,7 +488,7 @@ function Drawer({
                             type={f.type === "secret" ? "password" : "text"}
                             value={v}
                             onChange={(e) => set(f.key, e.target.value)}
-                            placeholder={f.type === "secret" && hasRazorpaySecret ? "•••••••• saved — leave blank to keep" : f.placeholder}
+                            placeholder={f.key === "razorpayKeySecret" && hasRazorpaySecret ? "•••••••• saved — leave blank to keep" : f.placeholder}
                             autoComplete="off"
                             spellCheck={false}
                             disabled={readOnly}

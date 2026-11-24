@@ -3,20 +3,18 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingBag, Zap, Trash2, CheckCircle2, MessageCircle, Banknote, Smartphone, ArrowLeft, Loader2, Star, BadgeCheck } from "lucide-react";
-import { MAX_QTY, findVariant, fromPrice, inr, isSoldOut, maxBuyable, optionText, orderLabel, PAYMENT_LABEL, productHref, shippingFor, variantView, type PaymentMethod, type PublicProduct, type PublicVariant, type StoreSettings } from "@/lib/store";
+import { Minus, Plus, ShoppingBag, Zap, MessageCircle, Loader2, Star, BadgeCheck } from "lucide-react";
+import { MAX_QTY, findVariant, fromPrice, inr, isSoldOut, maxBuyable, variantView, type PublicProduct, type PublicVariant } from "@/lib/store";
 import type { PublicReview } from "@/lib/storeServer";
 import { productsByIds, submitReview } from "@/lib/actions/storeAccount";
-import { placeStoreOrder, type PlaceOrderResult } from "@/lib/actions/storefront";
-import { qrImageForData, upiPayLink } from "@/lib/payments";
-import { addToCart, clearCart, removeFromCart, setQty, useCart } from "./cart";
+import { addToCart } from "./cart";
 import { PriceTag, ProductCard, ProductImage, Stars, WishButton } from "../sections/StoreBlocks";
 import { recordView, useRecentlyViewed } from "./shopper";
 
-const RADIUS = "rounded-[calc(var(--site-radius)*1.2)]";
-const FIELD = `w-full ${RADIUS} bg-[var(--site-surface)] ring-1 ring-inset ring-[var(--site-line)] px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary`;
+export const RADIUS = "rounded-[calc(var(--site-radius)*1.2)]";
+export const FIELD = `w-full ${RADIUS} bg-[var(--site-surface)] ring-1 ring-inset ring-[var(--site-line)] px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary`;
 
-function Qty({ value, onChange, small = false }: { value: number; onChange: (n: number) => void; small?: boolean }) {
+export function Qty({ value, onChange, small = false }: { value: number; onChange: (n: number) => void; small?: boolean }) {
   const btn = `${small ? "w-8 h-8" : "w-10 h-10"} inline-flex items-center justify-center hover:text-primary disabled:opacity-40`;
   return (
     <div className={`inline-flex items-center ${RADIUS} ring-1 ring-inset ring-[var(--site-line)] bg-[var(--site-surface)]`}>
@@ -110,7 +108,7 @@ function BuyBox({ p, opts, setOpts, variant, whatsappUrl }: {
     if (missing) return setMsg(`Please choose ${missing.name}.`);
     if (noCombo) return setMsg("That combination isn't available.");
     addToCart({ productId: p.id, variantId: variant?.id ?? null, slug: p.slug, name: p.name, price: view.price, image: view.image, options: variant?.options ?? opts }, Math.max(1, Math.min(qty, max)));
-    if (go) router.push("/cart");
+    if (go) router.push("/checkout");
     else setMsg("Added to cart ✓");
   };
 
@@ -282,150 +280,3 @@ export function ProductReviews({ productId, productName, rating, count, reviews 
   );
 }
 
-const METHOD_ICON = { cod: Banknote, upi: Smartphone, whatsapp: MessageCircle } as const;
-const METHOD_HINT: Record<PaymentMethod, string> = {
-  cod: "Pay in cash or UPI when your order arrives",
-  upi: "Pay instantly with any UPI app after placing the order",
-  whatsapp: "We'll confirm your order and payment on WhatsApp",
-};
-
-export type CheckoutPrefill = { name: string; phone: string; email: string; address: string; city: string; pincode: string };
-
-export function CartCheckout({ settings, methods, bizName, prefill }: { settings: StoreSettings; methods: PaymentMethod[]; bizName: string; prefill?: CheckoutPrefill | null }) {
-  const items = useCart();
-  const [pending, start] = useTransition();
-  const [error, setError] = useState("");
-  const [done, setDone] = useState<Extract<PlaceOrderResult, { ok: true }> | null>(null);
-  const [method, setMethod] = useState<PaymentMethod>(methods[0]);
-  const subtotal = items.reduce((n, i) => n + i.qty * i.price, 0);
-  const shipping = shippingFor(subtotal, settings);
-  const toFree = settings.freeShippingAbove > 0 ? settings.freeShippingAbove - subtotal : 0;
-
-  if (done) {
-    const upi = done.paymentMethod === "upi" && done.upiId ? upiPayLink(done.upiId, bizName, done.total) : "";
-    return (
-      <div className={`max-w-xl mx-auto text-center card sec-card p-6 sm:p-10`}>
-        <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto" />
-        <h2 className="text-2xl sm:text-3xl font-bold mt-4">Order {orderLabel(done.orderNo)} placed!</h2>
-        <p className="site-muted mt-2">Thank you for shopping with {bizName}. We&apos;ll confirm your order shortly{done.paymentMethod === "cod" ? " — pay when it arrives." : "."}</p>
-        <p className="text-lg font-bold mt-4">Total: {inr(done.total)} · {PAYMENT_LABEL[done.paymentMethod]}</p>
-        {upi && (
-          <div className="mt-6 space-y-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={done.upiQrImage || qrImageForData(upi, 220)} alt="UPI QR code" className="w-48 h-48 mx-auto rounded-xl ring-1 ring-[var(--site-line)] bg-white p-2" />
-            <p className="text-sm">Scan with any UPI app or pay to <strong className="select-all">{done.upiId}</strong></p>
-            <a href={upi} className="btn-primary inline-flex items-center gap-2 px-5 py-3 font-bold sm:hidden"><Smartphone className="w-4 h-4" /> Pay {inr(done.total)} with UPI</a>
-          </div>
-        )}
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          {done.whatsappUrl && (
-            <a href={done.whatsappUrl} target="_blank" rel="noreferrer" className={`inline-flex items-center gap-2 ${RADIUS} bg-emerald-600 text-white px-5 py-3 font-bold hover:bg-emerald-700`}>
-              <MessageCircle className="w-4 h-4" /> {done.paymentMethod === "whatsapp" ? "Send order on WhatsApp" : "Share on WhatsApp"}
-            </a>
-          )}
-          <Link href="/shop" className={`inline-flex items-center gap-2 ${RADIUS} ring-1 ring-inset ring-[var(--site-line)] px-5 py-3 font-semibold hover:text-primary`}>Continue shopping</Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!items.length) {
-    return (
-      <div className="text-center py-16">
-        <ShoppingBag className="w-14 h-14 mx-auto text-primary opacity-60" />
-        <h2 className="text-2xl font-bold mt-4">Your cart is empty</h2>
-        <p className="site-muted mt-1">Browse the shop and add something you love.</p>
-        <Link href="/shop" className="btn-primary inline-flex items-center gap-2 px-6 py-3 mt-6 font-semibold">Start shopping</Link>
-      </div>
-    );
-  }
-
-  const submit = (fd: FormData) => {
-    setError("");
-    start(async () => {
-      const res = await placeStoreOrder({
-        name: String(fd.get("name") ?? ""), phone: String(fd.get("phone") ?? ""), email: String(fd.get("email") ?? ""),
-        address: String(fd.get("address") ?? ""), city: String(fd.get("city") ?? ""), pincode: String(fd.get("pincode") ?? ""),
-        note: String(fd.get("note") ?? ""), paymentMethod: method,
-        lines: items.map((i) => ({ productId: i.productId, variantId: i.variantId ?? null, qty: i.qty, options: i.options })),
-      }).catch(() => ({ ok: false as const, error: "Could not place the order. Please try again." }));
-      if (!res.ok) return setError(res.error);
-      clearCart();
-      setDone(res);
-      if (res.paymentMethod === "whatsapp" && res.whatsappUrl) window.open(res.whatsappUrl, "_blank", "noopener");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-  };
-
-  return (
-    <form action={submit} className="grid lg:grid-cols-[1fr_24rem] gap-8 items-start">
-      <div className="space-y-8 min-w-0">
-        <div className="card sec-card p-4 sm:p-6">
-          <h2 className="text-lg font-bold mb-4">Your cart ({items.reduce((n, i) => n + i.qty, 0)})</h2>
-          <ul className="divide-y divide-[var(--site-line)]">
-            {items.map((i) => (
-              <li key={i.key} className="py-4 flex gap-3 sm:gap-4">
-                <Link href={productHref(i.slug)} className={`w-20 h-20 sm:w-24 sm:h-24 shrink-0 overflow-hidden ${RADIUS} bg-light`}>
-                  <ProductImage p={{ name: i.name, images: i.image ? [i.image] : [] }} />
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <Link href={productHref(i.slug)} className="font-semibold leading-snug line-clamp-2 hover:text-primary">{i.name}</Link>
-                  {Object.keys(i.options).length > 0 && <p className="text-xs site-muted mt-0.5">{optionText(i.options)}</p>}
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
-                    <Qty small value={i.qty} onChange={(n) => setQty(i.key, n)} />
-                    <button type="button" onClick={() => removeFromCart(i.key)} className="inline-flex items-center gap-1 text-xs font-semibold site-muted hover:text-rose-600"><Trash2 className="w-3.5 h-3.5" /> Remove</button>
-                  </div>
-                </div>
-                <p className="font-bold tabular-nums shrink-0">{inr(i.price * i.qty)}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="card sec-card p-4 sm:p-6 space-y-4">
-          <h2 className="text-lg font-bold">Delivery details</h2>
-          <div className="grid sm:grid-cols-2 gap-3">
-            <input name="name" required minLength={2} autoComplete="name" defaultValue={prefill?.name} placeholder="Full name *" className={FIELD} />
-            <input name="phone" required type="tel" autoComplete="tel" defaultValue={prefill?.phone} placeholder="Mobile number *" className={FIELD} />
-            <input name="email" type="email" autoComplete="email" defaultValue={prefill?.email} placeholder="Email (for order updates)" className={`${FIELD} sm:col-span-2`} />
-            <textarea name="address" required rows={2} autoComplete="street-address" defaultValue={prefill?.address} placeholder="House no., street, area, landmark *" className={`${FIELD} sm:col-span-2`} />
-            <input name="city" autoComplete="address-level2" defaultValue={prefill?.city} placeholder="City" className={FIELD} />
-            <input name="pincode" required inputMode="numeric" pattern="\d{6}" maxLength={6} autoComplete="postal-code" defaultValue={prefill?.pincode} placeholder="Pincode *" className={FIELD} />
-            <input name="note" placeholder="Order note (gift message, delivery time…)" className={`${FIELD} sm:col-span-2`} />
-          </div>
-        </div>
-
-        <div className="card sec-card p-4 sm:p-6 space-y-3">
-          <h2 className="text-lg font-bold">Payment</h2>
-          {methods.map((m) => {
-            const Ic = METHOD_ICON[m];
-            return (
-              <label key={m} className={`flex items-center gap-3 ${RADIUS} p-3.5 ring-1 ring-inset cursor-pointer transition ${method === m ? "ring-2 ring-primary bg-light" : "ring-[var(--site-line)] hover:ring-primary"}`}>
-                <input type="radio" name="pay" value={m} checked={method === m} onChange={() => setMethod(m)} className="accent-[var(--c-primary)]" />
-                <Ic className="w-5 h-5 text-primary shrink-0" />
-                <span className="min-w-0">
-                  <span className="block font-semibold text-sm">{m === "whatsapp" ? "Order on WhatsApp" : PAYMENT_LABEL[m]}</span>
-                  <span className="block text-xs site-muted">{METHOD_HINT[m]}</span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-
-      <aside className="card sec-card p-4 sm:p-6 lg:sticky lg:top-24 space-y-3">
-        <h2 className="text-lg font-bold">Order summary</h2>
-        <div className="flex justify-between text-sm"><span className="site-muted">Subtotal</span><span className="font-semibold tabular-nums">{inr(subtotal)}</span></div>
-        <div className="flex justify-between text-sm"><span className="site-muted">Delivery</span><span className="font-semibold tabular-nums">{shipping ? inr(shipping) : "Free"}</span></div>
-        {toFree > 0 && <p className="text-xs rounded-lg bg-light px-3 py-2">Add <strong>{inr(toFree)}</strong> more for free delivery</p>}
-        <div className="flex justify-between text-lg font-extrabold border-t border-[var(--site-line)] pt-3"><span>Total</span><span className="tabular-nums">{inr(subtotal + shipping)}</span></div>
-        {settings.checkoutNote && <p className="text-xs site-muted">{settings.checkoutNote}</p>}
-        {error && <p className="text-sm font-semibold text-rose-600" role="alert">{error}</p>}
-        <button type="submit" disabled={pending} className="btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 font-bold disabled:opacity-60">
-          {pending ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />} Place order · {inr(subtotal + shipping)}
-        </button>
-        <Link href="/shop" className="flex items-center justify-center gap-1 text-sm font-semibold site-muted hover:text-primary"><ArrowLeft className="w-4 h-4" /> Continue shopping</Link>
-      </aside>
-    </form>
-  );
-}

@@ -68,7 +68,7 @@ export default async function DashLayout({ children }: { children: React.ReactNo
     db.lead.count({ where: { ...scope, status: "new" } }),
     db.appointment.count({ where: { ...scope, status: "pending" } }),
     db.volunteer.count({ where: { ...scope, status: "new" } }),
-    isStoreVertical(authed.tenant.vertical) ? db.storeOrder.count({ where: { ...scope, status: "new" } }) : 0,
+    isStoreVertical(authed.tenant.vertical) ? db.storeOrder.count({ where: { ...scope, status: "new", NOT: { paymentMethod: "online", paymentStatus: { in: ["pending", "failed"] } } } }) : 0,
   ]);
 
   return (

@@ -37,6 +37,8 @@ import {
   Store,
   Truck,
   Undo2,
+  TicketPercent,
+  ShoppingCart,
   LayoutGrid,
   MessageSquareText,
 } from "lucide-react";
@@ -83,6 +85,8 @@ function navGroups(
         { href: "/admin/collections", label: "Collections", icon: LayoutGrid },
         { href: "/admin/reviews", label: "Reviews", icon: MessageSquareText },
         { href: "/admin/customers", label: "Customers", icon: UserRound },
+        { href: "/admin/discounts", label: "Discounts", icon: TicketPercent },
+        { href: "/admin/abandoned", label: "Abandoned checkouts", icon: ShoppingCart },
         { href: "/admin/returns", label: "Returns", icon: Undo2 },
         { href: "/admin/shipping", label: "Shipping", icon: Truck },
         { href: "/admin/store-settings", label: "Store settings", icon: Store },

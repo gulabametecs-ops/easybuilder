@@ -277,11 +277,11 @@ export function parseStoreSettings(raw: string | null | undefined): StoreSetting
   }
 }
 
-export type PaymentMethod = "cod" | "upi" | "whatsapp";
+export type PaymentMethod = "online" | "cod" | "upi" | "whatsapp";
 
-/** Methods the shopper can pick, given the settings (UPI needs an id, WhatsApp a number). */
-export function paymentMethods(s: StoreSettings): PaymentMethod[] {
-  const out: PaymentMethod[] = [];
+/** Methods the shopper can pick, given the settings (UPI needs an id, WhatsApp a number; online needs Razorpay keys). */
+export function paymentMethods(s: StoreSettings, online = false): PaymentMethod[] {
+  const out: PaymentMethod[] = online ? ["online"] : [];
   if (s.codEnabled) out.push("cod");
   if (s.upiEnabled && s.upiId.trim()) out.push("upi");
   if (s.whatsappEnabled && waDigits(s.whatsappNumber)) out.push("whatsapp");
@@ -292,7 +292,7 @@ export const PAYMENT_LABEL: Record<string, string> = {
   cod: "Cash on delivery",
   upi: "UPI",
   whatsapp: "WhatsApp order",
-  online: "Online",
+  online: "Online payment",
 };
 
 // ─── Orders ──────────────────────────────────────────────────────────────────
@@ -458,6 +458,8 @@ export function orderSummaryText(o: {
   items: OrderItem[];
   subtotal: number;
   shipping: number;
+  discount?: number;
+  codFee?: number;
   total: number;
   paymentMethod: string;
   customerName: string;
@@ -471,7 +473,9 @@ export function orderSummaryText(o: {
     `Order ${orderLabel(o.orderNo)} — ${o.bizName}`,
     ...lines,
     `Subtotal: ${inr(o.subtotal)}`,
+    ...(o.discount ? [`Discount: −${inr(o.discount)}`] : []),
     `Delivery: ${o.shipping ? inr(o.shipping) : "Free"}`,
+    ...(o.codFee ? [`COD charge: ${inr(o.codFee)}`] : []),
     `Total: ${inr(o.total)} (${PAYMENT_LABEL[o.paymentMethod] ?? o.paymentMethod})`,
     "",
     `${o.customerName} · ${o.phone}`,

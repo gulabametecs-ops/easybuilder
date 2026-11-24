@@ -6,7 +6,7 @@ import {
   ShoppingBag, Search, Phone, MessageCircle, Printer, MapPin, X, CheckCircle2, Circle, Ban, IndianRupee, Truck, RefreshCw, FileText,
   Package, ExternalLink, Undo2, History, Tag,
 } from "lucide-react";
-import { updateOrder } from "@/lib/actions/store";
+import { refundStoreOrder, updateOrder } from "@/lib/actions/store";
 import { courierDocument, prepareInvoices, refreshTracking, shipOrder } from "@/lib/actions/shipping";
 import { ORDER_STATUSES, PAYMENT_LABEL, inr, optionText, orderLabel, waLink } from "@/lib/store";
 import type { adminOrders } from "@/lib/storeAdmin";
@@ -124,9 +124,10 @@ export function OrdersManager({ orders, bizName, demo, couriers, siteBase }: { o
                         <span className="font-semibold text-sm text-slate-900 dark:text-white truncate">{o.customerName}</span>
                         <Badge tone={TONE[o.status] ?? "slate"}>{o.status}</Badge>
                         {o.returnStatus !== "none" && <Badge tone="amber">return {o.returnStatus}</Badge>}
+                        {awaitingPay(o) && <Badge tone="amber">awaiting payment</Badge>}
                       </span>
                       <span className="block text-xs text-slate-500 truncate mt-0.5">
-                        {o.items.reduce((n, i) => n + i.qty, 0)} item(s) · {PAYMENT_LABEL[o.paymentMethod] ?? o.paymentMethod}{o.paymentStatus === "paid" ? " · Paid" : ""} · {o.city || o.pincode}{o.awb ? ` · AWB ${o.awb}` : ""} · {when(o.createdAt)}
+                        {o.items.reduce((n, i) => n + i.qty, 0)} item(s) · {PAYMENT_LABEL[o.paymentMethod] ?? o.paymentMethod}{o.paymentStatus === "paid" ? " · Paid" : o.paymentStatus === "refunded" ? " · Refunded" : ""}{o.couponCode ? ` · ${o.couponCode}` : ""} · {o.city || o.pincode}{o.awb ? ` · AWB ${o.awb}` : ""} · {when(o.createdAt)}
                       </span>
                     </span>
                     <span className="text-sm font-extrabold text-slate-900 dark:text-white tabular-nums">{inr(o.total)}</span>
@@ -151,6 +152,7 @@ export function OrdersManager({ orders, bizName, demo, couriers, siteBase }: { o
             onPrint={(doc) => print(doc, [open.id])}
             onDoc={(kind) => start(async () => { const r = await run(() => courierDocument(open.id, kind)); if (r.ok) window.open(r.url, "_blank", "noopener"); else setFlash({ ok: false, text: r.error }); })}
             onRefresh={() => act(() => refreshTracking([open.id]))}
+            onRefund={(amount, note) => act(() => refundStoreOrder(open.id, amount, note))}
           />
         )}
       </div>
@@ -164,10 +166,18 @@ const lbl = "block text-[11px] font-semibold text-slate-500 dark:text-slate-400 
 
 type ShipForm = { provider: "manual" | "shiprocket" | "delhivery"; weightGrams: number; lengthCm: number; breadthCm: number; heightCm: number; courier: string; awb: string; trackingUrl: string };
 
-function OrderDetail({ o, bizName, couriers, siteBase, pending, onClose, onPatch, onShip, onPrint, onDoc, onRefresh }: {
+const awaitingPay = (o: AdminOrder) => o.paymentMethod === "online" && (o.paymentStatus === "pending" || o.paymentStatus === "failed") && o.status !== "cancelled";
+
+function OrderDetail({ o, bizName, couriers, siteBase, pending, onClose, onPatch, onShip, onPrint, onDoc, onRefresh, onRefund }: {
   o: AdminOrder; bizName: string; couriers: Couriers; siteBase: string; pending: boolean; onClose: () => void; onPatch: (p: Patch) => void;
   onShip: (f: ShipForm) => void; onPrint: (doc: "invoice" | "slip") => void; onDoc: (kind: "label" | "manifest") => void; onRefresh: () => void;
+  onRefund: (amount: number, note: string) => void;
 }) {
+  const refundable = o.total - o.refundAmount;
+  const gateway = o.paymentMethod === "online" && !!o.paymentId;
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundAmt, setRefundAmt] = useState(refundable);
+  const [refundNote, setRefundNote] = useState("");
   const step = PIPELINE.findIndex((s) => s.id === o.status);
   const cancelled = o.status === "cancelled";
   const next = !cancelled && step >= 0 && step < PIPELINE.length - 1 ? PIPELINE[step + 1] : null;
@@ -312,22 +322,45 @@ function OrderDetail({ o, bizName, couriers, siteBase, pending, onClose, onPatch
         <Row l="Subtotal" v={inr(o.subtotal)} />
         <Row l="Delivery" v={o.shipping ? inr(o.shipping) : "Free"} />
         {o.codFee > 0 && <Row l="COD charge" v={inr(o.codFee)} />}
-        {o.discount > 0 && <Row l="Discount" v={`−${inr(o.discount)}`} />}
+        {o.discount > 0 && <Row l={`Discount${o.couponCode ? ` (${o.couponCode})` : ""}`} v={`−${inr(o.discount)}`} />}
         <div className="flex justify-between font-extrabold text-base text-slate-900 dark:text-white pt-1"><span>Total</span><span className="tabular-nums">{inr(o.total)}</span></div>
+        {o.tax > 0 && <p className="text-[11px] text-slate-400 text-right">Incl. GST {inr(o.tax)}</p>}
         {o.refundAmount > 0 && <Row l="Refunded" v={`−${inr(o.refundAmount)}`} />}
       </div>
 
-      <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 dark:border-white/10 px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 rounded-2xl border border-slate-200 dark:border-white/10 px-3.5 py-2.5">
         <span className="text-sm">
           <span className="text-slate-500">{PAYMENT_LABEL[o.paymentMethod] ?? o.paymentMethod} · </span>
-          <span className={`font-bold ${o.paymentStatus === "paid" ? "text-emerald-600" : o.paymentStatus === "refunded" ? "text-slate-500" : "text-amber-600"}`}>{o.paymentStatus === "paid" ? "Paid" : o.paymentStatus === "refunded" ? "Refunded" : "Payment pending"}</span>
+          <span className={`font-bold ${o.paymentStatus === "paid" ? "text-emerald-600" : o.paymentStatus === "refunded" ? "text-slate-500" : o.paymentStatus === "failed" ? "text-rose-600" : "text-amber-600"}`}>{o.paymentStatus === "paid" ? (o.refundAmount > 0 ? "Paid · partly refunded" : "Paid") : o.paymentStatus === "refunded" ? "Refunded" : o.paymentStatus === "failed" ? "Payment failed" : "Payment pending"}</span>
         </span>
-        {o.paymentStatus !== "refunded" && (
-          <button type="button" disabled={pending} onClick={() => onPatch({ paymentStatus: o.paymentStatus === "paid" ? "pending" : "paid" })} className="inline-flex items-center gap-1 text-xs font-semibold text-lime-600 hover:underline">
-            <IndianRupee className="w-3.5 h-3.5" /> {o.paymentStatus === "paid" ? "Mark unpaid" : "Mark paid"}
-          </button>
-        )}
+        <span className="flex items-center gap-3">
+          {o.paymentStatus !== "refunded" && o.paymentMethod !== "online" && !o.refundAmount && (
+            <button type="button" disabled={pending} onClick={() => onPatch({ paymentStatus: o.paymentStatus === "paid" ? "pending" : "paid" })} className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-lime-600 hover:underline">
+              <IndianRupee className="w-3.5 h-3.5" /> {o.paymentStatus === "paid" ? "Mark unpaid" : "Mark paid"}
+            </button>
+          )}
+          {o.paymentStatus === "paid" && refundable > 0 && (
+            <button type="button" onClick={() => setRefundOpen((v) => !v)} className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-rose-600 hover:underline"><Undo2 className="w-3.5 h-3.5" /> Refund</button>
+          )}
+        </span>
       </div>
+      {awaitingPay(o) && <p className="text-xs rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-200 px-3 py-2">Waiting for the customer to finish paying online. Stock is held for 30 minutes, then the order is cancelled automatically if unpaid.</p>}
+      {o.paymentId && <p className="text-[11px] text-slate-400 -mt-3">Payment ref {o.paymentId}{o.paymentRef ? ` · ${o.paymentRef}` : ""}</p>}
+      {refundOpen && o.paymentStatus === "paid" && refundable > 0 && (
+        <form onSubmit={(e) => { e.preventDefault(); if (confirm(`${gateway ? "Refund" : "Record a refund of"} ${inr(refundAmt)}${gateway ? " to the customer via Razorpay" : ""}?`)) { onRefund(refundAmt, refundNote); setRefundOpen(false); } }} className="rounded-2xl border border-rose-200 dark:border-rose-500/30 bg-rose-50/40 dark:bg-rose-500/5 p-3.5 space-y-3">
+          <p className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white"><Undo2 className="w-4 h-4 text-rose-500" /> {gateway ? "Refund via Razorpay" : "Record a refund"}</p>
+          <div className="grid grid-cols-[8rem_1fr] gap-2">
+            <label><span className={lbl}>Amount (₹)</span><input type="number" min={1} max={refundable} value={refundAmt || ""} onChange={(e) => setRefundAmt(Math.max(0, Math.min(refundable, Math.floor(Number(e.target.value) || 0))))} className={input} /></label>
+            <label><span className={lbl}>Reason (optional)</span><input value={refundNote} onChange={(e) => setRefundNote(e.target.value)} maxLength={200} placeholder="Damaged item, out of stock…" className={input} /></label>
+          </div>
+          <button type="button" onClick={() => setRefundAmt(refundable)} className="text-xs font-semibold text-slate-500 hover:underline">Full amount ({inr(refundable)})</button>
+          <p className="text-[11px] text-slate-500">{gateway ? "The money goes back to the customer's original UPI / card in 5–7 days." : "Pay the customer back by UPI / bank first — this only records it."}</p>
+          <div className="flex gap-2">
+            <button type="submit" disabled={pending || refundAmt < 1} className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 text-sm font-semibold disabled:opacity-60">{gateway ? `Refund ${inr(refundAmt)}` : "Record refund"}</button>
+            <button type="button" onClick={() => setRefundOpen(false)} className={btnSecondary}>Close</button>
+          </div>
+        </form>
+      )}
 
       <div className="space-y-2">
         <div className="flex gap-2">

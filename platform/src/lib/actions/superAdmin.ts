@@ -100,6 +100,32 @@ export async function extendSubscription(tenantId: string, plan: "1" | "3" | "6"
   revalidatePath("/super/clients");
 }
 
+export type ClientLoginState = { ok: boolean; message: string };
+
+// Set the client owner's login email and/or a new password from Super Admin.
+// ponytail: already-open admin sessions stay valid until their 7-day cookie expires; add a session version if instant logout is needed.
+export async function setClientLogin(_prev: ClientLoginState, formData: FormData): Promise<ClientLoginState> {
+  await requireSuper();
+  const tenantId = formData.get("tenantId")?.toString() ?? "";
+  const email = (formData.get("email")?.toString() ?? "").trim().toLowerCase();
+  const password = formData.get("password")?.toString() ?? "";
+  if (!z.string().email().safeParse(email).success) return { ok: false, message: "Enter a valid login email." };
+  if (password && password.length < 8) return { ok: false, message: "Password must be at least 8 characters." };
+  const owner = await db.user.findFirst({ where: { tenantId, role: "owner" }, orderBy: { createdAt: "asc" } })
+    ?? await db.user.findFirst({ where: { tenantId }, orderBy: { createdAt: "asc" } });
+  if (!owner) return { ok: false, message: "This client has no admin user." };
+  if (email !== owner.email && (await db.user.findFirst({ where: { tenantId, email } }))) {
+    return { ok: false, message: "Another user of this client already uses that email." };
+  }
+  const bcrypt = (await import("bcryptjs")).default;
+  await db.user.update({
+    where: { id: owner.id },
+    data: { email, ...(password ? { password: await bcrypt.hash(password, 10) } : {}) },
+  });
+  revalidatePath(`/super/clients/${tenantId}`);
+  return { ok: true, message: password ? "Login updated — share the new password with the client." : "Login email updated." };
+}
+
 // Activate / suspend a client (suspended sites can be blocked by the proxy later).
 export async function setTenantStatus(tenantId: string, status: "active" | "suspended") {
   await requireSuper();

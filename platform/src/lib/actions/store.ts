@@ -8,6 +8,7 @@ import { requireTenantId, getDemoSessionId, ownedWhere, getDemoWriteContext, per
 import { ORDER_STATUSES, parseStoreSettings, slugifyProduct, variantMatrix, variantTitle, waDigits, type OrderItem, type VariantDraft } from "@/lib/store";
 import { restoreStock } from "@/lib/storeCatalog";
 import { addTimeline, notifyCustomer } from "@/lib/fulfilment";
+import { refundOrder } from "@/lib/storePayments";
 
 // Store admin (products, orders, store settings). Sandbox-aware: demo visitors create rows
 // tagged with their session and can only change those; settings go to the demo overlay.
@@ -192,6 +193,21 @@ export async function updateOrder(id: string, patch: { status?: string; paymentS
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
   return { ok: true };
+}
+
+/** Refund part or all of an order: via Razorpay for online payments (simulated in demo), else recorded. */
+export async function refundStoreOrder(id: string, amount: number, note = ""): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  try {
+    const tenantId = await requireTenantId({ demoOk: true });
+    const o = await db.storeOrder.findFirst({ where: await ownedWhere(String(id), tenantId), select: { id: true } });
+    if (!o) return { ok: false, error: "Sample orders are read-only in the demo — place a test order to try refunds." };
+    const r = await refundOrder(o.id, z.number().int().min(1).max(100_000_000).parse(Math.round(Number(amount) || 0)), z.string().trim().max(200).parse(note));
+    revalidatePath("/admin/orders");
+    revalidatePath("/admin/returns");
+    return r.ok ? { ok: true, message: r.message } : r;
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Refund failed." };
+  }
 }
 
 // ─── Store settings ──────────────────────────────────────────────────────────

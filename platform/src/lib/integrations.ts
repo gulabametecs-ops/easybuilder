@@ -59,11 +59,12 @@ export const INTEGRATIONS: IntegrationDef[] = [
   // ── Payments ──
   {
     id: "razorpay", name: "Razorpay", category: "payments", storage: "payments",
-    description: "Accept cards, UPI and netbanking on your Donate / Pay blocks.",
+    description: "Accept cards, UPI and netbanking at store checkout and on your Donate / Pay blocks.",
     icon: "CreditCard", color: "#0C2451", helpUrl: "https://dashboard.razorpay.com/app/website-app-settings/api-keys",
     fields: [
       { key: "razorpayKeyId", label: "Key ID", placeholder: "rzp_live_XXXXXXXXXXXX", pattern: /^rzp_(?:test|live)_[A-Za-z0-9]{8,32}$/ },
       { key: "razorpayKeySecret", label: "Key secret", placeholder: "Leave blank to keep the saved secret", pattern: /^[A-Za-z0-9]{12,64}$/, type: "secret", optional: true, help: "Stored securely on the server — never shown on your site." },
+      { key: "razorpayWebhookSecret", label: "Webhook secret (online store)", placeholder: "Leave blank to keep the saved secret", pattern: /^[!-~]{6,100}$/, type: "secret", optional: true, help: "Razorpay → Settings → Webhooks → add <your site>/api/store/razorpay-webhook with events payment.captured, payment.failed, refund.processed, and paste the same secret here." },
     ],
   },
   {

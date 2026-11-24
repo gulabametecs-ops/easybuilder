@@ -82,3 +82,30 @@ export function removeFromCart(key: string) {
 export function clearCart() {
   write([]);
 }
+
+/** Replace the whole cart (abandoned-cart restore link). */
+export function replaceCart(items: Omit<CartItem, "key">[]) {
+  write(items.map((i) => ({ ...i, key: lineKey(i.productId, i.options, i.variantId), qty: Math.max(1, Math.min(MAX_QTY, i.qty)) })));
+}
+
+// Browser cart id: ties checkout drafts (abandoned carts) to this cart; rotated after an order.
+const TOKEN_KEY = "sp_cart_token";
+const newToken = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
+
+export function cartToken(): string {
+  try {
+    let t = localStorage.getItem(TOKEN_KEY) ?? "";
+    if (!/^[\w-]{16,64}$/.test(t)) localStorage.setItem(TOKEN_KEY, (t = newToken()));
+    return t;
+  } catch {
+    return "";
+  }
+}
+
+export function setCartToken(token: string | null) {
+  try {
+    localStorage.setItem(TOKEN_KEY, token && /^[\w-]{16,64}$/.test(token) ? token : newToken());
+  } catch {
+    /* private mode */
+  }
+}

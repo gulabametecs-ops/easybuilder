@@ -285,7 +285,7 @@ export function CartFab() {
   const items = useCart();
   const pathname = usePathname();
   const count = items.reduce((n, i) => n + i.qty, 0);
-  if (pathname?.endsWith("/cart") || pathname?.endsWith("/account")) return null;
+  if (/\/(cart|checkout|account)$|\/order\//.test(pathname ?? "")) return null;
   const total = items.reduce((n, i) => n + i.qty * i.price, 0);
   return (
     <div className="fixed z-40 left-4 bottom-4 sm:left-6 sm:bottom-6 flex items-center gap-2">

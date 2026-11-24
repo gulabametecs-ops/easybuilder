@@ -6,6 +6,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { getProductReviews, getSiteProductBySlug, getSiteProducts, getStoreSettings } from "@/lib/storeServer";
 import { fromPrice, inr, isSoldOut, paymentMethods, productHref, waLink } from "@/lib/store";
 import { ProductCard } from "@/components/site/sections/StoreBlocks";
+import { PincodeCheck } from "@/components/site/PincodeCheck";
 import { ProductDetail, ProductReviews, RecentlyViewed } from "@/components/site/store/StoreClient";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -34,7 +35,7 @@ export default async function ProductPage({ params }: Props) {
   const wa = paymentMethods(settings).includes("whatsapp") ? waLink(settings.whatsappNumber, `Hi! I'm interested in ${p.name} (${inr(p.price)}).`) : "";
   const perks = [
     { Icon: Truck, t: settings.freeShippingAbove > 0 ? `Free delivery above ${inr(settings.freeShippingAbove)}` : "Fast delivery across India" },
-    { Icon: RotateCcw, t: "Easy 7-day returns" },
+    { Icon: RotateCcw, t: settings.shipping.returnWindowDays ? `Easy ${settings.shipping.returnWindowDays}-day returns` : "Quality checked before dispatch" },
     { Icon: ShieldCheck, t: settings.codEnabled ? "Cash on delivery available" : "Secure UPI payments" },
   ];
   const availability = `https://schema.org/${isSoldOut(p) ? "OutOfStock" : "InStock"}`;
@@ -58,6 +59,12 @@ export default async function ProductPage({ params }: Props) {
           <span className="text-primary truncate">{p.name}</span>
         </nav>
         <ProductDetail p={p} whatsappUrl={wa}>
+          {!isSoldOut(p) && (
+            <div className="mt-6">
+              <p className="text-sm font-semibold mb-2">Check delivery</p>
+              <PincodeCheck subtotal={fromPrice(p)} weightGrams={p.weightGrams || settings.shipping.defaultWeightGrams} />
+            </div>
+          )}
           <ul className="mt-8 grid sm:grid-cols-3 gap-3">
             {perks.map(({ Icon, t }) => (
               <li key={t} className="flex items-center gap-2 rounded-xl bg-light px-3 py-3 text-xs font-semibold"><Icon className="w-4 h-4 text-primary shrink-0" />{t}</li>

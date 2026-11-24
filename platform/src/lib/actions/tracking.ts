@@ -31,6 +31,8 @@ export async function checkPincode(pincode: string, subtotal = 0, weightGrams = 
   if (!/^[1-9]\d{5}$/.test(pin)) return { ok: false, error: "Please enter a valid 6-digit pincode." };
   const [settings, info] = await Promise.all([getStoreSettings(tenant.id), lookupPincode(pin)]);
   const quote = quoteShipping(settings, { pincode: pin, state: info?.state ?? "", subtotal: Math.max(0, Number(subtotal) || 0), weightGrams: Math.max(0, Number(weightGrams) || 0) });
+  // India Post down/slow and the store delivers by state: don't claim "not serviceable" on a guess.
+  if (!info && !quote.serviceable && settings.shipping.serviceArea === "zones") return { ok: false, error: "Couldn't check this pincode right now — delivery is confirmed at checkout." };
   return { ok: true, quote, place: info ? [info.city, info.state].filter(Boolean).join(", ") : "" };
 }
 

@@ -7,6 +7,7 @@ import { getStoreSettings } from "@/lib/storeServer";
 import { lookupPincode } from "@/lib/shipping";
 import { PAYMENT_LABEL, inr, optionText, orderLabel, type OrderItem } from "@/lib/store";
 import { PrintButton } from "@/components/PrintButton";
+import { allocateDiscount } from "@/lib/checkout";
 
 // Printable GST invoices / packing slips for one or many store orders (?doc=invoice|slip&ids=a,b).
 // Invoice numbers are assigned by the prepareInvoices action before this opens.
@@ -103,13 +104,15 @@ export default async function StorePrintPage({ searchParams }: { searchParams: P
           );
         }
 
-        // GST: prices are tax-inclusive at each product's rate. Delivery/COD charges use the highest item rate.
-        const lines = items.map((i) => {
+        // GST: prices are tax-inclusive at each product's rate, on the price AFTER the order discount
+        // (split across items in proportion, same as checkout). Delivery/COD charges use the highest item rate.
+        const disc = allocateDiscount(items.map((i) => i.price * i.qty), o.discount);
+        const lines = items.map((i, k) => {
           const p = products.get(i.productId);
           const rate = p?.gstRate ?? 0;
-          const amount = i.price * i.qty;
+          const amount = i.price * i.qty - disc[k];
           const taxable = r2((amount * 100) / (100 + rate));
-          return { name: i.name, opts: optionText(i.options ?? {}), hsn: p?.hsn ?? "", qty: i.qty, rate, amount, taxable, tax: r2(amount - taxable) };
+          return { name: i.name, opts: [optionText(i.options ?? {}), disc[k] ? `after discount ${money(disc[k])}` : ""].filter(Boolean).join(" · "), hsn: p?.hsn ?? "", qty: i.qty, rate, amount, taxable, tax: r2(amount - taxable) };
         });
         const maxRate = Math.max(0, ...lines.map((l) => l.rate));
         const charges = o.shipping + o.codFee;
@@ -159,7 +162,7 @@ export default async function StorePrintPage({ searchParams }: { searchParams: P
               {gst && (sameState
                 ? <><div className="flex justify-between"><span>CGST</span><span>{money(r2(totTax / 2))}</span></div><div className="flex justify-between"><span>SGST</span><span>{money(r2(totTax / 2))}</span></div></>
                 : <div className="flex justify-between"><span>IGST</span><span>{money(totTax)}</span></div>)}
-              {o.discount > 0 && <div className="flex justify-between"><span>Discount</span><span>−{money(o.discount)}</span></div>}
+              {o.discount > 0 && <div className="flex justify-between text-slate-600"><span>Discount{o.couponCode ? ` (${o.couponCode})` : ""} — included above</span><span>−{money(o.discount)}</span></div>}
               <div className="flex justify-between border-t-2 border-slate-900 pt-1 text-base font-extrabold"><span>Total</span><span>{money(o.total)}</span></div>
               {o.refundAmount > 0 && <div className="flex justify-between text-slate-600"><span>Refunded</span><span>−{money(o.refundAmount)}</span></div>}
             </div>

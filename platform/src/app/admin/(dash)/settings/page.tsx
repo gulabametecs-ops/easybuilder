@@ -84,7 +84,7 @@ export default async function SettingsPage() {
         canManageTeam={canManageTeam}
         isOwner={session.role === "owner"}
         prefs={prefs}
-        payments={{ ...parsePayments(siteConfig?.payments), razorpayKeySecret: "" }}
+        payments={{ ...parsePayments(siteConfig?.payments), razorpayKeySecret: "", razorpayWebhookSecret: "" }}
         hasRazorpaySecret={Boolean(parsePayments(siteConfig?.payments).razorpayKeySecret)}
         donations={donations.map((d) => ({
           id: d.id,

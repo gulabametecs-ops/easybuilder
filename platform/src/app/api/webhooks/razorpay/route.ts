@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
-import crypto from "node:crypto";
 import { db } from "@/lib/db";
 import { getRazorpayKeys } from "@/lib/platformConfig";
 import { provisionForOrder } from "@/lib/actions/checkout";
+import { verifyRazorpayWebhook } from "@/lib/razorpay";
 
 // Razorpay webhook — marks orders paid when the browser callback is missed.
 // Configure the webhook URL in Razorpay dashboard → Settings → Webhooks:
 //   https://yourdomain.com/api/webhooks/razorpay
 // Events: payment.captured, order.paid
-
-function verifyWebhookSignature(body: string, signature: string, secret: string): boolean {
-  const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
-  try {
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
-  } catch {
-    return false;
-  }
-}
 
 export async function POST(request: Request) {
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || "";
@@ -29,7 +20,7 @@ export async function POST(request: Request) {
   if (!secret) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
-  if (!signature || !verifyWebhookSignature(body, signature, secret)) {
+  if (!signature || !verifyRazorpayWebhook(body, signature, secret)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 

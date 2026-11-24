@@ -1,6 +1,7 @@
 export type TenantPayments = {
   razorpayKeyId: string;
   razorpayKeySecret: string;
+  razorpayWebhookSecret: string; // store webhooks (/api/store/razorpay-webhook); server-only
   upiId: string;
   upiQrImage: string;
   accountName: string;
@@ -10,13 +11,14 @@ export type TenantPayments = {
   paymentNote: string;
 };
 
-export type PublicPayments = Omit<TenantPayments, "razorpayKeySecret"> & {
+export type PublicPayments = Omit<TenantPayments, "razorpayKeySecret" | "razorpayWebhookSecret"> & {
   razorpayReady: boolean;
 };
 
 export const DEFAULT_PAYMENTS: TenantPayments = {
   razorpayKeyId: "",
   razorpayKeySecret: "",
+  razorpayWebhookSecret: "",
   upiId: "",
   upiQrImage: "",
   accountName: "",

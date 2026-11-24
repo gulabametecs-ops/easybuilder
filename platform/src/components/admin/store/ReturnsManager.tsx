@@ -17,6 +17,7 @@ const TABS = [
   { id: "rejected", label: "Rejected" },
 ] as const;
 const TONE = { requested: "violet", approved: "blue", received: "amber", refunded: "green", rejected: "red" } as const;
+const viaGateway = (o: Order) => o.paymentMethod === "online" && !!o.paymentId;
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short" }) : "—");
 
 export function ReturnsManager({ orders, demo }: { orders: Order[]; demo: boolean }) {
@@ -30,7 +31,7 @@ export function ReturnsManager({ orders, demo }: { orders: Order[]; demo: boolea
   const act = (o: Order, next: "approved" | "rejected" | "received" | "refunded") =>
     start(async () => {
       if (next === "rejected" && !confirm(`Reject the return for ${orderLabel(o.orderNo)}?`)) return;
-      const r = await processReturn(o.id, next, refund[o.id] ?? o.total).catch((e) => ({ ok: false as const, error: e instanceof Error ? e.message : "Failed" }));
+      const r = await processReturn(o.id, next, refund[o.id] ?? o.total - o.refundAmount).catch((e) => ({ ok: false as const, error: e instanceof Error ? e.message : "Failed" }));
       setFlash(r.ok ? { ok: true, text: r.message ?? "Updated." } : { ok: false, text: r.error });
     });
 
@@ -83,15 +84,15 @@ export function ReturnsManager({ orders, demo }: { orders: Order[]; demo: boolea
                   {o.returnStatus === "received" && (
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-slate-500 flex items-center gap-1">Refund ₹
-                        <input type="number" min={1} max={o.total} value={refund[o.id] ?? o.total} onChange={(e) => setRefund({ ...refund, [o.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} className="w-24 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-2.5 py-1.5 text-sm" />
+                        <input type="number" min={1} max={o.total - o.refundAmount} value={refund[o.id] ?? o.total - o.refundAmount} onChange={(e) => setRefund({ ...refund, [o.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) })} className="w-24 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-2.5 py-1.5 text-sm" />
                       </label>
-                      <button type="button" disabled={pending} onClick={() => act(o, "refunded")} className="admin-grad rounded-xl px-3.5 py-2 text-sm font-semibold shadow-md">Mark refunded</button>
+                      <button type="button" disabled={pending} onClick={() => act(o, "refunded")} className="admin-grad rounded-xl px-3.5 py-2 text-sm font-semibold shadow-md">{viaGateway(o) ? "Refund via Razorpay" : "Mark refunded"}</button>
                     </div>
                   )}
                   <a href={waLink(o.phone, msg)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline ml-auto"><MessageCircle className="w-3.5 h-3.5" /> WhatsApp</a>
                   <a href={`tel:${o.phone}`} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:underline"><Phone className="w-3.5 h-3.5" /> Call</a>
                 </div>
-                {o.returnStatus === "received" && <p className="text-[11px] text-slate-400">Pay the refund by UPI/bank first, then record it here. Stock was added back when the item was received.</p>}
+                {o.returnStatus === "received" && <p className="text-[11px] text-slate-400">{viaGateway(o) ? `Paid online — the refund goes back to the customer's UPI / card via Razorpay${demo ? " (simulated in the demo)" : ""}.` : "Pay the refund by UPI/bank first, then record it here."} Stock was added back when the item was received.</p>}
                 <Link href="/admin/orders" className={`${btnSecondary} w-full !py-1.5 !text-xs`}>Open in Orders</Link>
               </Card>
             );

@@ -23,6 +23,7 @@ export async function adminOrders(tenantId: string, demoId: string | null, take 
       awb: r.awb, trackingUrl: r.trackingUrl, shipmentRef: r.shipmentRef, weightGrams: r.weightGrams, timeline: parseTimeline(r.timeline),
       cancelReason: r.cancelReason, returnStatus: r.returnStatus, returnReason: r.returnReason, invoiceNo: r.invoiceNo, trackToken: r.trackToken,
       deliveredAt: r.deliveredAt?.toISOString() ?? null,
+      tax: r.tax, couponCode: r.couponCode, paymentId: r.paymentId, paymentRef: r.paymentRef,
     };
   });
 }

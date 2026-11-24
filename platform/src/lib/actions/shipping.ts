@@ -14,6 +14,7 @@ import {
 } from "@/lib/couriers";
 import { addTimeline, advanceOrder, assignInvoiceNos, notifyCustomer, syncTracking } from "@/lib/fulfilment";
 import { restoreStock } from "@/lib/storeCatalog";
+import { refundOrder } from "@/lib/storePayments";
 
 // Admin: shipping settings, courier booking, tracking refresh, invoices, returns.
 // Demo sandboxes: settings go to the overlay; courier calls are simulated; no emails.
@@ -292,12 +293,18 @@ export async function processReturn(id: string, next: "approved" | "rejected" | 
     const refund = z.number().int().min(0).max(o.total).parse(Math.round(refundAmount || 0));
     if (next === "refunded" && refund <= 0) return { ok: false, error: "Enter the refund amount." };
     const label = { approved: "Return approved", rejected: "Return rejected", received: "Returned item(s) received", refunded: `Refunded ${inr(refund)}` }[next];
+    let timeline = o.timeline;
+    if (next === "refunded") {
+      // Online (Razorpay) payments are refunded through the gateway; other methods just record it.
+      const r = await refundOrder(o.id, refund, "Return");
+      if (!r.ok) return { ok: false, error: r.error };
+      timeline = (await db.storeOrder.findUnique({ where: { id: o.id }, select: { timeline: true } }))?.timeline ?? timeline;
+    }
     await db.storeOrder.update({
       where: { id: o.id },
       data: {
         returnStatus: next,
-        timeline: addTimeline(o.timeline, `return_${next}`, [label, z.string().max(300).parse(note.trim())].filter(Boolean).join(" — ")),
-        ...(next === "refunded" ? { refundAmount: refund, paymentStatus: "refunded" } : {}),
+        timeline: addTimeline(timeline, `return_${next}`, [label, z.string().max(300).parse(note.trim())].filter(Boolean).join(" — ")),
       },
     });
     // Received → back in stock (real stores; demo orders never took stock).

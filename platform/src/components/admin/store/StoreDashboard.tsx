@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Globe, IndianRupee, ShoppingBag, Package, AlertTriangle, TrendingUp, Plus, Store, Palette, Rocket, Eye, UserRound } from "lucide-react";
+import { ArrowRight, Globe, IndianRupee, ShoppingBag, Package, AlertTriangle, TrendingUp, Plus, Store, Palette, Eye, UserRound, ShoppingCart, TicketPercent, CreditCard } from "lucide-react";
 import { db } from "@/lib/db";
 import { demoVisibleWhere } from "@/lib/demoSession";
 import { adminOrders } from "@/lib/storeAdmin";
@@ -9,15 +9,17 @@ import { inr, orderLabel, PAYMENT_LABEL } from "@/lib/store";
 import { Badge } from "@/components/admin/ui";
 
 const card = "rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(15,23,42,0.12)]";
+const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000);
 const TONE: Record<string, "violet" | "blue" | "amber" | "slate" | "green" | "red"> = { new: "violet", confirmed: "blue", packed: "amber", shipped: "slate", delivered: "green", cancelled: "red" };
 
 /** Store-sector dashboard: sales first (replaces the leads/appointments dashboard). */
 export async function StoreDashboard({ tenant, userName, demoId, liveUrl }: { tenant: { id: string; name: string }; userName: string; demoId: string | null; liveUrl: string }) {
-  const [orders, products, settings, views7] = await Promise.all([
+  const [orders, products, settings, views7, abandoned] = await Promise.all([
     adminOrders(tenant.id, demoId, 1000),
     db.product.findMany({ where: demoVisibleWhere(tenant.id, demoId), select: { id: true, name: true, stock: true, images: true, published: true } }),
     getStoreSettings(tenant.id, demoId),
     db.pageView.aggregate({ where: { tenantId: tenant.id, day: { gte: lastDays(7)[0] } }, _sum: { views: true } }),
+    db.abandonedCart.groupBy({ by: ["recovered"], where: { tenantId: tenant.id, demoSessionId: demoId, updatedAt: { gte: daysAgo(30) } }, _count: { _all: true }, _sum: { subtotal: true } }),
   ]);
 
   // Day buckets in IST so "today" matches the shop owner's day.
@@ -25,7 +27,8 @@ export async function StoreDashboard({ tenant, userName, demoId, liveUrl }: { te
   const now = new Date();
   const today = dayKey(now);
   const days = Array.from({ length: 7 }, (_, i) => dayKey(new Date(now.getTime() - (6 - i) * 86_400_000)));
-  const live = orders.filter((o) => o.status !== "cancelled");
+  // Sales = non-cancelled orders, minus online orders still waiting for payment.
+  const live = orders.filter((o) => o.status !== "cancelled" && !(o.paymentMethod === "online" && (o.paymentStatus === "pending" || o.paymentStatus === "failed")));
   const salesBy = new Map(days.map((d) => [d, 0]));
   for (const o of live) {
     const k = dayKey(new Date(o.createdAt));
@@ -48,6 +51,14 @@ export async function StoreDashboard({ tenant, userName, demoId, liveUrl }: { te
   const top = [...sold.values()].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
   const low = products.filter((p) => p.published && p.stock <= settings.lowStockAt).sort((a, b) => a.stock - b.stock).slice(0, 6);
   const visitors = views7._sum.views ?? 0;
+  const conversion = visitors ? Math.round((orders7 / visitors) * 1000) / 10 : 0;
+  const byMethod = new Map<string, { n: number; total: number }>();
+  for (const o of live) { const m = byMethod.get(o.paymentMethod) ?? { n: 0, total: 0 }; m.n += 1; m.total += o.total; byMethod.set(o.paymentMethod, m); }
+  const methodRows = [...byMethod.entries()].sort((a, b) => b[1].total - a[1].total);
+  const methodMax = Math.max(1, ...methodRows.map(([, m]) => m.total));
+  const lost = abandoned.find((a) => !a.recovered);
+  const won = abandoned.find((a) => a.recovered);
+  const couponOrders = live.filter((o) => o.couponCode).length;
 
   const kpis = [
     { label: "Sales today", value: inr(salesToday), hint: `${live.filter((o) => dayKey(new Date(o.createdAt)) === today).length} orders`, icon: IndianRupee, accent: "from-emerald-500 to-teal-500", href: "/admin/orders" },
@@ -61,7 +72,7 @@ export async function StoreDashboard({ tenant, userName, demoId, liveUrl }: { te
     { href: "/admin/customers", label: "Customers", icon: UserRound },
     { href: "/admin/store-settings", label: "Store settings", icon: Store },
     { href: "/admin/appearance", label: "Appearance", icon: Palette },
-    { href: "/admin/marketing", label: "Marketing", icon: Rocket },
+    { href: "/admin/discounts", label: "Discounts", icon: TicketPercent },
   ];
 
   return (
@@ -137,6 +148,31 @@ export async function StoreDashboard({ tenant, userName, demoId, liveUrl }: { te
               ))}
             </ul>
           )}
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
+        <div className={`${card} p-4 sm:p-5`}>
+          <div className="flex items-center gap-2 mb-4"><CreditCard className="w-4 h-4 text-lime-600" /><p className="text-sm font-bold text-slate-900 dark:text-white">Revenue by payment method</p><span className="ml-auto text-[11px] text-slate-400">all orders</span></div>
+          {methodRows.length === 0 ? <p className="py-6 text-center text-xs text-slate-400">Shows up after your first orders.</p> : (
+            <ul className="space-y-3">
+              {methodRows.map(([m, v]) => (
+                <li key={m}>
+                  <div className="flex items-center justify-between text-xs mb-1"><span className="font-semibold text-slate-700 dark:text-slate-200">{PAYMENT_LABEL[m] ?? m} <span className="font-normal text-slate-400">· {v.n} orders</span></span><span className="font-bold tabular-nums text-slate-900 dark:text-white">{inr(v.total)}</span></div>
+                  <span className="block h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"><span className="block h-full rounded-full bg-gradient-to-r from-[#2563ff] to-[#7c3aed]" style={{ width: `${Math.max(3, (v.total / methodMax) * 100)}%` }} /></span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className={`${card} p-4 sm:p-5 grid grid-cols-2 gap-4 content-start`}>
+          <Link href="/admin/abandoned" className="col-span-2 rounded-2xl bg-amber-50 dark:bg-amber-500/10 p-3.5 hover:ring-1 hover:ring-amber-300 transition">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-200"><ShoppingCart className="w-3.5 h-3.5" /> Abandoned checkouts · 30 days</p>
+            <p className="text-xl font-extrabold text-slate-900 dark:text-white tabular-nums mt-1">{inr(lost?._sum.subtotal ?? 0)} <span className="text-xs font-semibold text-slate-500">in {lost?._count._all ?? 0} carts</span></p>
+            <p className="text-[11px] text-slate-500 mt-0.5">{won?._count._all ?? 0} recovered · tap to nudge on WhatsApp →</p>
+          </Link>
+          <div><p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Conversion · 7d</p><p className="text-xl font-extrabold text-slate-900 dark:text-white tabular-nums">{conversion}%</p><p className="text-[11px] text-slate-400">{orders7} orders / {visitors.toLocaleString("en-IN")} visits</p></div>
+          <Link href="/admin/discounts" className="hover:opacity-80"><p className="flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-400"><TicketPercent className="w-3.5 h-3.5" /> With a coupon</p><p className="text-xl font-extrabold text-slate-900 dark:text-white tabular-nums">{couponOrders}</p><p className="text-[11px] text-slate-400">orders</p></Link>
         </div>
       </div>
 

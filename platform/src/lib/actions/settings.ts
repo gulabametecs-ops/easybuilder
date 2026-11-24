@@ -93,6 +93,7 @@ export async function saveTenantPayments(_prev: SettingsState, formData: FormDat
   const next = {
     razorpayKeyId: s("razorpayKeyId"),
     razorpayKeySecret: secret || prev.razorpayKeySecret,
+    razorpayWebhookSecret: prev.razorpayWebhookSecret,
     upiId: s("upiId"),
     upiQrImage: s("upiQrImage"),
     accountName: s("accountName"),
