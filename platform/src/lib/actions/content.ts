@@ -8,6 +8,7 @@ import {
   patchSectionOverlay,
   addOverlaySection,
   setSectionOrderOverlay,
+  applySectionsOverlay,
 } from "@/lib/demoOverlay";
 import { SECTION_DEFAULTS } from "@/lib/sectionDefaults";
 import { limitError, releaseMediaIn } from "@/lib/usage";
@@ -123,17 +124,30 @@ export async function duplicatePage(id: string): Promise<LimitResult> {
 }
 
 // ─── Sections ────────────────────────────────────────────────────────────────
-export async function addSection(pageId: string, type: string) {
+export type AddSectionOpts = {
+  /** Insert position in the page's current section list (default: end). */
+  index?: number;
+  /** Restore a deleted section (Undo) — otherwise the block's defaults are used. */
+  content?: string;
+  style?: string;
+  visible?: boolean;
+};
+
+export async function addSection(pageId: string, type: string, opts: AddSectionOpts = {}) {
   const t = type as SectionType;
+  const content = opts.content && isJson(opts.content) ? opts.content : JSON.stringify(SECTION_DEFAULTS[t] ?? {});
+  const style = opts.style && isJson(opts.style) ? opts.style : "{}";
+  const visible = opts.visible ?? true;
   const demo = await getDemoWriteContext();
   if (demo) {
-    // Sandbox: the new section lives only in this visitor's overlay, appended at the end.
-    const page = await db.page.findFirst({ where: { id: pageId, tenantId: demo.tenantId }, include: { sections: { select: { id: true }, orderBy: { order: "asc" } } } });
+    // Sandbox: the new section lives only in this visitor's overlay.
+    const page = await db.page.findFirst({ where: { id: pageId, tenantId: demo.tenantId } });
     if (!page) throw new Error("Not found");
+    const current = (await demoPageSections(demo, pageId)).map((x) => x.id);
     const newId = `demo_${Date.now().toString(36)}`;
-    let next = addOverlaySection(demo.overlay, newId, { pageId, type: t, order: 10_000, visible: true, content: JSON.stringify(SECTION_DEFAULTS[t] ?? {}), style: "{}" });
-    const order = next.sectionOrder?.[pageId];
-    if (order) next = setSectionOrderOverlay(next, pageId, [...order, newId]);
+    let next = addOverlaySection(demo.overlay, newId, { pageId, type: t, order: 10_000, visible, content, style });
+    const at = opts.index == null ? current.length : Math.max(0, Math.min(current.length, opts.index));
+    next = setSectionOrderOverlay(next, pageId, [...current.slice(0, at), newId, ...current.slice(at)]);
     await persistDemoOverlay(demo.sessionId, next);
     revalidatePath(`/admin/pages/${pageId}`);
     return;
@@ -141,16 +155,37 @@ export async function addSection(pageId: string, type: string) {
   const tenantId = await requireTenantId();
   const page = await db.page.findFirst({ where: { id: pageId, tenantId } });
   if (!page) throw new Error("Not found");
-  const max = await db.section.aggregate({ where: { pageId }, _max: { order: true } });
-  await db.section.create({
-    data: {
-      pageId,
-      type: t,
-      order: (max._max.order ?? -1) + 1,
-      content: JSON.stringify(SECTION_DEFAULTS[t] ?? {}),
-    },
-  });
+  const siblings = await db.section.findMany({ where: { pageId }, orderBy: { order: "asc" }, select: { order: true } });
+  const at = opts.index == null ? siblings.length : Math.max(0, Math.min(siblings.length, opts.index));
+  let order = (siblings[siblings.length - 1]?.order ?? -1) + 1;
+  if (at < siblings.length) {
+    // Make room: shift everything from the insert point down by one.
+    order = siblings[at].order;
+    await db.section.updateMany({ where: { pageId, order: { gte: order } }, data: { order: { increment: 1 } } });
+  }
+  await db.section.create({ data: { pageId, type: t, order, visible, content, style } });
   revalidatePath(`/admin/pages/${pageId}`);
+}
+
+function isJson(raw: string) {
+  try { JSON.parse(raw); return true; } catch { return false; }
+}
+
+/** Demo: a section may be a DB row or one added in this visitor's overlay. */
+async function demoSection(demo: NonNullable<Awaited<ReturnType<typeof getDemoWriteContext>>>, id: string) {
+  const added = demo.overlay.addedSections?.[id];
+  if (added) {
+    const page = await db.page.findFirst({ where: { id: added.pageId, tenantId: demo.tenantId } });
+    if (!page) throw new Error("Not found");
+    return { id, ...added, page };
+  }
+  return assertSectionOwned(id, demo.tenantId);
+}
+
+/** Demo: the page's sections as this visitor sees them (overlay applied, in order). */
+async function demoPageSections(demo: NonNullable<Awaited<ReturnType<typeof getDemoWriteContext>>>, pageId: string) {
+  const rows = await db.section.findMany({ where: { pageId, page: { tenantId: demo.tenantId } }, orderBy: { order: "asc" } });
+  return applySectionsOverlay(rows, pageId, demo.overlay);
 }
 
 async function assertSectionOwned(id: string, tenantId: string) {
@@ -164,7 +199,7 @@ export async function updateSectionContent(id: string, content: string) {
 
   const demo = await getDemoWriteContext();
   if (demo) {
-    const section = await assertSectionOwned(id, demo.tenantId);
+    const section = await demoSection(demo, id);
     const next = patchSectionOverlay(demo.overlay, id, { content });
     await persistDemoOverlay(demo.sessionId, next);
     revalidatePath(`/admin/pages/${section.pageId}`);
@@ -186,7 +221,7 @@ export async function updateSectionStyle(id: string, style: string) {
 
   const demo = await getDemoWriteContext();
   if (demo) {
-    const section = await assertSectionOwned(id, demo.tenantId);
+    const section = await demoSection(demo, id);
     const next = patchSectionOverlay(demo.overlay, id, { style });
     await persistDemoOverlay(demo.sessionId, next);
     revalidatePath(`/admin/pages/${section.pageId}`);
@@ -206,10 +241,11 @@ export async function updateSectionStyle(id: string, style: string) {
 export async function toggleSection(id: string) {
   const demo = await getDemoWriteContext();
   if (demo) {
-    const section = await assertSectionOwned(id, demo.tenantId);
+    const section = await demoSection(demo, id);
     const baseVisible = demo.overlay.sections?.[id]?.visible ?? section.visible;
     const next = patchSectionOverlay(demo.overlay, id, { visible: !baseVisible });
     await persistDemoOverlay(demo.sessionId, next);
+    revalidatePath(`/admin/pages/${section.pageId}`);
     return;
   }
 
@@ -222,8 +258,10 @@ export async function toggleSection(id: string) {
 export async function deleteSection(id: string) {
   const demo = await getDemoWriteContext();
   if (demo) {
+    const { pageId } = await demoSection(demo, id);
     const next = patchSectionOverlay(demo.overlay, id, { deleted: true });
     await persistDemoOverlay(demo.sessionId, next);
+    revalidatePath(`/admin/pages/${pageId}`);
     return;
   }
 
@@ -237,25 +275,18 @@ export async function deleteSection(id: string) {
 export async function duplicateSection(id: string) {
   const demo = await getDemoWriteContext();
   if (demo) {
-    const tenantId = demo.tenantId;
-    const section = await assertSectionOwned(id, tenantId);
+    const { pageId } = await demoSection(demo, id);
+    const list = await demoPageSections(demo, pageId);
+    const idx = list.findIndex((x) => x.id === id);
+    const src = list[idx];
+    if (!src) return;
     const newId = `demo_${Date.now().toString(36)}`;
-    let next = addOverlaySection(demo.overlay, newId, {
-      pageId: section.pageId,
-      type: section.type,
-      order: section.order + 1,
-      visible: section.visible,
-      content: section.content,
-      style: section.style,
-    });
-    const order = next.sectionOrder?.[section.pageId];
-    if (order) {
-      const idx = order.indexOf(id);
-      const newOrder = [...order];
-      newOrder.splice(idx + 1, 0, newId);
-      next = setSectionOrderOverlay(next, section.pageId, newOrder);
-    }
+    let next = addOverlaySection(demo.overlay, newId, { pageId, type: src.type, order: 10_000, visible: src.visible, content: src.content, style: src.style });
+    const ids = list.map((x) => x.id);
+    ids.splice(idx + 1, 0, newId);
+    next = setSectionOrderOverlay(next, pageId, ids);
     await persistDemoOverlay(demo.sessionId, next);
+    revalidatePath(`/admin/pages/${pageId}`);
     return;
   }
 
@@ -274,6 +305,7 @@ export async function reorderSections(pageId: string, orderedIds: string[]) {
   if (demo) {
     const next = setSectionOrderOverlay(demo.overlay, pageId, orderedIds);
     await persistDemoOverlay(demo.sessionId, next);
+    revalidatePath(`/admin/pages/${pageId}`);
     return;
   }
 
@@ -287,17 +319,14 @@ export async function reorderSections(pageId: string, orderedIds: string[]) {
 export async function moveSection(id: string, dir: "up" | "down") {
   const demo = await getDemoWriteContext();
   if (demo) {
-    const tenantId = demo.tenantId;
-    const section = await assertSectionOwned(id, tenantId);
-    const siblings = await db.section.findMany({ where: { pageId: section.pageId }, orderBy: { order: "asc" } });
-    const ids = siblings.map((s) => s.id);
+    const { pageId } = await demoSection(demo, id);
+    const ids = (await demoPageSections(demo, pageId)).map((x) => x.id);
     const idx = ids.indexOf(id);
     const swapIdx = dir === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= ids.length) return;
-    const newOrder = [...ids];
-    [newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]];
-    const next = setSectionOrderOverlay(demo.overlay, section.pageId, newOrder);
-    await persistDemoOverlay(demo.sessionId, next);
+    if (idx < 0 || swapIdx < 0 || swapIdx >= ids.length) return;
+    [ids[idx], ids[swapIdx]] = [ids[swapIdx], ids[idx]];
+    await persistDemoOverlay(demo.sessionId, setSectionOrderOverlay(demo.overlay, pageId, ids));
+    revalidatePath(`/admin/pages/${pageId}`);
     return;
   }
 

@@ -424,6 +424,24 @@ body {
   max-width: 100%;
 }
 
+/* Section size controls (Style tab / canvas): only active when the attribute is set,
+   so sections saved before these existed render exactly as before. */
+[data-pt] > :first-child { padding-top: var(--sec-pt) !important; }
+[data-pb] > :last-child { padding-bottom: var(--sec-pb) !important; }
+[data-sec-w="narrow"] :is(.max-w-7xl, .max-w-6xl, .max-w-5xl) { max-width: 48rem !important; }
+[data-sec-w="wide"] :is(.max-w-7xl, .max-w-6xl, .max-w-5xl) { max-width: 96rem !important; }
+[data-sec-w="full"] :is(.max-w-7xl, .max-w-6xl, .max-w-5xl) { max-width: none !important; }
+@media (min-width: 640px) {
+  [data-sec-cols] .sec-cols {
+    display: grid !important;
+    grid-template-columns: repeat(var(--sec-cols-sm), minmax(0, 1fr)) !important;
+  }
+  [data-sec-cols] .sec-cols > * { width: auto !important; }
+}
+@media (min-width: 1024px) {
+  [data-sec-cols] .sec-cols { grid-template-columns: repeat(var(--sec-cols), minmax(0, 1fr)) !important; }
+}
+
 .sec-card {
   background: var(--card-bg, var(--site-surface, #fff));
   color: var(--card-text, inherit);

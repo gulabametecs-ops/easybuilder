@@ -79,7 +79,11 @@ export function SectionRenderer({
   const align = style.align; // only set when user chose an alignment
   const hasCardStyle = !!(style.cardBg || style.cardText || style.cardBorderColor || style.cardBorderWidth != null || style.cardRadius || style.cardShadow || style.cardSize);
 
-  if (!editMode && !frame && !anchor && !hasStyle && !align) return block;
+  const width = style.width && style.width !== "normal" ? style.width : undefined;
+  const padT = typeof style.padTop === "number";
+  const padB = typeof style.padBottom === "number";
+
+  if (!editMode && !frame && !anchor && !hasStyle && !align && !width) return block;
   return (
     <div
       id={anchor}
@@ -88,6 +92,10 @@ export function SectionRenderer({
       data-hidden={editMode && section.visible === false ? "1" : undefined}
       data-sec-align={align || undefined}
       data-sec-cards={hasCardStyle ? "1" : undefined}
+      data-sec-w={width}
+      data-sec-cols={style.cols ? "1" : undefined}
+      data-pt={padT ? "1" : undefined}
+      data-pb={padB ? "1" : undefined}
       data-bg={style.background && style.background !== "default" ? style.background : undefined}
       className={`${frame} ${editMode ? "builder-section" : ""} ${editMode && section.visible === false ? "opacity-40" : ""}`.trim()}
       style={hasStyle ? frameStyle : undefined}

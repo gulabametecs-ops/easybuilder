@@ -230,7 +230,7 @@ export function ProductGridBlock({ c, products, collections }: { c: SectionConte
         )}
 
         {list.length ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+          <div className="sec-cols grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
             {list.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>
         ) : (
@@ -261,7 +261,7 @@ export function ProductCategoriesBlock({ c, products }: { c: SectionContentMap["
     <section className="site-sec py-16 sm:py-24 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Heading c={c} />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="sec-cols grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {[...cats].slice(0, 8).map(([name, x]) => (
             <Link key={name} href={`/shop?c=${encodeURIComponent(name)}`} className={`group relative block aspect-[4/5] overflow-hidden ${RADIUS} bg-light`}>
               <ProductImage p={x.sample} src={x.image || undefined} className="transition-transform duration-700 group-hover:scale-110" />

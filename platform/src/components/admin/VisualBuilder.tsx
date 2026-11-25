@@ -6,9 +6,9 @@ import {
   LayoutTemplate, LayoutGrid, AlignLeft, BarChart3, Images, ListOrdered, Megaphone, Users, Tag,
   Sparkles, Quote, HelpCircle, Play, MapPin, FileText, Mail, Bell, Trophy, Download, CreditCard,
   Clock, Type, Timer, PanelTop, CalendarClock, Building2, HandHeart, Wallet, ArrowLeft, ChevronUp, ChevronDown, Copy,
-  Layers, ShoppingBag, type LucideIcon,
+  Layers, ShoppingBag, Undo2, Loader2, Check, type LucideIcon,
 } from "lucide-react";
-import { toggleSection, deleteSection, moveSection, addSection, reorderSections, duplicateSection } from "@/lib/actions/content";
+import { toggleSection, deleteSection, moveSection, addSection, reorderSections, duplicateSection, updateSectionStyle } from "@/lib/actions/content";
 import { SECTION_META } from "@/lib/sectionDefaults";
 import type { ThemeConfig } from "@/lib/config";
 import { SectionContentEditor } from "./SectionContentEditor";
@@ -63,6 +63,20 @@ export function VisualBuilder({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
+  const [insertAt, setInsertAt] = useState<number | null>(null);
+  const [undo, setUndo] = useState<{ s: Section; index: number } | null>(null);
+  const [styleRev, setStyleRev] = useState(0);
+  const [everSaved, setEverSaved] = useState(false);
+  const itemsRef = useRef(items);
+  const selectedRef = useRef<string | null>(null);
+  const scrollY = useRef(0);
+  useEffect(() => { itemsRef.current = items; selectedRef.current = selected; });
+  if (pending && !everSaved) setEverSaved(true);
+  useEffect(() => {
+    if (!undo) return;
+    const t = setTimeout(() => setUndo(null), 10_000);
+    return () => clearTimeout(t);
+  }, [undo]);
 
   const baseSrc = `${previewPath}${previewPath.includes("?") ? "&" : "?"}__edit=1`;
   // Cache-bust so Next/browser cannot serve a stale preview after save
@@ -112,8 +126,34 @@ export function VisualBuilder({
     const next = [...items];
     const [moved] = next.splice(from, 1);
     next.splice(target, 0, moved);
+    applyOrder(next);
+  };
+
+  const applyOrder = (next: Section[]) => {
     setItems(next);
     start(() => reorderSections(pageId, next.map((x) => x.id)));
+  };
+
+  // Delete straight away (no confirm) — the toast offers Undo, which re-adds it in the same spot.
+  const removeSection = (id: string) => {
+    const list = itemsRef.current;
+    const index = list.findIndex((x) => x.id === id);
+    if (index < 0) return;
+    setUndo({ s: list[index], index });
+    setItems(list.filter((x) => x.id !== id));
+    if (selectedRef.current === id) setSelected(null);
+    start(() => deleteSection(id));
+  };
+  const undoDelete = () => {
+    if (!undo) return;
+    const { s, index } = undo;
+    setUndo(null);
+    start(() => addSection(pageId, s.type, { index, content: s.content, style: s.style, visible: s.visible }));
+  };
+
+  const openPicker = (at: number | null) => {
+    setInsertAt(at);
+    setPickerOpen(true);
   };
 
   useEffect(() => {
@@ -125,6 +165,37 @@ export function VisualBuilder({
         setTab("content");
         setSectionsW((w) => Math.max(w, 340));
       }
+      if (d.type === "ready") {
+        // Preview reloaded after a save: keep the user's scroll position + selection.
+        iframeRef.current?.contentWindow?.postMessage({ __builderCmd: true, type: "restore", y: scrollY.current, id: selectedRef.current }, "*");
+      }
+      if (d.type === "scroll" && typeof d.y === "number") scrollY.current = d.y;
+      if (d.type === "add" && typeof d.index === "number") openPicker(d.index);
+      if (d.type === "reorder" && d.id && typeof d.to === "number") {
+        const list = itemsRef.current;
+        const from = list.findIndex((x) => x.id === d.id);
+        if (from >= 0) {
+          const next = [...list];
+          const [moved] = next.splice(from, 1);
+          next.splice(d.to > from ? d.to - 1 : d.to, 0, moved);
+          applyOrder(next);
+        }
+      }
+      if (d.type === "spacing" && d.id && typeof d.padBottom === "number") {
+        const sec = itemsRef.current.find((x) => x.id === d.id);
+        if (sec) {
+          let st: Record<string, unknown> = {};
+          try { st = JSON.parse(sec.style || "{}"); } catch { /* keep {} */ }
+          st.padBottom = d.padBottom;
+          delete st.spacingBottom;
+          const raw = JSON.stringify(st);
+          start(async () => {
+            await updateSectionStyle(sec.id, raw);
+            onSectionSaved(sec.id, { style: raw });
+            setStyleRev((r) => r + 1);
+          });
+        }
+      }
       if (d.type === "action" && d.id) {
         const id: string = d.id;
         switch (d.action) {
@@ -132,7 +203,7 @@ export function VisualBuilder({
           case "down": start(() => moveSection(id, "down")); break;
           case "toggle": start(() => toggleSection(id)); break;
           case "duplicate": start(() => duplicateSection(id)); break;
-          case "delete": if (confirm("Remove this section?")) start(() => deleteSection(id)); break;
+          case "delete": removeSection(id); break;
           case "edit": setSelected(id); setTab("content"); break;
           case "style": setSelected(id); setTab("design"); break;
         }
@@ -140,6 +211,7 @@ export function VisualBuilder({
     };
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handlers read latest state via refs
   }, [start]);
 
   useEffect(() => {
@@ -195,10 +267,10 @@ export function VisualBuilder({
   const SelectedIcon = selectedSection ? (SECTION_ICON[selectedSection.type] ?? LayoutTemplate) : LayoutTemplate;
 
   return (
-    <div className={`flex flex-col flex-1 min-h-0 ${pending ? "opacity-70 pointer-events-none" : ""}`}>
+    <div className="flex flex-col flex-1 min-h-0 relative">
       <div ref={rowRef} className="flex flex-col xl:flex-row xl:items-stretch flex-1 min-h-0 gap-0">
         <div
-          className="vb-sections w-full flex flex-col min-h-0 order-2 xl:order-1"
+          className={`vb-sections w-full flex flex-col min-h-0 order-2 xl:order-1 ${pending ? "pointer-events-none" : ""}`}
           style={
             previewHidden
               ? { flex: "1 1 auto", width: "100%" }
@@ -234,7 +306,7 @@ export function VisualBuilder({
                       <button type="button" disabled={selectedIndex >= items.length - 1} onClick={() => start(() => moveSection(selectedSection.id, "down"))} className="p-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-500 disabled:opacity-35" title="Down"><ChevronDown className="w-3.5 h-3.5" /></button>
                       <button type="button" onClick={() => start(() => duplicateSection(selectedSection.id))} className="p-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-500" title="Copy"><Copy className="w-3.5 h-3.5" /></button>
                       <button type="button" onClick={() => start(() => toggleSection(selectedSection.id))} className="p-1.5 rounded-md border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-500" title="Show/hide">{selectedSection.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}</button>
-                      <button type="button" onClick={() => { if (confirm("Remove this section?")) { start(() => deleteSection(selectedSection.id)); closeEditor(); } }} className="p-1.5 rounded-md border border-red-200 text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                      <button type="button" onClick={() => { removeSection(selectedSection.id); closeEditor(); }} className="p-1.5 rounded-md border border-red-200 text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                   <div className="flex rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 p-0.5">
@@ -261,7 +333,7 @@ export function VisualBuilder({
                     )
                     : (
                       <SectionStyleEditor
-                        key={`s-${selectedSection.id}`}
+                        key={`s-${selectedSection.id}-${styleRev}`}
                         id={selectedSection.id}
                         type={selectedSection.type}
                         style={selectedSection.style}
@@ -300,7 +372,7 @@ export function VisualBuilder({
                     >
                       <Sparkles className="w-3.5 h-3.5" /> AI
                     </button>
-                    <button type="button" onClick={() => setPickerOpen(true)} className="inline-flex items-center gap-1 rounded-md bg-lime-500 text-white text-xs font-semibold px-2.5 py-1.5 hover:bg-lime-600">
+                    <button type="button" onClick={() => openPicker(null)} className="inline-flex items-center gap-1 rounded-md bg-lime-500 text-white text-xs font-semibold px-2.5 py-1.5 hover:bg-lime-600">
                       <Plus className="w-3.5 h-3.5" /> Add
                     </button>
                   </div>
@@ -320,7 +392,7 @@ export function VisualBuilder({
                   {items.length === 0 && (
                     <div className="text-center py-10 px-3">
                       <p className="text-sm text-slate-400 mb-2">No sections yet</p>
-                      <button type="button" onClick={() => setPickerOpen(true)} className="text-sm font-semibold text-lime-600 hover:underline">
+                      <button type="button" onClick={() => openPicker(null)} className="text-sm font-semibold text-lime-600 hover:underline">
                         Add first section
                       </button>
                     </div>
@@ -363,7 +435,7 @@ export function VisualBuilder({
                             <button type="button" onClick={() => start(() => toggleSection(s.id))} className="p-1.5 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="Show / hide">
                               {s.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                             </button>
-                            <button type="button" onClick={() => { if (confirm("Remove this section?")) start(() => deleteSection(s.id)); }} className="p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" title="Delete">
+                            <button type="button" onClick={() => removeSection(s.id)} className="p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" title="Delete">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -432,8 +504,26 @@ export function VisualBuilder({
       <SectionPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onPick={(type) => start(() => addSection(pageId, type))}
+        positionHint={insertAt == null || insertAt >= items.length ? "at the end of the page" : insertAt === 0 ? "at the top of the page" : `after "${typeLabel(items[insertAt - 1].type)}"`}
+        onPick={(type) => start(() => addSection(pageId, type, insertAt == null ? {} : { index: insertAt }))}
       />
+
+      {/* Saving indicator + undo toast */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none">
+        {undo && (
+          <div className="pointer-events-auto flex items-center gap-3 rounded-xl bg-slate-900 text-white text-sm px-4 py-2.5 shadow-xl border border-white/10">
+            <span>&ldquo;{typeLabel(undo.s.type)}&rdquo; deleted</span>
+            <button type="button" onClick={undoDelete} className="inline-flex items-center gap-1 font-semibold text-lime-400 hover:text-lime-300">
+              <Undo2 className="w-4 h-4" /> Undo
+            </button>
+          </div>
+        )}
+        {(pending || everSaved) && (
+          <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow-md border ${pending ? "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-200 border-slate-200 dark:border-slate-600" : "bg-lime-50 dark:bg-lime-500/10 text-lime-700 dark:text-lime-300 border-lime-200 dark:border-lime-500/30"}`}>
+            {pending ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</> : <><Check className="w-3.5 h-3.5" /> All changes saved</>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

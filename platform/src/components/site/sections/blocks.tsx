@@ -526,7 +526,7 @@ export function StatsBlock({ c, layout }: { c: SectionContentMap["stats"]; layou
     return (
       <section className="site-on-dark relative py-14 sm:py-16 bg-primary text-white overflow-hidden">
         <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20" />
-        <div className={`relative ${WRAP} grid grid-cols-2 lg:grid-cols-4 gap-y-10 lg:divide-x lg:divide-white/20`}>
+        <div className={`relative ${WRAP} sec-cols grid grid-cols-2 lg:grid-cols-4 gap-y-10 lg:divide-x lg:divide-white/20`}>
           {rows.map(({ s, i, t }) => (
             <div key={s.label || i} className="text-center px-4">
               <div className="text-5xl sm:text-6xl font-extrabold tracking-[-0.04em] tabular-nums text-white" {...textStyleProps(t.value)}><StatValue v={s.value} /></div>
@@ -542,7 +542,7 @@ export function StatsBlock({ c, layout }: { c: SectionContentMap["stats"]; layou
   if (layout === "cards") {
     return (
       <section className="site-sec py-16 sm:py-20 bg-light">
-        <div className={`${WRAP} grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6`}>
+        <div className={`${WRAP} sec-cols grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6`}>
           {rows.map(({ s, i, t, cardCss }) => (
             <div key={s.label || i} className="sec-card site-lift p-5 sm:p-7 flex flex-col" style={cardCss}>
               <span className={`${CHIP} w-11 h-11 mb-6`}><Icon name={s.icon} className="w-5 h-5" /></span>
@@ -560,7 +560,7 @@ export function StatsBlock({ c, layout }: { c: SectionContentMap["stats"]; layou
   if (layout === "minimal") {
     return (
       <section className="site-sec py-12 sm:py-16 bg-white">
-        <div className={`${WRAP} grid grid-cols-2 lg:grid-cols-4 border-y border-[var(--site-line)]`}>
+        <div className={`${WRAP} sec-cols grid grid-cols-2 lg:grid-cols-4 border-y border-[var(--site-line)]`}>
           {rows.map(({ s, i, t }) => (
             <div key={s.label || i} className="py-8 sm:py-10 px-3 text-center border-[var(--site-line)] odd:border-r lg:border-r lg:last:border-r-0 [&:nth-child(n+3)]:border-t lg:[&:nth-child(n+3)]:border-t-0">
               <div className="text-4xl sm:text-6xl font-bold tracking-[-0.05em] tabular-nums text-[var(--c-heading)]" {...textStyleProps(t.value)}><StatValue v={s.value} /></div>
@@ -575,7 +575,7 @@ export function StatsBlock({ c, layout }: { c: SectionContentMap["stats"]; layou
   return (
     <section className="site-on-dark relative py-16 sm:py-20 bg-dark overflow-hidden">
       <div aria-hidden className="site-blob w-[30rem] h-[18rem] left-1/2 -translate-x-1/2 -top-40 opacity-25" />
-      <div className={`relative ${WRAP} grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6`}>
+      <div className={`relative ${WRAP} sec-cols grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6`}>
         {c.items.map((s, i) => {
           const row = s as typeof s & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
           const cardCss = cardStyleCss(readItemStyle(row) ?? allCards);
@@ -644,7 +644,7 @@ export function GalleryBlock({
           ) : (
             <div key={cat}>
               <CategoryHeading cat={cat} />
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="sec-cols grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {items.map((g) => (
                   <figure key={g.id} className="card relative overflow-hidden group ring-1 ring-[var(--site-line)]">
                     <Media src={g.image} w={IMAGE_SLOTS.gallery.w} h={IMAGE_SLOTS.gallery.h} alt={g.caption} className="w-full aspect-square transition-transform duration-500 group-hover:scale-105" />
@@ -707,7 +707,7 @@ export function StepsBlock({ c, layout }: { c: SectionContentMap["steps"]; layou
       <section className={`${SEC} bg-light`}>
         <div className={WRAP}>
           <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+          <div className="sec-cols grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {items.map((s, i) => {
               const { cardCss, t } = styled(s);
               return (
@@ -732,7 +732,7 @@ export function StepsBlock({ c, layout }: { c: SectionContentMap["steps"]; layou
     <section className={`${SEC} bg-light`}>
       <div className={WRAP}>
         <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
-        <div className="sec-grid grid sm:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div className="sec-grid sec-cols grid sm:grid-cols-2 lg:grid-cols-5 gap-5">
           {c.items.map((s, i) => {
             const row = s as typeof s & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
             const cardCss = cardStyleCss(readItemStyle(row) ?? allCards);
@@ -939,7 +939,7 @@ export function TeamBlock({ c, people, layout }: { c: SectionContentMap["team"];
               </div>
             )}
             {core.length > 0 && (
-              <div className="sec-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="sec-grid sec-cols grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                 {core.map((m) => (
                   <PersonCard key={m.id} name={m.name} role={m.role} image={m.image} note={m.experience} bio={m.bio} linkedin={m.linkedin} instagram={m.instagram} cardCss={cardStyleCss(allCards)} />
                 ))}
@@ -947,7 +947,7 @@ export function TeamBlock({ c, people, layout }: { c: SectionContentMap["team"];
             )}
           </>
         ) : (
-          <div className="sec-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="sec-grid sec-cols grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {c.members.map((m, i) => {
               const row = m as typeof m & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
               const cardCss = cardStyleCss(readItemStyle(row) ?? allCards);
@@ -1037,7 +1037,7 @@ function eventStatus(ev: LiveEvent): { label: string; upcoming: boolean } {
 
 function EventCards({ list }: { list: LiveEvent[] }) {
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="sec-cols grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {list.map((ev) => {
         const st = eventStatus(ev);
         const formatted = ev.date ? new Date(ev.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
@@ -1195,7 +1195,7 @@ export function TestimonialsBlock({ c, layout }: { c: SectionContentMap["testimo
             {person(first, "mt-8 sm:mt-10")}
           </figure>
           {rest.length > 0 && (
-            <div className="mt-5 sm:mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            <div className="mt-5 sm:mt-6 sec-cols grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
               {rest.map((r, i) => (
                 <figure key={i} className="sec-card p-6 flex flex-col text-left" style={r.cardCss}>
                   <Stars rating={r.rating} className="mb-4" />
@@ -1242,7 +1242,7 @@ export function TestimonialsBlock({ c, layout }: { c: SectionContentMap["testimo
         <div aria-hidden className="site-gridlines" />
         <div className={`relative ${WRAP}`}>
           {heading}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+          <div className="sec-cols grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
             {rows.map((r, i) => (
               <figure key={i} className="sec-card relative p-7 flex flex-col text-left backdrop-blur-md" style={r.cardCss}>
                 <span aria-hidden className="text-5xl leading-none font-serif text-primary">&ldquo;</span>
@@ -1263,7 +1263,7 @@ export function TestimonialsBlock({ c, layout }: { c: SectionContentMap["testimo
     <section className={`${SEC} bg-white`}>
       <div className={WRAP}>
         <SectionHeading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} styles={headingStylesFrom(c)} />
-        <div className="sec-grid grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        <div className="sec-grid sec-cols grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {c.items.map((t, i) => {
             const row = t as typeof t & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
             const cardCss = cardStyleCss(readItemStyle(row) ?? allCards);
@@ -1352,7 +1352,7 @@ export function FeaturesBlock({ c, layout }: { c: SectionContentMap["features"];
   if (layout === "minimal") {
     return (
       <section className={`${SEC} bg-white`}>
-        <div className={`${WRAP} grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12`}>
+        <div className={`${WRAP} sec-cols grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12`}>
           {rows.map(({ f, fs }, i) => (
             <div key={i} className="group border-t-2 border-[var(--site-line)] pt-7 transition-colors hover:border-primary">
               <Icon name={f.icon} className="w-7 h-7 text-primary" />
@@ -1413,7 +1413,7 @@ export function FeaturesBlock({ c, layout }: { c: SectionContentMap["features"];
   return (
     <section className={`${SEC} bg-white`}>
       <div className={WRAP}>
-        <div className="sec-grid grid sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+        <div className="sec-grid sec-cols grid sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
           {c.items.map((f, i) => {
             const row = f as typeof f & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
             const cardCss = cardStyleCss(readItemStyle(row) ?? allCards);

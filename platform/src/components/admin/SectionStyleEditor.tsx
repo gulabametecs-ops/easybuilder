@@ -1,18 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlignLeft, AlignCenter, AlignRight, RotateCcw, Check } from "lucide-react";
 import { updateSectionStyle } from "@/lib/actions/content";
 import type { SectionStyle, SectionType, ThemeConfig } from "@/lib/config";
 import { SECTION_LAYOUTS } from "@/lib/sectionDefaults";
 
-const SPACING = [
-  { v: "default", label: "Normal" },
-  { v: "none", label: "None" },
-  { v: "sm", label: "Small" },
-  { v: "lg", label: "Large" },
-];
+const WIDTHS = [
+  { v: "narrow", label: "Narrow" },
+  { v: "normal", label: "Normal" },
+  { v: "wide", label: "Wide" },
+  { v: "full", label: "Full" },
+] as const;
+
+// Blocks whose card grid carries `.sec-cols` (see site/sections) — "cards per row" works there.
+const COLS_TYPES = new Set([
+  "stats", "gallery", "steps", "team", "eventList", "testimonials", "features",
+  "toppers", "downloads", "pricingPlans", "productGrid", "productCategories",
+]);
 
 type SiteColors = ThemeConfig["colors"];
 
@@ -61,7 +67,9 @@ export function SectionStyleEditor({
   const [saved, setSaved] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
+  const dirty = useRef(false);
   const set = (patch: Partial<SectionStyle>) => {
+    dirty.current = true;
     setSt((s) => ({ ...s, ...patch }));
     setSaved(false);
   };
@@ -77,6 +85,20 @@ export function SectionStyleEditor({
       alert(e instanceof Error ? e.message : "Save failed — try again");
     }
   });
+
+  // Auto-save shortly after the last change so the preview follows the controls.
+  useEffect(() => {
+    if (!dirty.current) return;
+    const t = setTimeout(() => { dirty.current = false; save(); }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- save reads this render's st
+  }, [st]);
+  // Leaving the panel before the auto-save fired: save the last change anyway.
+  const stRef = useRef(st);
+  useEffect(() => { stRef.current = st; });
+  useEffect(() => () => {
+    if (dirty.current) void updateSectionStyle(id, JSON.stringify(stRef.current)).then(() => router.refresh()).catch(() => {});
+  }, [id, router]);
 
   const align = st.align ?? "center";
   const usingSiteColors = !st.accentColor && !st.textColor;
@@ -139,18 +161,47 @@ export function SectionStyleEditor({
           </div>
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Space above">
-            <select className={inputCls} value={st.spacingTop ?? "default"} onChange={(e) => set({ spacingTop: e.target.value as SectionStyle["spacingTop"] })}>
-              {SPACING.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
-            </select>
-          </Field>
-          <Field label="Space below">
-            <select className={inputCls} value={st.spacingBottom ?? "default"} onChange={(e) => set({ spacingBottom: e.target.value as SectionStyle["spacingBottom"] })}>
-              {SPACING.map((s) => <option key={s.v} value={s.v}>{s.label}</option>)}
-            </select>
-          </Field>
+      </section>
+
+      {/* Size — direct controls */}
+      <section className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Size &amp; spacing</p>
+          <p className="text-[11px] text-slate-400">Tip: on the preview, drag the green &ldquo;Space below&rdquo; handle at the bottom of a selected section.</p>
         </div>
+        <Field label="Section width">
+          <div className="flex gap-1.5">
+            {WIDTHS.map((w) => (
+              <button key={w.v} type="button" onClick={() => set({ width: w.v === "normal" ? undefined : w.v })} className={chip((st.width ?? "normal") === w.v)}>
+                {w.label}
+              </button>
+            ))}
+          </div>
+        </Field>
+        {type && COLS_TYPES.has(type) && (
+          <Field label="Cards per row (computer)">
+            <div className="flex gap-1.5">
+              {([undefined, 1, 2, 3, 4] as const).map((n) => (
+                <button key={n ?? "auto"} type="button" onClick={() => set({ cols: n })} className={chip(st.cols === n)}>
+                  {n ?? "Auto"}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1.5">Tablets show up to 2, phones keep the block&apos;s own layout.</p>
+          </Field>
+        )}
+        <PadSlider
+          label="Space above"
+          value={st.padTop}
+          legacy={st.spacingTop}
+          onChange={(v) => set({ padTop: v, spacingTop: undefined })}
+        />
+        <PadSlider
+          label="Space below"
+          value={st.padBottom}
+          legacy={st.spacingBottom}
+          onChange={(v) => set({ padBottom: v, spacingBottom: undefined })}
+        />
       </section>
 
       {/* Cards — simple */}
@@ -301,9 +352,43 @@ export function SectionStyleEditor({
 
       <div className="sticky bottom-0 -mx-1 px-1 pt-3 pb-1 bg-gradient-to-t from-white via-white dark:from-slate-900 dark:via-slate-900 to-transparent flex items-center gap-3">
         <button type="button" onClick={save} disabled={pending} className="rounded-lg bg-lime-500 text-white text-sm font-semibold px-4 py-2.5 hover:bg-lime-600 disabled:opacity-60 shadow-sm">
-          {pending ? "Saving..." : "Save style"}
+          {pending ? "Saving..." : "Save now"}
         </button>
-        {saved && <span className="text-sm text-green-600 font-medium">Saved ✓</span>}
+        {saved ? <span className="text-sm text-green-600 font-medium">Saved ✓</span> : <span className="text-[11px] text-slate-400">Changes save automatically</span>}
+      </div>
+    </div>
+  );
+}
+
+// Approximate px of the old presets, so the slider starts where the section already is.
+const PRESET_PX: Record<string, number> = { none: 0, sm: 24, default: 112, lg: 112 };
+
+function PadSlider({ label, value, legacy, onChange }: { label: string; value?: number; legacy?: string; onChange: (v: number | undefined) => void }) {
+  const auto = typeof value !== "number";
+  const shown = auto ? PRESET_PX[legacy ?? "default"] ?? 112 : value;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-xs font-medium text-slate-500">{label} — {auto ? (legacy && legacy !== "default" ? legacy : "auto") : `${value}px`}</span>
+        {!auto && (
+          <button type="button" onClick={() => onChange(undefined)} className="text-[11px] font-semibold text-slate-500 hover:text-lime-600 inline-flex items-center gap-1">
+            <RotateCcw className="w-3 h-3" /> Auto
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="range"
+          min={0}
+          max={240}
+          step={4}
+          value={shown}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className={`w-full accent-lime-500 ${auto ? "opacity-60" : ""}`}
+          aria-label={label}
+        />
+        <button type="button" onClick={() => onChange(Math.max(0, shown - 16))} className="w-7 h-7 shrink-0 rounded-md border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-bold" aria-label={`Less ${label}`}>−</button>
+        <button type="button" onClick={() => onChange(Math.min(400, shown + 16))} className="w-7 h-7 shrink-0 rounded-md border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-bold" aria-label={`More ${label}`}>+</button>
       </div>
     </div>
   );

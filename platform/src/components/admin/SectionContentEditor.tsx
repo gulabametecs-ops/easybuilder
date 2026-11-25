@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, Copy, GripVertical } from "lucide-react";
 import { updateSectionContent } from "@/lib/actions/content";
 import { SECTION_DEFAULTS } from "@/lib/sectionDefaults";
 import { defaultTheme } from "@/lib/template";
@@ -106,11 +106,13 @@ export function SectionContentEditor({
   const stateRef = useRef(state);
   const [pending, start] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   const commitLocal = (next: Json) => {
     stateRef.current = next;
     setState(next);
     setSaved(false);
+    setDirty(true);
   };
 
   const persist = async () => {
@@ -122,6 +124,7 @@ export function SectionContentEditor({
     onSaved?.(raw);
     router.refresh();
     setSaved(true);
+    setDirty(false);
   };
 
   const save = () => start(async () => {
@@ -146,6 +149,7 @@ export function SectionContentEditor({
               {pending ? "Saving..." : "Save all changes"}
             </button>
             {saved && <span className="text-sm text-green-600 font-medium">Saved ✓</span>}
+            {dirty && !pending && <span className="text-xs font-medium text-amber-600">Unsaved changes</span>}
           </div>
         </div>
       </PersistCtx.Provider>
@@ -333,6 +337,18 @@ function FieldEditor({
   );
 }
 
+/** Readable card title: first non-empty plain text field (name, title, q, label…). */
+function itemTitle(item: Json): string {
+  for (const [k, v] of Object.entries(item)) {
+    if (isMetaKey(k) || isImageKey(k) || isCodeKey(k) || k === "icon" || k.toLowerCase().endsWith("href") || k === "link" || k === "url") continue;
+    if (typeof v === "string" && v.trim()) return v.trim().replace(/<[^>]+>/g, "").slice(0, 60);
+  }
+  return "";
+}
+
+let listKeySeq = 0;
+const newKey = () => `k${++listKeySeq}`;
+
 function ListEditor({
   label: lbl, items, itemSample, onChange, listStyle, onListStyle,
 }: {
@@ -346,34 +362,73 @@ function ListEditor({
   const colors = useContext(SiteColorsCtx);
   const persist = useContext(PersistCtx);
   const cardDefaults = websiteFieldDefaults("items", colors, "card");
-  const update = (i: number, v: Json) => onChange(items.map((it, idx) => (idx === i ? v : it)));
-  const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i));
-  const add = () => onChange([...items, blankFrom(itemSample) as Json]);
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= items.length) return;
-    const next = [...items];
-    [next[i], next[j]] = [next[j], next[i]];
-    onChange(next);
+
+  // Stable keys per item (items have no ids) so reorders keep each card's open state + inputs.
+  const [keys, setKeys] = useState<string[]>(() => items.map(newKey));
+  const [open, setOpen] = useState<Set<string>>(() => new Set(items.length <= 2 ? keys : []));
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
+  const liveKeys = keys.length === items.length ? keys : items.map((_, i) => keys[i] ?? newKey());
+  if (keys.length !== items.length) setKeys(liveKeys); // list changed from outside
+
+  // Apply the same edit to items and their keys.
+  const apply = (nextItems: Json[], nextKeys: string[]) => {
+    setKeys(nextKeys);
+    onChange(nextItems);
   };
+  const toggle = (k: string) => setOpen((o) => { const n = new Set(o); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  const update = (i: number, v: Json) => onChange(items.map((it, idx) => (idx === i ? v : it)));
+  const remove = (i: number) => apply(items.filter((_, idx) => idx !== i), liveKeys.filter((_, idx) => idx !== i));
+  const moveTo = (from: number, to: number) => {
+    if (to < 0 || to >= items.length || from === to) return;
+    const ni = [...items]; const nk = [...liveKeys];
+    const [it] = ni.splice(from, 1); const [k] = nk.splice(from, 1);
+    ni.splice(to, 0, it); nk.splice(to, 0, k);
+    apply(ni, nk);
+  };
+  const duplicate = (i: number) => {
+    const k = newKey();
+    const copy = JSON.parse(JSON.stringify(items[i])) as Json;
+    apply([...items.slice(0, i + 1), copy, ...items.slice(i + 1)], [...liveKeys.slice(0, i + 1), k, ...liveKeys.slice(i + 1)]);
+    setOpen((o) => new Set(o).add(k));
+  };
+  const add = () => {
+    // Same fields as the last card (blank values), so new cards match what's already there.
+    const k = newKey();
+    apply([...items, blankFrom(items[items.length - 1] ?? itemSample) as Json], [...liveKeys, k]);
+    setOpen((o) => new Set(o).add(k));
+  };
+  const allOpen = items.length > 0 && liveKeys.every((k) => open.has(k));
+
+  const iconBtn = "p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30";
 
   return (
     <div className="rounded-lg border border-slate-100 dark:border-slate-700/80 bg-slate-50/40 dark:bg-slate-800/20 px-3 py-2.5">
       <div className="flex items-center justify-between gap-2 mb-2">
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{lbl}</p>
-        {onListStyle && (
-          <FieldStyleButton
-            value={listStyle}
-            onChange={onListStyle}
-            onApply={async () => { await persist(); }}
-            defaults={cardDefaults}
-            mode="card"
-            title={`Style all · ${lbl}`}
-          />
-        )}
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{lbl} <span className="font-normal text-slate-400">· {items.length}</span></p>
+        <div className="flex items-center gap-2">
+          {items.length > 1 && (
+            <button type="button" onClick={() => setOpen(allOpen ? new Set() : new Set(liveKeys))} className="text-[11px] font-semibold text-slate-500 hover:text-lime-600">
+              {allOpen ? "Collapse all" : "Expand all"}
+            </button>
+          )}
+          {onListStyle && (
+            <FieldStyleButton
+              value={listStyle}
+              onChange={onListStyle}
+              onApply={async () => { await persist(); }}
+              defaults={cardDefaults}
+              mode="card"
+              title={`Style all · ${lbl}`}
+            />
+          )}
+        </div>
       </div>
-      <div className="space-y-3">
+      {items.length > 1 && <p className="text-[11px] text-slate-400 -mt-1 mb-2">Drag <GripVertical className="inline w-3 h-3 -mt-0.5" /> to reorder · click a card to open it</p>}
+      <div className="space-y-1.5">
         {items.map((item, i) => {
+          const k = liveKeys[i];
+          const isOpen = open.has(k);
           const itemStyle = item.__style as FieldStyle | undefined;
           const setItemStyle = (fs: FieldStyle | undefined) => {
             const next = { ...item };
@@ -381,11 +436,33 @@ function ListEditor({
             else next.__style = fs;
             update(i, next);
           };
+          const title = itemTitle(item);
+          const showLine = dragFrom !== null && dragOver === i && dragFrom !== i;
           return (
-            <div key={i} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-400">Item {i + 1}</span>
-                <div className="flex items-center gap-1">
+            <div
+              key={k}
+              onDragOver={(e) => { if (dragFrom === null) return; e.preventDefault(); if (dragOver !== i) setDragOver(i); }}
+              onDrop={(e) => { e.preventDefault(); if (dragFrom !== null) moveTo(dragFrom, i); setDragFrom(null); setDragOver(null); }}
+              className={`rounded-lg border bg-white dark:bg-slate-900/50 transition ${
+                showLine ? (dragFrom! < i ? "border-slate-200 dark:border-slate-700 shadow-[0_3px_0_0_#84cc16]" : "border-slate-200 dark:border-slate-700 shadow-[0_-3px_0_0_#84cc16]") : "border-slate-200 dark:border-slate-700"
+              } ${dragFrom === i ? "opacity-40" : ""}`}
+            >
+              <div className="flex items-center gap-1 px-1.5 py-1.5">
+                <span
+                  draggable
+                  onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(i)); }}
+                  onDragEnd={() => { setDragFrom(null); setDragOver(null); }}
+                  className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-slate-500 shrink-0"
+                  title="Drag to reorder"
+                >
+                  <GripVertical className="w-4 h-4" />
+                </span>
+                <button type="button" onClick={() => toggle(k)} className="flex-1 min-w-0 flex items-center gap-1.5 text-left py-0.5">
+                  <ChevronRight className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                  <span className="text-[10px] font-semibold text-slate-400 shrink-0">{i + 1}</span>
+                  <span className={`text-sm truncate ${title ? "font-medium text-slate-700 dark:text-slate-200" : "italic text-slate-400"}`}>{title || "Untitled item"}</span>
+                </button>
+                <div className="flex items-center shrink-0">
                   <FieldStyleButton
                     value={itemStyle}
                     onChange={setItemStyle}
@@ -394,17 +471,22 @@ function ListEditor({
                     mode="card"
                     title={`Style card ${i + 1}`}
                   />
-                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30"><ChevronUp className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => move(i, 1)} disabled={i === items.length - 1} className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => remove(i)} className="p-1 text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => moveTo(i, i - 1)} disabled={i === 0} className={iconBtn} title="Move up"><ChevronUp className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => moveTo(i, i + 1)} disabled={i === items.length - 1} className={iconBtn} title="Move down"><ChevronDown className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => duplicate(i)} className={iconBtn} title="Duplicate"><Copy className="w-3.5 h-3.5" /></button>
+                  <button type="button" onClick={() => remove(i)} className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               </div>
-              <ObjectEditor value={item} sample={itemSample} onChange={(v) => update(i, v)} />
+              {isOpen && (
+                <div className="px-3 pb-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+                  <ObjectEditor value={item} sample={itemSample} onChange={(v) => update(i, v)} />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
-      <button type="button" onClick={add} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 text-slate-600 px-3 py-1.5 text-sm font-medium hover:border-lime-500 hover:text-lime-600">
+      <button type="button" onClick={add} className="mt-2 w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 px-3 py-2 text-sm font-medium hover:border-lime-500 hover:text-lime-600">
         <Plus className="w-4 h-4" /> Add item
       </button>
     </div>

@@ -79,6 +79,14 @@ export function patchSectionOverlay(
   sectionId: string,
   patch: { content?: string; style?: string; visible?: boolean; deleted?: boolean },
 ): DemoOverlay {
+  // Sections added during the demo live in addedSections — patch (or drop) them there.
+  const added = overlay.addedSections?.[sectionId];
+  if (added) {
+    const addedSections = { ...overlay.addedSections };
+    if (patch.deleted) delete addedSections[sectionId];
+    else addedSections[sectionId] = { ...added, ...stripUndef({ content: patch.content, style: patch.style, visible: patch.visible }) };
+    return { ...overlay, addedSections };
+  }
   const next = { ...overlay, sections: { ...overlay.sections } };
   next.sections![sectionId] = { ...next.sections?.[sectionId], ...patch };
   return next;
@@ -103,4 +111,8 @@ export function addOverlaySection(
 
 export function setSectionOrderOverlay(overlay: DemoOverlay, pageId: string, orderedIds: string[]): DemoOverlay {
   return { ...overlay, sectionOrder: { ...overlay.sectionOrder, [pageId]: orderedIds } };
+}
+
+function stripUndef<T extends Record<string, unknown>>(o: T): Partial<T> {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
 }

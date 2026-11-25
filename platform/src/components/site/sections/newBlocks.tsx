@@ -183,7 +183,7 @@ export function ToppersBlock({ c }: { c: SectionContentMap["toppers"] }) {
       <div aria-hidden className="site-blob w-[26rem] h-[26rem] -bottom-48 right-[5%] opacity-20" />
       <div className={`relative ${WRAP} max-w-6xl`}>
         <Heading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} content={c} />
-        <div className="grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="sec-cols grid gap-5 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {(c.items ?? []).map((t, i) => {
             const row = t as typeof t & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
             const fs = row.__styles ?? {};
@@ -221,7 +221,7 @@ export function DownloadsBlock({ c }: { c: SectionContentMap["downloads"] }) {
     <section className="site-sec py-20 sm:py-28">
       <div className={`${WRAP} max-w-6xl`}>
         <Heading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} content={c} />
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="sec-cols grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {(c.items ?? []).map((d, i) => {
             const row = d as typeof d & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
             const fs = row.__styles ?? {};
@@ -255,7 +255,7 @@ export function PricingPlansBlock({ c }: { c: SectionContentMap["pricingPlans"] 
     <section className="site-sec py-20 sm:py-28 bg-light">
       <div className={`${WRAP} max-w-7xl`}>
         <Heading eyebrow={c.eyebrow} title={c.title} highlight={c.titleHighlight} content={c} />
-        <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto items-stretch">
+        <div className="sec-cols grid gap-6 md:grid-cols-3 max-w-5xl mx-auto items-stretch">
           {(c.plans ?? []).map((p, i) => {
             const row = p as typeof p & { __style?: FieldStyle; __styles?: Record<string, FieldStyle> };
             const fs = row.__styles ?? {};

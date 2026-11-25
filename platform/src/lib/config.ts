@@ -304,6 +304,11 @@ export type SectionStyle = {
   cardRadius?: "none" | "sm" | "md" | "lg" | "full";
   cardShadow?: "none" | "sm" | "md" | "lg";
   cardSize?: "sm" | "md" | "lg";
+  // Direct size controls (all optional — unset renders exactly as before)
+  width?: "narrow" | "normal" | "wide" | "full"; // content container width
+  cols?: 1 | 2 | 3 | 4; // cards per row on grid blocks (.sec-cols)
+  padTop?: number; // px — overrides spacingTop preset
+  padBottom?: number; // px — overrides spacingBottom preset
 };
 
 const CARD_RADIUS: Record<NonNullable<SectionStyle["cardRadius"]>, string> = {
@@ -339,6 +344,10 @@ export function sectionFrameStyle(style: SectionStyle): import("react").CSSPrope
   if (style.cardRadius) s["--card-radius"] = CARD_RADIUS[style.cardRadius];
   if (style.cardShadow) s["--card-shadow"] = CARD_SHADOW[style.cardShadow];
   if (style.cardSize) s["--card-w"] = CARD_SIZE[style.cardSize];
+  const px = (n: number) => `${Math.min(400, Math.max(0, Math.round(n)))}px`;
+  if (typeof style.padTop === "number") s["--sec-pt"] = px(style.padTop);
+  if (typeof style.padBottom === "number") s["--sec-pb"] = px(style.padBottom);
+  if (style.cols) { s["--sec-cols"] = String(style.cols); s["--sec-cols-sm"] = String(Math.min(2, style.cols)); }
   return s;
 }
 
@@ -355,8 +364,8 @@ const BG_CLASS = {
 // Build the wrapper class list for a section from its style config.
 export function sectionFrameClasses(style: SectionStyle): string {
   const parts: string[] = [];
-  if (style.spacingTop && style.spacingTop !== "default" && SPACE_TOP[style.spacingTop]) parts.push(SPACE_TOP[style.spacingTop]);
-  if (style.spacingBottom && SPACE_BOTTOM[style.spacingBottom]) parts.push(SPACE_BOTTOM[style.spacingBottom]);
+  if (typeof style.padTop !== "number" && style.spacingTop && style.spacingTop !== "default" && SPACE_TOP[style.spacingTop]) parts.push(SPACE_TOP[style.spacingTop]);
+  if (typeof style.padBottom !== "number" && style.spacingBottom && SPACE_BOTTOM[style.spacingBottom]) parts.push(SPACE_BOTTOM[style.spacingBottom]);
   if (style.hideOnMobile) parts.push("hidden md:block");
   if (style.background && style.background !== "default" && BG_CLASS[style.background]) parts.push(BG_CLASS[style.background]);
   if (style.customClass) parts.push(style.customClass);
