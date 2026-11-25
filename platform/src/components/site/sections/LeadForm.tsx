@@ -26,6 +26,7 @@ export function LeadForm({
   // Product / service pages link here with ?service=<name> — keep it selected.
   const params = useSearchParams();
   const [service, setService] = useState(() => params.get("service")?.slice(0, 200) ?? "");
+  const opts = params.get("opts")?.slice(0, 300) ?? "";
   const waNum = waNumber(whatsapp);
   const options = service && !serviceOptions.includes(service) ? [service, ...serviceOptions] : serviceOptions;
 
@@ -70,6 +71,8 @@ export function LeadForm({
       <div className="relative">
         <textarea
           name="message"
+          defaultValue={opts ? `Selected: ${opts}
+` : ""}
           rows={compact ? 3 : 4}
           placeholder="Your Requirement / Message"
           className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[var(--c-primary)] focus:ring-2 focus:ring-[var(--c-primary)]/20"

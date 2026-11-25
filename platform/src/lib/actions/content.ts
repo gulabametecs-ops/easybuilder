@@ -13,6 +13,7 @@ import {
 import { SECTION_DEFAULTS } from "@/lib/sectionDefaults";
 import { limitError, releaseMediaIn } from "@/lib/usage";
 import { getPageTemplate } from "@/lib/pageTemplates";
+import { parseServiceOptions } from "@/lib/serviceOptions";
 import type { SectionType } from "@/lib/config";
 
 function slugify(input: string): string {
@@ -405,6 +406,7 @@ export async function updateService(formData: FormData) {
       longDescription: (formData.get("longDescription")?.toString() ?? "").trim(),
       seoTitle: (formData.get("seoTitle")?.toString() ?? "").trim(),
       seoDescription: (formData.get("seoDescription")?.toString() ?? "").trim(),
+      ...(formData.has("options") ? { options: JSON.stringify(parseServiceOptions(formData.get("options")?.toString() ?? "[]")) } : {}),
     },
   });
   revalidatePath("/admin/services");

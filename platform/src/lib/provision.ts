@@ -78,6 +78,7 @@ export async function createTenantFromTemplate(input: ProvisionInput) {
           title: s.title,
           description: s.description,
           longDescription: s.longDescription ?? "",
+          options: JSON.stringify(s.options ?? []),
           image: img(`${s.title}-${i}`, 600, 400),
           order: i,
           slug,

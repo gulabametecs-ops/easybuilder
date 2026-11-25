@@ -236,6 +236,7 @@ model Service {
   longDescription String  @default("") @db.MediumText // richer content shown on the detail page
   seoTitle        String  @default("") @db.MediumText // per-service SEO title
   seoDescription  String  @default("") @db.MediumText // per-service SEO meta description
+  options         String  @default("[]") @db.MediumText // JSON { name, values[] }[] — variety shown on the detail page (size, colour, finish…)
   demoSessionId   String? // demo sandbox create — cleaned on expiry
 
   @@index([demoSessionId])

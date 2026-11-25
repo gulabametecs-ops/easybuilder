@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { addService, updateService, deleteService } from "@/lib/actions/content";
 import { ImageInput } from "./ImageInput";
+import { parseServiceOptions } from "@/lib/serviceOptions";
 import { DevicePreviewFrame } from "./DevicePreviewFrame";
 
 type Service = {
@@ -20,6 +21,7 @@ type Service = {
   longDescription: string;
   seoTitle: string;
   seoDescription: string;
+  options: string; // JSON { name, values[] }[]
 };
 
 const inputCls =
@@ -284,6 +286,7 @@ function ServiceEditor({
       fd.set("longDescription", form.longDescription);
       fd.set("seoTitle", form.seoTitle);
       fd.set("seoDescription", form.seoDescription);
+      fd.set("options", form.options || "[]");
       await updateService(fd);
       onSaved(form);
     });
@@ -333,6 +336,10 @@ function ServiceEditor({
 
         <FieldCard icon={ImageIcon} title="Image">
           <ImageInput value={form.image} onChange={(v) => set("image", v)} aspect="aspect-[3/2]" />
+        </FieldCard>
+
+        <FieldCard icon={Tag} title="Options / variety (size, colour, finish…)">
+          <OptionsEditor key={form.id} value={form.options || "[]"} onChange={(v) => set("options", v)} />
         </FieldCard>
 
         <FieldCard icon={FileText} title="Full details">
@@ -431,6 +438,37 @@ function FieldCard({ icon: Ic, title, children }: { icon: typeof Tag; title: str
         <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{title}</span>
       </div>
       <div className="p-3">{children}</div>
+    </div>
+  );
+}
+
+// Variety groups shown on the detail page as selectable chips; the choice goes into the enquiry / WhatsApp message.
+function OptionsEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const groups = parseServiceOptions(value);
+  const [draft, setDraft] = useState(() => groups.map((g) => ({ name: g.name, values: g.values.join(", ") })));
+  const push = (next: { name: string; values: string }[]) => {
+    setDraft(next);
+    onChange(JSON.stringify(next.map((g) => ({ name: g.name, values: g.values.split(",").map((x) => x.trim()).filter(Boolean) }))));
+  };
+  const PRESETS: [string, string][] = [["Size", "Small, Medium, Large, Custom size"], ["Colour", "Steel, Black, Grey, White"], ["Finish", "Matte, Satin, Glossy"], ["Material", "SS 304, SS 316"]];
+  return (
+    <div className="space-y-2">
+      {draft.map((g, i) => (
+        <div key={i} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2 space-y-1.5">
+          <div className="flex gap-2">
+            <input value={g.name} onChange={(e) => push(draft.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Option name (e.g. Size)" className={inputCls} />
+            <button type="button" onClick={() => push(draft.filter((_, j) => j !== i))} className="p-2 rounded-md border border-red-200 text-red-500" title="Remove"><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+          <input value={g.values} onChange={(e) => push(draft.map((x, j) => (j === i ? { ...x, values: e.target.value } : x)))} placeholder="Values, comma separated (e.g. Small, Medium, Large)" className={inputCls} />
+        </div>
+      ))}
+      <div className="flex flex-wrap gap-1.5">
+        {PRESETS.filter(([n]) => !draft.some((g) => g.name.toLowerCase() === n.toLowerCase())).map(([n, v]) => (
+          <button key={n} type="button" onClick={() => push([...draft, { name: n, values: v }])} className="rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:border-lime-500">+ {n}</button>
+        ))}
+        <button type="button" onClick={() => push([...draft, { name: "", values: "" }])} className="rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:border-lime-500">+ Custom option</button>
+      </div>
+      <p className="text-[10px] text-slate-400">Customers pick these on the product page; the choice is added to their enquiry and WhatsApp message.</p>
     </div>
   );
 }

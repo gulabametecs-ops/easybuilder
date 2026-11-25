@@ -8,7 +8,7 @@
 import { db } from "../../src/lib/db";
 import { createTenantFromTemplate } from "../../src/lib/provision";
 import { isPlaceholderSrc } from "../../src/lib/img";
-import { incredaSink, INCREDA_CATEGORY_PHOTO, INCREDA_PHOTOS as P } from "../../src/lib/templates/incredaSink";
+import { incredaSink, incredaOptions, INCREDA_CATEGORY_PHOTO, INCREDA_PHOTOS as P } from "../../src/lib/templates/incredaSink";
 
 const arg = (k: string) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] ?? "" : ""; };
 const u = (id: string, w: number, h: number) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&h=${h}&q=80`;
@@ -16,8 +16,12 @@ const BIZ = "Increda Sink";
 
 /** Fill empty product and gallery photos (never overwrites an uploaded one). */
 async function fillPhotos(tenantId: string) {
-  const services = await db.service.findMany({ where: { tenantId }, select: { id: true, category: true, image: true } });
+  const services = await db.service.findMany({ where: { tenantId }, select: { id: true, category: true, title: true, image: true, options: true } });
   for (const s of services) {
+    // Give products their variety options unless the owner already set some.
+    if (!s.options || s.options === "[]") {
+      await db.service.update({ where: { id: s.id }, data: { options: JSON.stringify(incredaOptions(s.category, s.title)) } });
+    }
     const id = INCREDA_CATEGORY_PHOTO[s.category];
     if (id && (!s.image || isPlaceholderSrc(s.image))) {
       await db.service.update({ where: { id: s.id }, data: { image: u(id, 800, 600) } });

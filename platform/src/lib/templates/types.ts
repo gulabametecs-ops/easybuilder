@@ -130,7 +130,7 @@ export type TemplateDef = {
   // Templates supply the SEO basics; the rest of SeoConfig is filled from
   // defaults when the stored value is read back (see getTenantConfig).
   seo: (biz: string) => Partial<SeoConfig> & Pick<SeoConfig, "title" | "description">;
-  services: { category: string; title: string; description: string; longDescription?: string }[];
+  services: { category: string; title: string; description: string; longDescription?: string; options?: { name: string; values: string[] }[] }[];
   gallery: { category: string; caption: string }[];
   people?: (biz: string) => PersonSeed[];
   events?: (biz: string) => EventSeed[];

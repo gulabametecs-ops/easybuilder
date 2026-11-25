@@ -88,6 +88,36 @@ const products: Record<string, string[]> = {
   ],
 };
 
+// Variety customers can pick on each product page (sent with the enquiry / WhatsApp). Editable per product in Admin → Services.
+const SIZE = { name: "Size", values: ["Standard", "Large", "Extra large", "Custom size"] };
+const SS = { name: "Material", values: ["SS 304", "SS 316", "SS 202"] };
+const SS_FINISH = { name: "Finish", values: ["Matte", "Satin", "Mirror"] };
+const OPTIONS_BY_CATEGORY: Record<string, { name: string; values: string[] }[]> = {
+  "Kitchen Sinks": [
+    { name: "Size", values: ["Small", "Medium", "Large", "Custom size"] },
+    { name: "Colour", values: ["Steel", "Black", "Graphite grey", "Gold", "Copper"] },
+    { name: "Finish", values: ["Matte", "Satin", "Lining", "Glossy"] },
+    { name: "Mounting", values: ["Top mount", "Undermount"] },
+  ],
+  "Commercial & Industrial Sinks": [SIZE, SS, SS_FINISH, { name: "Drainboard", values: ["None", "Left", "Right", "Both sides"] }],
+  "Hand Wash Stations": [{ name: "Size", values: ["Compact", "Standard", "Large", "Custom size"] }, SS, SS_FINISH],
+  "Dishwashing Equipment": [SIZE, SS, SS_FINISH],
+  "Stainless Steel Fabrication": [SIZE, SS, SS_FINISH, { name: "Shelves", values: ["No shelf", "1 under-shelf", "2 under-shelves"] }],
+  "Sink Accessories": [
+    { name: "Finish", values: ["Chrome", "Matte black", "Brushed steel", "Gold"] },
+    { name: "Size", values: ["Standard", "Large", "Custom"] },
+  ],
+};
+/** Stone / ceramic sinks come in colours, not steel finishes. */
+const STONE_OPTIONS = [
+  { name: "Size", values: ["Small", "Medium", "Large", "Custom size"] },
+  { name: "Colour", values: ["Black", "Grey", "White", "Beige", "Brown"] },
+  { name: "Bowl", values: ["Single", "1.5 bowl", "Double"] },
+];
+export function incredaOptions(category: string, title: string) {
+  return /quartz|granite|ceramic/i.test(title) ? STONE_OPTIONS : OPTIONS_BY_CATEGORY[category] ?? [];
+}
+
 const blurb: Record<string, (name: string) => string> = {
   "Kitchen Sinks": (n) => `${n} for residential, modular and premium kitchens — supplied in standard and custom sizes for projects and bulk orders.`,
   "Commercial & Industrial Sinks": (n) => `${n} built for commercial kitchens, hotels, hospitals and food-processing units — made to order in custom sizes.`,
@@ -330,6 +360,7 @@ export const incredaSink: TemplateDef = {
       title: name,
       description: blurb[category](name),
       longDescription: `${blurb[category](name)}\n\n${SPEC_NOTE}`,
+      options: incredaOptions(category, name),
     })),
   ),
   gallery: [

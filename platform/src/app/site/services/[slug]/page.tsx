@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { waLink, waNumber } from "@/lib/whatsapp";
+import { waNumber } from "@/lib/whatsapp";
+import { parseServiceOptions } from "@/lib/serviceOptions";
+import { ServiceEnquiry } from "@/components/site/ServiceEnquiry";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentTenant, getTenantConfig } from "@/lib/tenant";
@@ -94,9 +96,7 @@ export default async function ServiceDetailPage({ params }: Props) {
           <aside className="lg:sticky lg:top-6 rounded-2xl border border-slate-200 bg-light p-6">
             <h3 className="font-bold text-heading text-lg">Interested in {svc.title}?</h3>
             <p className="text-sm text-slate-500 mt-1">Get in touch and we&apos;ll help you right away.</p>
-            <Link href={`${cta.href}${cta.href.includes("?") ? "&" : "?"}service=${encodeURIComponent(svc.title)}`} className="btn-primary mt-4 w-full inline-flex items-center justify-center gap-2 px-5 py-3 font-semibold"><Icon name="edit" className="w-4 h-4" /> {cta.label}</Link>
-            {waNum && <a href={waLink(waNum, `Hi, I'm interested in "${svc.title}" (${svc.category}) from your website. Please share details and a quotation.`)} target="_blank" rel="noopener noreferrer" className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-5 py-3 font-semibold text-white hover:bg-[#1ebe5b]"><Icon name="whatsapp" className="w-4 h-4" /> Enquire on WhatsApp</a>}
-            {phone && <a href={`tel:${phone}`} className="mt-2 w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-white"><Icon name="phone" className="w-4 h-4 text-primary" /> {phone}</a>}
+            <ServiceEnquiry title={svc.title} category={svc.category} options={parseServiceOptions(svc.options)} ctaHref={cta.href} ctaLabel={cta.label} phone={phone} waNum={waNum} />
           </aside>
         </div>
       </section>
