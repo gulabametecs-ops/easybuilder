@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 /** Per-field / per-card look — stored in content.__styles[field] or item.__style */
 export type FieldStyle = {
   color?: string;
-  fontSize?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  fontSize?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "7xl";
   fontWeight?: "normal" | "medium" | "semibold" | "bold" | "extrabold";
   align?: "left" | "center" | "right";
   italic?: boolean;
@@ -28,6 +28,9 @@ const FONT_SIZE: Record<NonNullable<FieldStyle["fontSize"]>, string> = {
   "2xl": "1.5rem",
   "3xl": "1.875rem",
   "4xl": "2.25rem",
+  "5xl": "3rem",
+  "6xl": "3.75rem",
+  "7xl": "4.5rem",
 };
 
 const FONT_WEIGHT: Record<NonNullable<FieldStyle["fontWeight"]>, string> = {

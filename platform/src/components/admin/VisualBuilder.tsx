@@ -8,7 +8,8 @@ import {
   Clock, Type, Timer, PanelTop, CalendarClock, Building2, HandHeart, Wallet, ArrowLeft, ChevronUp, ChevronDown, Copy,
   Layers, ShoppingBag, Undo2, Loader2, Check, type LucideIcon,
 } from "lucide-react";
-import { toggleSection, deleteSection, moveSection, addSection, reorderSections, duplicateSection, updateSectionStyle } from "@/lib/actions/content";
+import { toggleSection, deleteSection, moveSection, addSection, reorderSections, duplicateSection, updateSectionStyle, updateSectionContent } from "@/lib/actions/content";
+import { ImageInput } from "./ImageInput";
 import { SECTION_META } from "@/lib/sectionDefaults";
 import type { ThemeConfig } from "@/lib/config";
 import { SectionContentEditor } from "./SectionContentEditor";
@@ -113,6 +114,33 @@ export function VisualBuilder({
     setPreviewTick((t) => t + 1);
   };
 
+  // ── on-canvas element edits (text / style / image / cards) from the preview ──
+  const [imgEdit, setImgEdit] = useState<{ id: string; path: (string | number)[]; url: string } | null>(null);
+  const getAt = (obj: unknown, path: (string | number)[]) => path.reduce<unknown>((o, k) => (o as Record<string | number, unknown>)?.[k], obj);
+  const saveContent = (id: string, mutate: (c: Record<string, unknown>) => void) => {
+    const sec = itemsRef.current.find((x) => x.id === id);
+    if (!sec) return;
+    let c: Record<string, unknown> = {};
+    try { c = JSON.parse(sec.content || "{}"); } catch { /* keep {} */ }
+    mutate(c);
+    const raw = JSON.stringify(c);
+    setItems((prev) => prev.map((x) => (x.id === id ? { ...x, content: raw } : x))); // instant, preview reloads
+    start(async () => {
+      await updateSectionContent(id, raw);
+      setEverSaved(true);
+    });
+  };
+  const setAt = (c: Record<string, unknown>, path: (string | number)[], value: unknown) => {
+    const parent = getAt(c, path.slice(0, -1)) as Record<string | number, unknown> | undefined;
+    if (parent && typeof parent === "object") parent[path[path.length - 1]] = value;
+  };
+  // Tell the preview each section's content so it can map clicks to fields.
+  useEffect(() => {
+    try {
+      iframeRef.current?.contentWindow?.postMessage({ __builderCmd: true, type: "content", map: Object.fromEntries(items.map((x) => [x.id, x.content])) }, "*");
+    } catch { /* ignore */ }
+  }, [items]);
+
   useEffect(() => {
     if (!selected) return;
     document.getElementById(`sec-row-${selected}`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -168,6 +196,36 @@ export function VisualBuilder({
       if (d.type === "ready") {
         // Preview reloaded after a save: keep the user's scroll position + selection.
         iframeRef.current?.contentWindow?.postMessage({ __builderCmd: true, type: "restore", y: scrollY.current, id: selectedRef.current }, "*");
+        iframeRef.current?.contentWindow?.postMessage({ __builderCmd: true, type: "content", map: Object.fromEntries(itemsRef.current.map((x) => [x.id, x.content])) }, "*");
+      }
+      if (d.type === "el-text" && d.id && Array.isArray(d.path) && typeof d.value === "string") {
+        saveContent(d.id, (c) => setAt(c, d.path, d.value));
+      }
+      if (d.type === "el-style" && d.id && typeof d.field === "string") {
+        saveContent(d.id, (c) => {
+          const styles = { ...((c.__styles as Record<string, Record<string, unknown>>) ?? {}) };
+          if (d.patch === null) delete styles[d.field];
+          else styles[d.field] = { ...(styles[d.field] ?? {}), ...(d.patch as Record<string, unknown>) };
+          if (Object.keys(styles).length) c.__styles = styles;
+          else delete c.__styles;
+        });
+      }
+      if (d.type === "el-image" && d.id && Array.isArray(d.path)) {
+        const sec = itemsRef.current.find((x) => x.id === d.id);
+        let cur = "";
+        try { cur = String(getAt(JSON.parse(sec?.content || "{}"), d.path) ?? ""); } catch { /* empty */ }
+        setImgEdit({ id: d.id, path: d.path, url: cur });
+      }
+      if (d.type === "el-list" && d.id && Array.isArray(d.path) && typeof d.index === "number") {
+        saveContent(d.id, (c) => {
+          const list = getAt(c, d.path);
+          if (!Array.isArray(list)) return;
+          const i = d.index as number;
+          if (d.op === "left" && i > 0) [list[i - 1], list[i]] = [list[i], list[i - 1]];
+          if (d.op === "right" && i < list.length - 1) [list[i + 1], list[i]] = [list[i], list[i + 1]];
+          if (d.op === "dup") list.splice(i + 1, 0, JSON.parse(JSON.stringify(list[i])));
+          if (d.op === "del") list.splice(i, 1);
+        });
       }
       if (d.type === "scroll" && typeof d.y === "number") scrollY.current = d.y;
       if (d.type === "add" && typeof d.index === "number") openPicker(d.index);
@@ -323,7 +381,7 @@ export function VisualBuilder({
                   {tab === "content"
                     ? (
                       <SectionContentEditor
-                        key={`c-${selectedSection.id}`}
+                        key={`c-${selectedSection.id}-${hash(selectedSection.content)}`}
                         id={selectedSection.id}
                         type={selectedSection.type}
                         content={selectedSection.content}
@@ -500,6 +558,27 @@ export function VisualBuilder({
           }
         }
       `}</style>
+
+      {imgEdit && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" onClick={() => setImgEdit(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-slate-900 dark:text-white">Replace image</h3>
+              <button type="button" onClick={() => setImgEdit(null)} className="text-slate-400 hover:text-slate-700 text-sm">Close</button>
+            </div>
+            <ImageInput
+              value={imgEdit.url}
+              onChange={(url) => {
+                const { id, path } = imgEdit;
+                setImgEdit({ ...imgEdit, url });
+                if (url) saveContent(id, (c) => setAt(c, path, url));
+              }}
+              aspect="aspect-video"
+            />
+            <p className="text-[11px] text-slate-400 mt-2">Upload or paste a link — it is saved and shown in the preview straight away.</p>
+          </div>
+        </div>
+      )}
 
       <SectionPicker
         open={pickerOpen}

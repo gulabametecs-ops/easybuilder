@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { setupElementEditing } from "./builderElements";
 
 // Injected into the live site inside the visual builder's preview iframe. Gives
 // an on-canvas editing experience (like Chrome inspect): hover shows a label +
@@ -84,15 +85,37 @@ export function BuilderBridge() {
       position();
     };
 
+    // Element-level editing (text / image / card); falls back to whole-section selection.
+    const els = setupElementEditing(post, (id) => {
+      const el = sectionEl(id);
+      select(id, el?.getAttribute("data-label"));
+      post({ type: "select", id });
+    });
+
     const onClick = (e: MouseEvent) => {
-      if (e.target instanceof Element && e.target.closest(".builder-toolbar, .builder-grow, .builder-insert")) return;
+      if (e.target instanceof Element && e.target.closest(".builder-toolbar, .builder-grow, .builder-insert, .builder-elbar")) return;
+      if (els.isEditing() && e.target instanceof Element && e.target.closest(".builder-editing")) return; // let the caret move
       const sec = sectionOf(e.target);
       if (!sec) return;
       e.preventDefault();
       e.stopPropagation();
       const id = sec.getAttribute("data-sid");
+      if (els.handleClick(e, sec)) {
+        select(null); // element toolbar replaces the section toolbar
+        post({ type: "select", id });
+        return;
+      }
       select(id, sec.getAttribute("data-label"));
       post({ type: "select", id });
+    };
+    const onDblClick = (e: MouseEvent) => {
+      if (e.target instanceof Element && e.target.closest(".builder-toolbar, .builder-elbar, .builder-editing")) return;
+      const sec = sectionOf(e.target);
+      if (!sec) return;
+      e.preventDefault();
+      e.stopPropagation();
+      select(null);
+      els.handleDblClick(e, sec);
     };
 
     bar.addEventListener("click", (e) => {
@@ -110,7 +133,8 @@ export function BuilderBridge() {
         const el = sectionEl(d.id);
         if (el) { select(d.id, el.getAttribute("data-label")); el.scrollIntoView({ behavior: "smooth", block: "center" }); }
       }
-      if (d.type === "deselect") select(null);
+      if (d.type === "deselect") { select(null); els.clear(); }
+      if (d.type === "content" && d.map && typeof d.map === "object") els.setContent(d.map as Record<string, string>);
       if (d.type === "restore") {
         // After a save the preview reloads — put the scroll + selection back where they were.
         if (typeof d.y === "number") window.scrollTo(0, d.y);
@@ -252,6 +276,7 @@ export function BuilderBridge() {
     let scrollT = 0;
     const onScroll = () => {
       position();
+      els.reposition();
       if (!drag) ins.style.display = "none";
       clearTimeout(scrollT);
       scrollT = window.setTimeout(() => post({ type: "scroll", y: window.scrollY }), 150);
@@ -261,12 +286,13 @@ export function BuilderBridge() {
     document.addEventListener("pointerup", onUp);
     document.addEventListener("pointercancel", onUp);
     document.addEventListener("click", onClick, true);
+    document.addEventListener("dblclick", onDblClick, true);
     window.addEventListener("message", onMessage);
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", position);
 
     const styleEl = document.createElement("style");
-    styleEl.textContent = `
+    styleEl.textContent = els.css + `
       .builder-section { position: relative; cursor: pointer; }
       .builder-section:hover { outline: 2px dashed rgba(101,163,13,.7); outline-offset: -2px; }
       .builder-section:hover::before {
@@ -333,7 +359,9 @@ export function BuilderBridge() {
       document.removeEventListener("pointerup", onUp);
       document.removeEventListener("pointercancel", onUp);
       document.removeEventListener("click", onClick, true);
+      document.removeEventListener("dblclick", onDblClick, true);
       window.removeEventListener("message", onMessage);
+      els.cleanup();
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", position);
       if (raf) cancelAnimationFrame(raf);

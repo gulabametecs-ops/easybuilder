@@ -11,7 +11,7 @@ import { isFieldStyleEmpty, mergeFieldStyle } from "@/lib/fieldStyle";
 
 type Mode = "text" | "card";
 
-const SIZES: FieldStyle["fontSize"][] = ["sm", "md", "lg", "xl", "2xl", "3xl", "4xl"];
+const SIZES: FieldStyle["fontSize"][] = ["sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl", "6xl", "7xl"];
 const WEIGHTS: { v: NonNullable<FieldStyle["fontWeight"]>; label: string }[] = [
   { v: "normal", label: "Aa" },
   { v: "medium", label: "Me" },
