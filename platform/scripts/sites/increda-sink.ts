@@ -3,6 +3,7 @@
 //   npx tsx --env-file=.env scripts/sites/increda-sink.ts --email owner@example.com --password 'StrongPass123' [--subdomain incredasink]
 // Update an existing site to the latest template (pages, header, footer, photos, contact number):
 //   npx tsx --env-file=.env scripts/sites/increda-sink.ts --refresh [--subdomain incredasink]
+//   Add --reset-options to also overwrite every product's options with the template defaults.
 //   ⚠ --refresh replaces page sections with the template's (Pages editor edits are lost);
 //     products/services, their specs, leads, gallery uploads and logins are kept.
 import { db } from "../../src/lib/db";
@@ -19,7 +20,7 @@ async function fillPhotos(tenantId: string) {
   const services = await db.service.findMany({ where: { tenantId }, select: { id: true, category: true, title: true, image: true, options: true } });
   for (const s of services) {
     // Give products their variety options unless the owner already set some.
-    if (!s.options || s.options === "[]") {
+    if (!s.options || s.options === "[]" || process.argv.includes("--reset-options")) {
       await db.service.update({ where: { id: s.id }, data: { options: JSON.stringify(incredaOptions(s.category, s.title)) } });
     }
     const id = INCREDA_CATEGORY_PHOTO[s.category];

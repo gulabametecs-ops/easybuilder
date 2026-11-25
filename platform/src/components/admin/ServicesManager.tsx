@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { addService, updateService, deleteService } from "@/lib/actions/content";
 import { ImageInput } from "./ImageInput";
-import { parseServiceOptions } from "@/lib/serviceOptions";
+import { parseServiceOptions, isColorGroup, swatchOf, COLOR_NAMES } from "@/lib/serviceOptions";
 import { DevicePreviewFrame } from "./DevicePreviewFrame";
 
 type Service = {
@@ -442,33 +442,90 @@ function FieldCard({ icon: Ic, title, children }: { icon: typeof Tag; title: str
   );
 }
 
-// Variety groups shown on the detail page as selectable chips; the choice goes into the enquiry / WhatsApp message.
+// Variety groups shown on the detail page (chips, or colour swatches). Each value can carry its own photo
+// (swaps the main product image) and, for colour groups, a swatch colour. Saved into Service.options JSON.
+type DraftValue = { label: string; color: string; image: string };
+type DraftGroup = { name: string; swatch: boolean; values: DraftValue[] };
+
 function OptionsEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const groups = parseServiceOptions(value);
-  const [draft, setDraft] = useState(() => groups.map((g) => ({ name: g.name, values: g.values.join(", ") })));
-  const push = (next: { name: string; values: string }[]) => {
+  const [draft, setDraft] = useState<DraftGroup[]>(() =>
+    parseServiceOptions(value).map((g) => ({
+      name: g.name,
+      swatch: isColorGroup(g),
+      values: g.values.map((v) => ({ label: v, color: swatchOf(g, v) || "#b8bec5", image: g.images?.[v] ?? "" })),
+    })),
+  );
+  const [open, setOpen] = useState<string | null>(null); // "g:v" row whose photo picker is open
+
+  const push = (next: DraftGroup[]) => {
     setDraft(next);
-    onChange(JSON.stringify(next.map((g) => ({ name: g.name, values: g.values.split(",").map((x) => x.trim()).filter(Boolean) }))));
+    onChange(JSON.stringify(next.map((g) => {
+      const vals = g.values.filter((v) => v.label.trim());
+      const images = Object.fromEntries(vals.filter((v) => v.image).map((v) => [v.label.trim(), v.image]));
+      const colors = g.swatch ? Object.fromEntries(vals.map((v) => [v.label.trim(), v.color])) : undefined;
+      return { name: g.name, values: vals.map((v) => v.label.trim()), ...(Object.keys(images).length ? { images } : {}), ...(colors ? { colors } : {}) };
+    })));
   };
-  const PRESETS: [string, string][] = [["Size", "Small, Medium, Large, Custom size"], ["Colour", "Steel, Black, Grey, White"], ["Finish", "Matte, Satin, Glossy"], ["Material", "SS 304, SS 316"]];
+  const setGroup = (gi: number, patch: Partial<DraftGroup>) => push(draft.map((g, j) => (j === gi ? { ...g, ...patch } : g)));
+  const setVal = (gi: number, vi: number, patch: Partial<DraftValue>) =>
+    setGroup(gi, { values: draft[gi].values.map((v, k) => (k === vi ? { ...v, ...patch } : v)) });
+
+  const PRESETS: { name: string; swatch: boolean; values: string[] }[] = [
+    { name: "Size", swatch: false, values: ['18" × 16"', '24" × 18"', '32" × 18"', '37" × 18"', '45" × 20"', "Custom size"] },
+    { name: "Colour", swatch: true, values: ["Steel", "Black", "Graphite grey", "Gold", "Copper"] },
+    { name: "Finish", swatch: false, values: ["Matte", "Satin", "Glossy"] },
+    { name: "Material", swatch: false, values: ["SS 304", "SS 316"] },
+  ];
+
   return (
-    <div className="space-y-2">
-      {draft.map((g, i) => (
-        <div key={i} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2 space-y-1.5">
-          <div className="flex gap-2">
-            <input value={g.name} onChange={(e) => push(draft.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Option name (e.g. Size)" className={inputCls} />
-            <button type="button" onClick={() => push(draft.filter((_, j) => j !== i))} className="p-2 rounded-md border border-red-200 text-red-500" title="Remove"><Trash2 className="w-3.5 h-3.5" /></button>
+    <div className="space-y-3">
+      {draft.map((g, gi) => (
+        <div key={gi} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 space-y-2">
+          <div className="flex gap-2 items-center">
+            <input value={g.name} onChange={(e) => setGroup(gi, { name: e.target.value })} placeholder="Option name (e.g. Size)" className={inputCls} />
+            <label className="flex items-center gap-1 text-[11px] font-medium text-slate-500 whitespace-nowrap">
+              <input type="checkbox" checked={g.swatch} onChange={(e) => setGroup(gi, { swatch: e.target.checked })} /> Colour dots
+            </label>
+            <button type="button" onClick={() => push(draft.filter((_, j) => j !== gi))} className="p-2 rounded-md border border-red-200 text-red-500" title="Remove option"><Trash2 className="w-3.5 h-3.5" /></button>
           </div>
-          <input value={g.values} onChange={(e) => push(draft.map((x, j) => (j === i ? { ...x, values: e.target.value } : x)))} placeholder="Values, comma separated (e.g. Small, Medium, Large)" className={inputCls} />
+          <div className="space-y-1.5">
+            {g.values.map((v, vi) => {
+              const key = `${gi}:${vi}`;
+              return (
+                <div key={vi} className="rounded-md bg-slate-50 dark:bg-slate-800/50 p-1.5">
+                  <div className="flex items-center gap-1.5">
+                    {g.swatch && (
+                      <input type="color" value={v.color} onChange={(e) => setVal(gi, vi, { color: e.target.value })} title="Swatch colour" className="w-8 h-8 shrink-0 rounded-full border border-slate-300 p-0 overflow-hidden cursor-pointer" />
+                    )}
+                    <input value={v.label} onChange={(e) => setVal(gi, vi, { label: e.target.value })} placeholder={g.swatch ? "Colour name" : 'Value (e.g. 24" × 18")'} className={inputCls} />
+                    <button type="button" onClick={() => setOpen(open === key ? null : key)} title="Photo for this option" className={`shrink-0 w-9 h-9 rounded-md border overflow-hidden flex items-center justify-center ${v.image ? "border-lime-500" : "border-slate-300 dark:border-slate-600 text-slate-400"}`}>
+                      {v.image
+                        // eslint-disable-next-line @next/next/no-img-element
+                        ? <img src={v.image} alt="" className="w-full h-full object-cover" />
+                        : <ImageIcon className="w-4 h-4" />}
+                    </button>
+                    <button type="button" onClick={() => setGroup(gi, { values: g.values.filter((_, k) => k !== vi) })} className="shrink-0 p-1.5 text-slate-400 hover:text-red-500" title="Remove value"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                  {open === key && (
+                    <div className="mt-2">
+                      <p className="text-[10px] text-slate-400 mb-1">Shown as the main product photo when a customer picks “{v.label || "this option"}”.</p>
+                      <ImageInput value={v.image} onChange={(url) => setVal(gi, vi, { image: url })} aspect="aspect-[3/2]" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => setGroup(gi, { values: [...g.values, { label: "", color: "#b8bec5", image: "" }] })} className="text-xs font-semibold text-lime-600 hover:underline">+ Add value</button>
+          </div>
         </div>
       ))}
       <div className="flex flex-wrap gap-1.5">
-        {PRESETS.filter(([n]) => !draft.some((g) => g.name.toLowerCase() === n.toLowerCase())).map(([n, v]) => (
-          <button key={n} type="button" onClick={() => push([...draft, { name: n, values: v }])} className="rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:border-lime-500">+ {n}</button>
+        {PRESETS.filter((pr) => !draft.some((g) => g.name.toLowerCase() === pr.name.toLowerCase())).map((pr) => (
+          <button key={pr.name} type="button" onClick={() => push([...draft, { name: pr.name, swatch: pr.swatch, values: pr.values.map((label) => ({ label, color: COLOR_NAMES[label.toLowerCase()] ?? "#b8bec5", image: "" })) }])} className="rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:border-lime-500">+ {pr.name}</button>
         ))}
-        <button type="button" onClick={() => push([...draft, { name: "", values: "" }])} className="rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:border-lime-500">+ Custom option</button>
+        <button type="button" onClick={() => push([...draft, { name: "", swatch: false, values: [{ label: "", color: "#b8bec5", image: "" }] }])} className="rounded-full border border-dashed border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-300 hover:border-lime-500">+ Custom option</button>
       </div>
-      <p className="text-[10px] text-slate-400">Customers pick these on the product page; the choice is added to their enquiry and WhatsApp message.</p>
+      <p className="text-[10px] text-slate-400">Customers pick these on the product page. Add a photo to any value to change the main image when it&apos;s picked. The choice is sent with their enquiry and WhatsApp message.</p>
     </div>
   );
 }

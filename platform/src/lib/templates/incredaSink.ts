@@ -88,33 +88,36 @@ const products: Record<string, string[]> = {
   ],
 };
 
-// Variety customers can pick on each product page (sent with the enquiry / WhatsApp). Editable per product in Admin → Services.
-const SIZE = { name: "Size", values: ["Standard", "Large", "Extra large", "Custom size"] };
-const SS = { name: "Material", values: ["SS 304", "SS 316", "SS 202"] };
-const SS_FINISH = { name: "Finish", values: ["Matte", "Satin", "Mirror"] };
-const OPTIONS_BY_CATEGORY: Record<string, { name: string; values: string[] }[]> = {
+// Variety customers can pick on each product page (sent with the enquiry / WhatsApp). Editable per product in
+// Admin → Services → Options (owners can add a photo per value so the main image changes with the choice).
+type Opt = { name: string; values: string[]; colors?: Record<string, string> };
+const size = (...v: string[]): Opt => ({ name: "Size", values: [...v, "Custom size"] });
+const colour = (pairs: [string, string][]): Opt => ({ name: "Colour", values: pairs.map(([n]) => n), colors: Object.fromEntries(pairs) });
+const SS: Opt = { name: "Material", values: ["SS 304", "SS 316", "SS 202"] };
+const SS_FINISH: Opt = { name: "Finish", values: ["Matte", "Satin", "Mirror"] };
+const OPTIONS_BY_CATEGORY: Record<string, Opt[]> = {
   "Kitchen Sinks": [
-    { name: "Size", values: ["Small", "Medium", "Large", "Custom size"] },
-    { name: "Colour", values: ["Steel", "Black", "Graphite grey", "Gold", "Copper"] },
+    size('18" × 16"', '24" × 18"', '32" × 18"', '37" × 18"', '45" × 20"'),
+    colour([["Steel", "#b8bec5"], ["Black", "#1c1d20"], ["Graphite grey", "#4a4f55"], ["Gold", "#c9a24a"], ["Copper", "#b8734a"]]),
     { name: "Finish", values: ["Matte", "Satin", "Lining", "Glossy"] },
     { name: "Mounting", values: ["Top mount", "Undermount"] },
   ],
-  "Commercial & Industrial Sinks": [SIZE, SS, SS_FINISH, { name: "Drainboard", values: ["None", "Left", "Right", "Both sides"] }],
-  "Hand Wash Stations": [{ name: "Size", values: ["Compact", "Standard", "Large", "Custom size"] }, SS, SS_FINISH],
-  "Dishwashing Equipment": [SIZE, SS, SS_FINISH],
-  "Stainless Steel Fabrication": [SIZE, SS, SS_FINISH, { name: "Shelves", values: ["No shelf", "1 under-shelf", "2 under-shelves"] }],
+  "Commercial & Industrial Sinks": [size('24" × 24"', '30" × 24"', '36" × 24"', '48" × 24"'), SS, SS_FINISH, { name: "Drainboard", values: ["None", "Left", "Right", "Both sides"] }],
+  "Hand Wash Stations": [size('16" × 14"', '20" × 16"', '24" × 18"'), SS, SS_FINISH],
+  "Dishwashing Equipment": [size('36" × 24"', '48" × 30"', '60" × 30"'), SS, SS_FINISH],
+  "Stainless Steel Fabrication": [size("4 ft × 2 ft", "5 ft × 2.5 ft", "6 ft × 2.5 ft"), SS, SS_FINISH, { name: "Shelves", values: ["No shelf", "1 under-shelf", "2 under-shelves"] }],
   "Sink Accessories": [
-    { name: "Finish", values: ["Chrome", "Matte black", "Brushed steel", "Gold"] },
+    { name: "Finish", values: ["Chrome", "Matte black", "Brushed steel", "Gold"], colors: { Chrome: "#d4d8dc", "Matte black": "#26272b", "Brushed steel": "#a8adb3", Gold: "#c9a24a" } },
     { name: "Size", values: ["Standard", "Large", "Custom"] },
   ],
 };
 /** Stone / ceramic sinks come in colours, not steel finishes. */
-const STONE_OPTIONS = [
-  { name: "Size", values: ["Small", "Medium", "Large", "Custom size"] },
-  { name: "Colour", values: ["Black", "Grey", "White", "Beige", "Brown"] },
+const STONE_OPTIONS: Opt[] = [
+  size('24" × 18"', '30" × 18"', '33" × 20"'),
+  colour([["Black", "#1c1d20"], ["Grey", "#8a9098"], ["White", "#f6f6f4"], ["Beige", "#d9c7a7"], ["Brown", "#6f4e37"]]),
   { name: "Bowl", values: ["Single", "1.5 bowl", "Double"] },
 ];
-export function incredaOptions(category: string, title: string) {
+export function incredaOptions(category: string, title: string): Opt[] {
   return /quartz|granite|ceramic/i.test(title) ? STONE_OPTIONS : OPTIONS_BY_CATEGORY[category] ?? [];
 }
 
@@ -151,30 +154,57 @@ const legalLine = `Legal name: ${INCREDA.legalName} · Trade name: ${INCREDA.tra
 // White, premium home hero + category photo grid as custom HTML (inline styles: no Tailwind build step needed).
 // Owners can edit text/images in Admin → Pages → Home (hero "custom HTML"), or switch the hero to a standard design.
 const heroHtml = `<style>
-.ics-hero{background:#fff;color:#16191e;padding:72px 20px 56px;font-family:inherit}
-.ics-wrap{max-width:1200px;margin:0 auto}
-.ics-badge{display:inline-flex;gap:8px;align-items:center;font-size:12px;font-weight:700;letter-spacing:.14em;color:#1d6f91;background:#eef5f8;border:1px solid #d6e6ee;border-radius:999px;padding:7px 14px}
-.ics-h1{font-size:clamp(34px,5.2vw,64px);line-height:1.04;font-weight:800;letter-spacing:-.025em;margin:22px 0 18px;max-width:900px}
-.ics-h1 span{color:#1d6f91}
-.ics-sub{font-size:clamp(16px,1.6vw,20px);line-height:1.6;color:#4b525b;max-width:680px;margin:0 0 30px}
-.ics-btns{display:flex;flex-wrap:wrap;gap:12px}
-.ics-btn{display:inline-flex;align-items:center;gap:8px;padding:15px 26px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none}
-.ics-btn.p{background:#16191e;color:#fff}.ics-btn.s{background:#fff;color:#16191e;border:1.5px solid #c9d1d8}
-.ics-img{margin-top:48px;border-radius:18px;overflow:hidden;aspect-ratio:16/9;box-shadow:0 40px 80px -30px rgba(22,25,30,.45);background:#e9edf0}
-.ics-img img{width:100%;height:100%;object-fit:cover;display:block}
-.ics-trust{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e3e8ec;border:1px solid #e3e8ec;border-radius:14px;overflow:hidden;margin-top:28px}
-.ics-trust div{background:#fff;padding:18px 20px;font-weight:700;font-size:14px}
-.ics-trust small{display:block;font-weight:500;color:#6b747e;font-size:12.5px;margin-top:3px}
-@media(max-width:760px){.ics-trust{grid-template-columns:1fr 1fr}.ics-hero{padding-top:48px}}
+.ih{position:relative;overflow:hidden;background:linear-gradient(180deg,#f4f8fa 0%,#fff 70%);color:#16191e;font-family:inherit}
+.ih:before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(29,111,145,.12) 1px,transparent 1px);background-size:22px 22px;-webkit-mask-image:linear-gradient(180deg,#000 0%,transparent 75%);mask-image:linear-gradient(180deg,#000 0%,transparent 75%);pointer-events:none}
+.ih-wrap{position:relative;max-width:1240px;margin:0 auto;padding:64px 20px 40px;display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center}
+.ih-badge{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.14em;color:#1d6f91;background:#fff;border:1px solid #d6e6ee;border-radius:999px;padding:7px 14px;box-shadow:0 4px 14px -8px rgba(29,111,145,.4)}
+.ih-badge i{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.18)}
+.ih h1{font-size:clamp(36px,4.8vw,62px);line-height:1.03;font-weight:800;letter-spacing:-.03em;margin:20px 0 18px;color:#16191e}
+.ih h1 span{background:linear-gradient(90deg,#1d6f91,#3ea3c9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ih-sub{font-size:clamp(16px,1.5vw,19px);line-height:1.65;color:#4b525b;max-width:560px;margin:0 0 28px}
+.ih-btns{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.ih-btn{display:inline-flex;align-items:center;gap:8px;padding:15px 26px;border-radius:12px;font-weight:700;font-size:15px;text-decoration:none;transition:transform .15s,box-shadow .15s}
+.ih-btn:hover{transform:translateY(-2px)}
+.ih-btn.p{background:#16191e;color:#fff;box-shadow:0 14px 28px -12px rgba(22,25,30,.55)}
+.ih-btn.s{background:#fff;color:#16191e;border:1.5px solid #c9d1d8}
+.ih-call{font-weight:700;font-size:14px;color:#1d6f91;text-decoration:none;padding:6px 4px}
+.ih-pts{display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin-top:30px;max-width:520px}
+.ih-pts div{display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600;color:#2a2f36}
+.ih-pts b{flex:none;width:22px;height:22px;border-radius:7px;background:#1d6f91;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.ih-art{position:relative;padding:0 0 46px 46px}
+.ih-main{border-radius:24px;overflow:hidden;aspect-ratio:4/4.3;box-shadow:0 40px 80px -30px rgba(22,25,30,.5);background:#e9edf0}
+.ih-main img,.ih-small img{width:100%;height:100%;object-fit:cover;display:block}
+.ih-small{position:absolute;left:0;bottom:0;width:46%;aspect-ratio:4/3;border-radius:18px;overflow:hidden;border:6px solid #fff;box-shadow:0 24px 48px -20px rgba(22,25,30,.55);background:#e9edf0}
+.ih-card{position:absolute;background:#fff;border-radius:14px;box-shadow:0 20px 40px -18px rgba(22,25,30,.45);padding:12px 16px;font-size:13px;font-weight:700;color:#16191e;display:flex;gap:10px;align-items:center}
+.ih-card small{display:block;font-weight:500;color:#6b747e;font-size:11.5px;margin-top:2px}
+.ih-card i{font-style:normal;width:34px;height:34px;border-radius:10px;background:#eef5f8;color:#1d6f91;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:800}
+.ih-c1{top:22px;right:-14px}
+.ih-c2{right:24px;bottom:70px}
+.ih-cats{position:relative;max-width:1240px;margin:0 auto;padding:0 20px 44px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ih-cats span{font-size:12px;font-weight:800;letter-spacing:.14em;color:#6b747e;margin-right:6px}
+.ih-cats a{font-size:13.5px;font-weight:600;color:#2a2f36;text-decoration:none;background:#fff;border:1px solid #e3e8ec;border-radius:999px;padding:8px 14px;transition:border-color .15s,color .15s}
+.ih-cats a:hover{border-color:#1d6f91;color:#1d6f91}
+@media(max-width:960px){.ih-wrap{grid-template-columns:1fr;gap:36px;padding-top:44px}.ih-art{padding:0 0 30px 30px}.ih-c1{right:6px}}
+@media(max-width:560px){.ih-pts{grid-template-columns:1fr}.ih-small{width:52%}.ih-c2{display:none}.ih-btn{width:100%;justify-content:center}}
 </style>
-<div class="ics-hero"><div class="ics-wrap">
-<span class="ics-badge">● SINKS · WASH STATIONS · STAINLESS-STEEL EQUIPMENT</span>
-<h1 class="ics-h1">Premium Sink &amp; Commercial <span>Wash Equipment</span> Solutions</h1>
-<p class="ics-sub">Reliable products, customized solutions and bulk supply for commercial and industrial projects.</p>
-<div class="ics-btns"><a class="ics-btn p" href="/products">Explore Products →</a><a class="ics-btn s" href="/bulk-orders">Request Bulk Quote</a></div>
-<div class="ics-img"><img src="${u(P.hero, 1920, 1080)}" alt="Commercial kitchen with stainless-steel sinks and wash stations"></div>
-<div class="ics-trust"><div>Stainless-Steel Range<small>Sinks, tables &amp; wash equipment</small></div><div>Custom Sizes<small>Made to your drawings</small></div><div>Bulk &amp; Project Supply<small>Quotation assistance</small></div><div>GST Invoice<small>Proper tax billing</small></div></div>
-</div></div>`;
+<section class="ih">
+<div class="ih-wrap">
+<div>
+<span class="ih-badge"><i></i>SINKS · WASH STATIONS · SS EQUIPMENT</span>
+<h1>Premium Sink &amp; Commercial <span>Wash Equipment</span> Solutions</h1>
+<p class="ih-sub">Reliable products, customized solutions and bulk supply for commercial and industrial projects.</p>
+<div class="ih-btns"><a class="ih-btn p" href="/products">Explore Products →</a><a class="ih-btn s" href="/bulk-orders">Request Bulk Quote</a><a class="ih-call" href="tel:${INCREDA.phone}">or call ${INCREDA.phone}</a></div>
+<div class="ih-pts"><div><b>✓</b>Stainless-steel range for commercial use</div><div><b>✓</b>Custom sizes made to your drawings</div><div><b>✓</b>Bulk &amp; project supply</div><div><b>✓</b>GST invoice on every order</div></div>
+</div>
+<div class="ih-art">
+<div class="ih-main"><img src="${u(P.hero, 1100, 1180)}" alt="Commercial kitchen with stainless-steel sinks and wash stations"></div>
+<div class="ih-small"><img src="${u(P.welding, 700, 520)}" alt="Stainless-steel fabrication"></div>
+<div class="ih-card ih-c1"><i>SS</i><div>SS 304 &amp; SS 316<small>Food-grade stainless steel</small></div></div>
+<div class="ih-card ih-c2"><i>↔</i><div>Custom sizes<small>Built to your layout</small></div></div>
+</div>
+</div>
+<div class="ih-cats"><span>BROWSE</span><a href="/products">Kitchen Sinks</a><a href="/products">Commercial Sinks</a><a href="/products">Hand Wash Stations</a><a href="/services/pot-wash-sink">Pot Wash Sinks</a><a href="/products">Dishwashing</a><a href="/services/stainless-steel-work-tables">Work Tables</a><a href="/products">Accessories</a></div>
+</section>`;
 
 const CATEGORY_CARDS: { title: string; text: string; photo: string; href: string }[] = [
   { title: "Kitchen Sinks", text: "Single, double, handmade, quartz & more", photo: P.farmhouseSink, href: "/products" },

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { waNumber } from "@/lib/whatsapp";
 import { parseServiceOptions } from "@/lib/serviceOptions";
 import { ServiceEnquiry } from "@/components/site/ServiceEnquiry";
+import { ServiceImage } from "@/components/site/ServiceImage";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentTenant, getTenantConfig } from "@/lib/tenant";
@@ -88,8 +89,7 @@ export default async function ServiceDetailPage({ params }: Props) {
       <section className="py-16 bg-white">
         <div className="mx-auto max-w-7xl px-4 grid lg:grid-cols-[1.4fr_1fr] gap-10 items-start">
           <div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image} alt={svc.title} className="w-full aspect-video rounded-2xl object-cover shadow-lg mb-6" />
+            <ServiceImage src={image} alt={svc.title} />
             {svc.description && <p className="text-lg text-slate-700 leading-relaxed">{svc.description}</p>}
             {svc.longDescription && <div className="mt-4 text-slate-600 leading-relaxed whitespace-pre-line">{svc.longDescription}</div>}
           </div>

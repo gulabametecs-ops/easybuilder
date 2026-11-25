@@ -13,3 +13,9 @@ test("parseServiceOptions sanitises groups and values", () => {
 test("describeSelection joins chosen values", () => {
   assert.equal(describeSelection({ Size: "Large", Finish: "", Colour: "Black" }), "Size: Large · Colour: Black");
 });
+
+test("parseServiceOptions keeps safe images and hex colours only for listed values", () => {
+  const [g] = parseServiceOptions([{ name: "Colour", values: ["Black", "Red"], colors: { Black: "#111", Red: "red", Ghost: "#fff" }, images: { Black: "https://x.test/a.jpg", Red: "javascript:alert(1)" } }]);
+  assert.deepEqual(g.colors, { Black: "#111" });
+  assert.deepEqual(g.images, { Black: "https://x.test/a.jpg" });
+});
